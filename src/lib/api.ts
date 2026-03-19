@@ -828,6 +828,7 @@ export const appointmentsApi = {
         service_id: body.service_id,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
+        source: body.source === "walk-in" ? "walk_in" : body.source,
         notes: body.notes,
       }),
     }).then((r) =>
@@ -1080,6 +1081,13 @@ export const cashDrawerApi = {
     }).then((r) =>
       r.data ? { data: { session: r.data } } : { error: r.error },
     ),
+  approve: (sessionId: string, notes?: string) =>
+    api<CashDrawerSession>(`/api/cash-drawers/${sessionId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ notes: notes ?? "" }),
+    }).then((r) =>
+      r.data ? { data: { session: r.data } } : { error: r.error },
+    ),
 };
 
 export const debtApi = {
@@ -1140,6 +1148,27 @@ export const debtApi = {
         : { error: r.error },
     );
   },
+  writeOffRequests: (status?: "pending" | "approved" | "rejected") =>
+    api<unknown>("/api/debts/write-off-requests" + qs({ status })).then((r) =>
+      r.data
+        ? { data: { requests: listData(r.data as DebtWriteOffRequest[] | { data: DebtWriteOffRequest[] }) } }
+        : { error: r.error },
+    ),
+  requestWriteOff: (debtId: string, reason?: string) =>
+    api<{ request_id: string; status: string }>(`/api/debts/${debtId}/write-off`, {
+      method: "POST",
+      body: JSON.stringify({ submit_for_approval: true, reason }),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+  approveWriteOff: (requestId: string) =>
+    api<unknown>(`/api/debts/write-off-requests/${requestId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+  rejectWriteOff: (requestId: string) =>
+    api<unknown>(`/api/debts/write-off-requests/${requestId}/reject`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
 };
 
 export interface DebtAgingRow {
@@ -1319,12 +1348,26 @@ export const reportsApi = {
       `/api/reports/payment-breakdown?from=${from}&to=${to}` +
         (locationId ? `&branch_id=${locationId}` : ""),
     ),
-  inventoryMovement: (params?: { location_id?: string }) =>
-    api<Inventory[] | { data: Inventory[] }>(
-      "/api/reports/inventory-movement" + qs(params || {}),
-    ).then((r) =>
-      r.data ? { data: { inventory: listData(r.data) } } : { error: r.error },
-    ),
+  inventoryMovement: (params?: {
+    from: string;
+    to: string;
+    location_id?: string;
+    product_id?: string;
+  }) =>
+    api<{
+      from: string;
+      to: string;
+      summary: { in: number; out: number; net: number };
+      rows: InventoryMovementRow[];
+    }>(
+      "/api/reports/inventory-movement" +
+        qs({
+          from: params?.from,
+          to: params?.to,
+          branch_id: params?.location_id,
+          product_id: params?.product_id,
+        }),
+    ).then((r) => (r.data ? { data: r.data } : { error: r.error })),
   monthlyClose: (period: string) => {
     const [y, m] = period.split("-").map(Number);
     const body = {
@@ -1647,7 +1690,12 @@ export interface CashDrawerSession {
   opening_balance: string | number;
   closing_balance?: string | number | null;
   expected_balance?: string | number | null;
+  discrepancy?: string | number | null;
   status: string;
+  approval_required?: boolean;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  approval_notes?: string | null;
   CashMovements?: CashMovement[];
 }
 
@@ -1663,6 +1711,31 @@ export interface DebtLedgerEntry {
   type: string;
   amount: string | number;
   balance_after: string | number;
+  created_at?: string;
+}
+
+export interface DebtWriteOffRequest {
+  id: string;
+  debt_id: string;
+  amount: string | number;
+  reason?: string | null;
+  status: "pending" | "approved" | "rejected";
+  requested_by?: string | number;
+  approved_by?: string | number | null;
+  created_at?: string;
+}
+
+export interface InventoryMovementRow {
+  id: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  type: string;
+  quantity: number;
+  reason?: string | null;
+  reference_type?: string | null;
+  reference_id?: string | null;
   created_at?: string;
 }
 

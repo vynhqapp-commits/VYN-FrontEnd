@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { locationsApi, reportsApi, Inventory } from '@/lib/api';
+import { locationsApi, reportsApi, InventoryMovementRow } from '@/lib/api';
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState(() => {
@@ -27,7 +27,10 @@ export default function ReportsPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const [inventory, setInventory] = useState<Inventory[] | null>(null);
+  const [inventory, setInventory] = useState<InventoryMovementRow[] | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<{ in: number; out: number; net: number } | null>(null);
+  const [inventoryFrom, setInventoryFrom] = useState('');
+  const [inventoryTo, setInventoryTo] = useState('');
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
 
@@ -128,13 +131,20 @@ export default function ReportsPage() {
 
   const loadInventory = () => {
     ensureLocations();
+    if (!inventoryFrom || !inventoryTo) {
+      setInventoryError('Select from/to dates');
+      return;
+    }
     setInventoryLoading(true);
     setInventoryError(null);
-        reportsApi.inventoryMovement({ location_id: locationId || undefined })
+    reportsApi.inventoryMovement({ from: inventoryFrom, to: inventoryTo, location_id: locationId || undefined })
       .then((res) => {
         setInventoryLoading(false);
         if ('error' in res && res.error) setInventoryError(res.error);
-        else if (res.data) setInventory(res.data.inventory || []);
+        else if (res.data) {
+          setInventory(res.data.rows || []);
+          setInventorySummary(res.data.summary || null);
+        }
       });
   };
 
@@ -390,33 +400,70 @@ export default function ReportsPage() {
             {inventoryLoading ? 'Loading…' : 'Load'}
           </button>
         </div>
+        <div className="flex flex-col md:flex-row gap-2 text-sm">
+          <label className="flex-1">
+            <span className="block text-xs text-salon-stone mb-1">From</span>
+            <input
+              type="date"
+              value={inventoryFrom}
+              onChange={(e) => setInventoryFrom(e.target.value)}
+              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
+            />
+          </label>
+          <label className="flex-1">
+            <span className="block text-xs text-salon-stone mb-1">To</span>
+            <input
+              type="date"
+              value={inventoryTo}
+              onChange={(e) => setInventoryTo(e.target.value)}
+              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
+            />
+          </label>
+        </div>
+        {inventorySummary && (
+          <div className="grid gap-2 sm:grid-cols-3 text-xs">
+            <div className="rounded-lg border border-salon-sand/40 px-3 py-2">In: <span className="font-medium">{inventorySummary.in}</span></div>
+            <div className="rounded-lg border border-salon-sand/40 px-3 py-2">Out: <span className="font-medium">{inventorySummary.out}</span></div>
+            <div className="rounded-lg border border-salon-sand/40 px-3 py-2">Net: <span className="font-medium">{inventorySummary.net}</span></div>
+          </div>
+        )}
         {inventoryError && <p className="text-xs text-red-600">{inventoryError}</p>}
         <div className="overflow-x-auto max-h-72 border border-salon-sand/40 rounded-xl">
           <table className="min-w-full text-xs md:text-sm">
             <thead className="bg-salon-cream/70 text-salon-stone">
               <tr>
+                <th className="py-2 px-3 text-left font-medium">When</th>
                 <th className="py-2 px-3 text-left font-medium">Product</th>
                 <th className="py-2 px-3 text-left font-medium">Location</th>
+                <th className="py-2 px-3 text-left font-medium">Type</th>
                 <th className="py-2 px-3 text-right font-medium">Quantity</th>
+                <th className="py-2 px-3 text-left font-medium">Reason</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-salon-sand/40">
               {inventory?.map((row) => (
                 <tr key={row.id}>
+                  <td className="py-2 px-3 text-salon-stone">{row.created_at ? new Date(row.created_at).toLocaleString() : '—'}</td>
                   <td className="py-2 px-3 text-salon-espresso">
-                    {row.Product?.name || '—'}
+                    {row.product_name || '—'}
                   </td>
                   <td className="py-2 px-3 text-salon-stone">
-                    {row.Location?.name || '—'}
+                    {row.branch_name || '—'}
+                  </td>
+                  <td className="py-2 px-3 text-salon-stone">
+                    {row.type}
                   </td>
                   <td className="py-2 px-3 text-right text-salon-espresso">
-                    {Number(row.quantity).toFixed(0)}
+                    {Number(row.quantity ?? 0).toFixed(0)}
+                  </td>
+                  <td className="py-2 px-3 text-salon-stone">
+                    {row.reason || '—'}
                   </td>
                 </tr>
               ))}
               {!inventory?.length && !inventoryLoading && (
                 <tr>
-                  <td className="py-3 px-3 text-center text-salon-stone" colSpan={3}>
+                  <td className="py-3 px-3 text-center text-salon-stone" colSpan={6}>
                     Load inventory to see results.
                   </td>
                 </tr>

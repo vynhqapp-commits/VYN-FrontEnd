@@ -165,7 +165,7 @@ export default function PosPage() {
           product_id: prod.id,
           name: prod.name,
           quantity: 1,
-          unit_price: Number(prod.cost ?? 0),
+          unit_price: Number(prod.price ?? 0),
         },
       ]);
     }

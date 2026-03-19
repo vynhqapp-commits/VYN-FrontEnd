@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cashDrawerApi, locationsApi, CashDrawerSession, CashMovement, Location } from '@/lib/api';
 
-type StatusFilter = 'all' | 'open' | 'closed' | 'reconciled';
+type StatusFilter = 'all' | 'open' | 'closed' | 'pending_approval' | 'reconciled';
 
 export default function CashDrawerPage() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -21,6 +21,7 @@ export default function CashDrawerPage() {
   const [expectedBalance, setExpectedBalance] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [approvalNotes, setApprovalNotes] = useState<string>('');
 
   useEffect(() => {
     locationsApi.list().then((res) => {
@@ -117,11 +118,12 @@ export default function CashDrawerPage() {
   const handleReconcile = async (sessionId: string) => {
     setActionLoading(true);
     setActionMessage(null);
-    const { error: err } = await cashDrawerApi.reconcile(sessionId);
+    const { error: err } = await cashDrawerApi.approve(sessionId, approvalNotes || undefined);
     setActionLoading(false);
     if (err) setActionMessage(err);
     else {
       setActionMessage('Session reconciled.');
+      setApprovalNotes('');
       cashDrawerApi
         .list(locationId, status === 'all' ? undefined : status)
         .then(({ data }) => data && setSessions(data.sessions || []));
@@ -179,6 +181,7 @@ export default function CashDrawerPage() {
           >
             <option value="open">Open only</option>
             <option value="closed">Closed</option>
+            <option value="pending_approval">Pending approval</option>
             <option value="reconciled">Reconciled</option>
             <option value="all">All</option>
           </select>
@@ -318,6 +321,13 @@ export default function CashDrawerPage() {
           </button>
 
           <div className="border-t border-salon-sand/30 pt-3 space-y-2">
+            <input
+              type="text"
+              value={approvalNotes}
+              onChange={(e) => setApprovalNotes(e.target.value)}
+              placeholder="Approval notes (optional)"
+              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
+            />
             <p className="text-xs font-medium text-salon-stone">Recently closed sessions</p>
             <div className="space-y-2 max-h-40 overflow-y-auto text-xs">
               {sessions
@@ -337,7 +347,7 @@ export default function CashDrawerPage() {
                         {s.closed_at && `· Closed ${new Date(s.closed_at).toLocaleTimeString()}`}
                       </p>
                     </div>
-                    {s.status === 'closed' && (
+                    {(s.status === 'closed' || s.status === 'pending_approval') && (
                       <button
                         type="button"
                         onClick={() => handleReconcile(s.id)}
@@ -368,6 +378,7 @@ export default function CashDrawerPage() {
                   <th className="py-2 text-right font-medium">Opening</th>
                   <th className="py-2 text-right font-medium">Closing</th>
                   <th className="py-2 text-right font-medium">Expected</th>
+                  <th className="py-2 text-right font-medium">Discrepancy</th>
                   <th className="py-2 text-left font-medium">Status</th>
                 </tr>
               </thead>
@@ -389,12 +400,15 @@ export default function CashDrawerPage() {
                     <td className="py-2 text-right text-salon-stone">
                       {s.expected_balance != null ? Number(s.expected_balance).toFixed(2) : '-'}
                     </td>
+                    <td className="py-2 text-right text-salon-stone">
+                      {s.discrepancy != null ? Number(s.discrepancy).toFixed(2) : '-'}
+                    </td>
                     <td className="py-2 text-left">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ${
                           s.status === 'open'
                             ? 'bg-emerald-50 text-emerald-700'
-                            : s.status === 'closed'
+                            : s.status === 'closed' || s.status === 'pending_approval'
                             ? 'bg-amber-50 text-amber-700'
                             : 'bg-salon-cream text-salon-espresso'
                         }`}

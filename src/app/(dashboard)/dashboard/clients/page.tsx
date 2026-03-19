@@ -18,6 +18,7 @@ export default function ClientsPage() {
   const [debtEntries, setDebtEntries] = useState<Array<{ id: string; amount: string | number; balance_after?: string | number; created_at?: string }>>([]);
   const [debtBalance, setDebtBalance] = useState(0);
   const [debtPaymentAmount, setDebtPaymentAmount] = useState('');
+  const [writeOffReason, setWriteOffReason] = useState('');
 
   const loadClients = () => {
     setLoading(true);
@@ -95,12 +96,13 @@ export default function ClientsPage() {
     const amt = Number(debtPaymentAmount);
     if (!amt || amt <= 0) return;
     if (!debtEntries.length) return;
-    const targetDebt = (debtEntries as any)[0];
-    if (!targetDebt?.id) return;
+    const targetDebt = (debtEntries as any[]).find((e) => e?.debt_id || e?.debtId) ?? (debtEntries as any)[0];
+    const targetDebtId = String(targetDebt?.debt_id ?? targetDebt?.debtId ?? targetDebt?.id ?? '');
+    if (!targetDebtId) return;
     const res = await debtApi.addPayment({
       client_id: openClient.id,
       amount: amt,
-      debt_id: targetDebt.id,
+      debt_id: targetDebtId,
     });
     if ('error' in res && res.error) {
       setError(res.error);
@@ -108,6 +110,26 @@ export default function ClientsPage() {
     }
     setDebtPaymentAmount('');
     // Refresh debt list
+    const debtRes = await debtApi.list(openClient.id);
+    if (!('error' in debtRes) && debtRes.data) {
+      const entries = debtRes.data.entries ?? [];
+      setDebtEntries(entries as any);
+      const bal = (debtRes.data as any).balance ?? entries.reduce((acc: number, e: any) => acc + Number(e.amount ?? 0), 0);
+      setDebtBalance(Number(bal));
+    }
+  };
+
+  const handleRequestWriteOff = async () => {
+    if (!openClient || debtBalance <= 0) return;
+    const targetDebt = (debtEntries as any[]).find((e) => e?.debt_id || e?.debtId) ?? (debtEntries as any)[0];
+    const targetDebtId = String(targetDebt?.debt_id ?? targetDebt?.debtId ?? targetDebt?.id ?? '');
+    if (!targetDebtId) return;
+    const res = await debtApi.requestWriteOff(targetDebtId, writeOffReason || undefined);
+    if ('error' in res && res.error) {
+      setError(res.error);
+      return;
+    }
+    setWriteOffReason('');
     const debtRes = await debtApi.list(openClient.id);
     if (!('error' in debtRes) && debtRes.data) {
       const entries = debtRes.data.entries ?? [];
@@ -282,6 +304,22 @@ export default function ClientsPage() {
                           <p className="text-[11px] text-salon-stone mt-1">
                             Applies to the oldest open debt entry.
                           </p>
+                          <div className="flex gap-2 mt-2">
+                            <input
+                              type="text"
+                              value={writeOffReason}
+                              onChange={(e) => setWriteOffReason(e.target.value)}
+                              className="flex-1 border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm"
+                              placeholder="Write-off reason (optional)"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleRequestWriteOff}
+                              className="px-4 py-2 rounded-xl border border-amber-300 text-amber-700 text-sm font-semibold hover:bg-amber-50"
+                            >
+                              Request write-off
+                            </button>
+                          </div>
                         </>
                       )}
                     </>
