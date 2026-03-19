@@ -1,0 +1,1564 @@
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("salon_token");
+}
+
+function getTenantId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("salon_tenant_id");
+}
+
+export function setTenantId(tenantId: string | null) {
+  if (typeof window === "undefined") return;
+  if (tenantId) localStorage.setItem("salon_tenant_id", tenantId);
+  else localStorage.removeItem("salon_tenant_id");
+}
+
+export async function api<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ data?: T; meta?: PaginationMeta; error?: string }> {
+  const token = getToken();
+  const tenantId = getTenantId();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token)
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  if (tenantId) (headers as Record<string, string>)["X-Tenant"] = tenantId;
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Network error";
+    if (
+      msg === "Failed to fetch" ||
+      msg.includes("NetworkError") ||
+      msg.includes("REFUSED")
+    ) {
+      return {
+        error:
+          "Cannot reach the server. Make sure the backend is running (e.g. php artisan serve in the backend folder).",
+      };
+    }
+    return { error: msg };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    return {
+      error: (json as { message?: string }).message || "Request failed",
+    };
+  }
+  const payload =
+    (json as { data?: T }).data !== undefined
+      ? (json as { data: T }).data
+      : (json as T);
+  const meta = (json as { meta?: PaginationMeta }).meta;
+  return { data: payload, meta };
+}
+
+/** Public API helper: never sends Authorization or X-Tenant headers */
+export async function publicRequest<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ data?: T; meta?: PaginationMeta; error?: string }> {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Network error";
+    if (
+      msg === "Failed to fetch" ||
+      msg.includes("NetworkError") ||
+      msg.includes("REFUSED")
+    ) {
+      return {
+        error:
+          "Cannot reach the server. Make sure the backend is running (e.g. php artisan serve in the backend folder).",
+      };
+    }
+    return { error: msg };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    return {
+      error: (json as { message?: string }).message || "Request failed",
+    };
+  }
+
+  const payload =
+    (json as { data?: T }).data !== undefined
+      ? (json as { data: T }).data
+      : (json as T);
+  const meta = (json as { meta?: PaginationMeta }).meta;
+  return { data: payload, meta };
+}
+
+export interface PaginationMeta {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+  from: number | null;
+  to: number | null;
+}
+
+/** Extract list from Laravel response (array or paginated { data: [] }) */
+function listData<T>(raw: T | T[] | { data: T[] } | undefined): T[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  const pag = raw as { data?: T[] };
+  return Array.isArray(pag?.data) ? pag.data : [];
+}
+
+function qs(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
+  const entries = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== "")
+    .map(([k, v]) => [k, String(v)] as [string, string]);
+  return entries.length ? "?" + new URLSearchParams(entries).toString() : "";
+}
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api<{ user: AuthUser; token: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  otpSend: (email: string, purpose?: string) =>
+    api<{ message?: string }>("/api/auth/request-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, ...(purpose ? { purpose } : {}) }),
+    }),
+  otpVerify: (email: string, code: string, purpose?: string) =>
+    api<{ user: AuthUser; token: string } | { verified: boolean }>("/api/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code, ...(purpose ? { purpose } : {}) }),
+    }),
+  me: async () => {
+    const res = await api<AuthUser>("/api/me");
+    return res.data != null
+      ? { data: { user: res.data } }
+      : { error: res.error };
+  },
+  registerCustomer: (body: {
+    email: string;
+    password: string;
+    full_name?: string;
+    phone?: string;
+  }) =>
+    api<{ user: AuthUser; token: string }>("/api/auth/register/customer", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  registerSalonOwner: (body: {
+    salon_name: string;
+    salon_address?: string;
+    email: string;
+    password: string;
+    full_name?: string;
+    phone?: string;
+  }) =>
+    api<{ user: AuthUser; token: string }>("/api/auth/register/salon-owner", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const tenantsApi = {
+  list: async (params?: { page?: number; per_page?: number }) => {
+    const qsPart = params?.page || params?.per_page ? qs(params) : "";
+    const res = await api<Tenant[] | { data: Tenant[] }>(
+      "/api/admin/tenants" + qsPart,
+    );
+    const list = listData(res.data).map(normalizeTenant);
+    return res.error
+      ? { error: res.error }
+      : { data: { tenants: list }, meta: res.meta };
+  },
+  get: (id: string) => api<Tenant>(`/api/admin/tenants/${id}`).then((r) =>
+    r.data ? { data: { tenant: normalizeTenant(r.data) } } : { error: r.error },
+  ),
+  create: (body: { name: string; slug?: string; status?: string }) =>
+    api<Tenant>("/api/admin/tenants", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: normalizeTenant(r.data) } : r)),
+  update: (
+    id: string,
+    body: { name?: string; slug?: string; status?: string },
+  ) =>
+    api<Tenant>(`/api/admin/tenants/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: normalizeTenant(r.data) } : r)),
+  suspend: (id: string) =>
+    api<Tenant>(`/api/admin/tenants/${id}/suspend`, { method: "PATCH" }).then(
+      (r) => (r.data ? { data: { tenant: normalizeTenant(r.data) } } : { error: r.error }),
+    ),
+  activate: (id: string) =>
+    api<Tenant>(`/api/admin/tenants/${id}/activate`, { method: "PATCH" }).then(
+      (r) => (r.data ? { data: { tenant: normalizeTenant(r.data) } } : { error: r.error }),
+    ),
+  delete: (id: string) =>
+    api<unknown>(`/api/admin/tenants/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
+};
+
+export const adminReportsApi = {
+  kpis: () => api<unknown>("/api/admin/reports"),
+  financial: (from: string, to: string) =>
+    api<{ from: string; to: string; rows: { type: string; category: string; total: number }[] }>(
+      `/api/admin/reports/financial?from=${from}&to=${to}`,
+    ),
+  franchiseKpis: (from: string, to: string) =>
+    api<{ from: string; to: string; rows: { tenant_id: string; tenant_name: string; plan: string; status: string; revenue: number }[] }>(
+      `/api/admin/franchise/kpis?from=${from}&to=${to}`,
+    ),
+};
+
+export type AdminUserRow = {
+  id: string;
+  email: string;
+  name?: string | null;
+  tenant_id?: string | null;
+  role?: string | null;
+  created_at?: string;
+};
+
+export const adminUsersApi = {
+  list: async (
+    params?: { tenant_id?: string; role?: string; q?: string; page?: number; per_page?: number },
+  ) => {
+    const res = await api<AdminUserRow[] | { data: AdminUserRow[] }>(
+      "/api/admin/users" + qs(params || {}),
+    );
+    const list = listData(res.data);
+    return res.error
+      ? { error: res.error }
+      : { data: { users: list }, meta: res.meta };
+  },
+  invite: (body: {
+    email: string;
+    name?: string;
+    tenant_id?: string;
+    role: string;
+    password?: string;
+  }) =>
+    api<AdminUserRow>("/api/admin/users", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: { user: r.data } } : { error: r.error })),
+  update: (id: string, body: Partial<AdminUserRow> & { role?: string }) =>
+    api<AdminUserRow>(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: { user: r.data } } : { error: r.error })),
+  delete: (id: string) =>
+    api<unknown>(`/api/admin/users/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
+};
+
+export type AdminRoleRow = {
+  name: string;
+  description: string;
+  scopes: string[];
+};
+
+export const adminRolesApi = {
+  roles: async () => {
+    const res = await api<AdminRoleRow[] | { data: AdminRoleRow[] }>(
+      "/api/admin/roles",
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { roles: list } };
+  },
+  permissions: async () => {
+    const res = await api<string[] | { data: string[] }>("/api/admin/permissions");
+    const list = listData(res.data);
+    // permissions is a plain list; listData will return [] unless wrapped.
+    const perms = Array.isArray(res.data) ? (res.data as string[]) : list;
+    return res.error ? { error: res.error } : { data: { permissions: perms } };
+  },
+};
+
+export type AdminSubscriptionRow = {
+  id: string;
+  tenant_id: string;
+  tenant_name?: string | null;
+  plan: string;
+  status: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  notes?: string | null;
+};
+
+export const adminSubscriptionsApi = {
+  list: async () => {
+    const res = await api<AdminSubscriptionRow[] | { data: AdminSubscriptionRow[] }>(
+      "/api/admin/subscriptions",
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { subscriptions: list } };
+  },
+  upsertForTenant: (
+    tenantId: string,
+    body: {
+      plan: "basic" | "pro" | "enterprise";
+      status: "active" | "suspended" | "trial" | "cancelled";
+      starts_at?: string;
+      ends_at?: string;
+      notes?: string;
+    },
+  ) =>
+    api<AdminSubscriptionRow>(`/api/admin/tenants/${tenantId}/subscription`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: { subscription: r.data } } : { error: r.error })),
+};
+
+export type AdminAuditLogRow = {
+  id: string;
+  action: string;
+  actor?: { id: string; email: string; name?: string | null } | null;
+  tenant?: { id: string; name: string } | null;
+  meta?: any;
+  created_at?: string;
+};
+
+export const adminAuditApi = {
+  list: async (params?: {
+    from?: string;
+    to?: string;
+    actor_id?: string;
+    tenant_id?: string;
+    action?: string;
+  }) => {
+    const res = await api<AdminAuditLogRow[] | { data: AdminAuditLogRow[] }>(
+      "/api/admin/audit" + qs(params || {}),
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { logs: list } };
+  },
+};
+
+export const locationsApi = {
+  list: async () => {
+    const res = await api<Location[] | { data: Location[] }>("/api/branches");
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { locations: list } };
+  },
+  get: (id: string) =>
+    api<Location>(`/api/branches/${id}`).then((r) =>
+      r.data ? { data: { location: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    name: string;
+    address?: string;
+    timezone?: string;
+    status?: string;
+  }) => {
+    const code =
+      (body.name?.replace(/\s+/g, "").slice(0, 4) || "LOC").toUpperCase() +
+      "-" +
+      Date.now();
+    return api<Location>("/api/branches", {
+      method: "POST",
+      body: JSON.stringify({
+        name: body.name,
+        code,
+        address: body.address,
+        timezone: body.timezone,
+      }),
+    }).then((r) =>
+      r.data ? { data: { location: r.data } } : { error: r.error },
+    );
+  },
+  update: (
+    id: string,
+    body: {
+      name?: string;
+      address?: string;
+      timezone?: string;
+      status?: string;
+    },
+  ) =>
+    api<Location>(`/api/branches/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data ? { data: { location: r.data } } : { error: r.error },
+    ),
+  delete: () => ({ error: "Backend does not support branch delete" }),
+};
+
+export const clientsApi = {
+  list: async () => {
+    const res = await api<unknown>("/api/customers");
+    const list = listData(res.data as unknown as Array<Record<string, unknown>> | { data: Array<Record<string, unknown>> });
+    const clients = list.map(normalizeClient);
+    return res.error ? { error: res.error } : { data: { clients } };
+  },
+  get: (id: string) =>
+    api<Record<string, unknown>>(`/api/customers/${id}`).then((r) =>
+      r.data ? { data: { client: normalizeClient(r.data) } } : { error: r.error },
+    ),
+  create: (body: {
+    full_name: string;
+    phone?: string;
+    email?: string;
+    notes?: string;
+    tags?: string;
+    user_id?: string;
+  }) =>
+    api<Record<string, unknown>>("/api/customers", {
+      method: "POST",
+      body: JSON.stringify({
+        name: body.full_name,
+        phone: body.phone ?? "",
+        email: body.email,
+        notes: body.notes,
+        tags: body.tags,
+      }),
+    }).then((r) =>
+      r.data ? { data: { client: normalizeClient(r.data) } } : { error: r.error },
+    ),
+  update: (
+    id: string,
+    body: {
+      full_name?: string;
+      phone?: string;
+      email?: string;
+      notes?: string;
+      tags?: string;
+      user_id?: string;
+    },
+  ) =>
+    api<Record<string, unknown>>(`/api/customers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: body.full_name,
+        phone: body.phone,
+        email: body.email,
+        notes: body.notes,
+        tags: body.tags,
+      }),
+    }).then((r) =>
+      r.data ? { data: { client: normalizeClient(r.data) } } : { error: r.error },
+    ),
+  delete: (id: string) =>
+    api<unknown>(`/api/customers/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
+
+  notes: (id: string) =>
+    api<{ data?: Array<{ id: string; note: string; created_at?: string; user?: { id: string; email?: string; name?: string } }> }>(
+      `/api/customers/${id}/notes`,
+    ).then((r) => (r.error ? { error: r.error } : { data: { notes: listData(r.data as unknown as any) } })),
+
+  addNote: (id: string, note: string) =>
+    api<Record<string, unknown>>(`/api/customers/${id}/notes`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    }).then((r) => (r.error ? { error: r.error } : { data: { created: true } })),
+};
+
+function normalizeClient(raw: Record<string, unknown>): Client {
+  const id = String(raw.id ?? "");
+  const full_name = String((raw.full_name ?? raw.name ?? "") as string);
+  return {
+    id,
+    tenant_id: String(raw.tenant_id ?? ""),
+    full_name,
+    phone: (raw.phone as string | null | undefined) ?? null,
+    email: (raw.email as string | null | undefined) ?? null,
+    notes: (raw.notes as string | null | undefined) ?? null,
+    tags: (raw.tags as string | null | undefined) ?? null,
+    created_at: (raw.created_at as string | undefined) ?? undefined,
+    updated_at: (raw.updated_at as string | undefined) ?? undefined,
+  };
+}
+
+export const servicesApi = {
+  list: async () => {
+    const res = await api<Service[] | { data: Service[] }>("/api/services");
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { services: list } };
+  },
+  get: (id: string) =>
+    api<Service>(`/api/services/${id}`).then((r) =>
+      r.data ? { data: { service: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    name: string;
+    duration_minutes?: number;
+    price?: number;
+    cost?: number;
+    category?: string;
+    is_active?: boolean;
+  }) =>
+    api<Service>("/api/services", {
+      method: "POST",
+      body: JSON.stringify({
+        name: body.name,
+        duration_minutes: body.duration_minutes ?? 30,
+        price: body.price ?? 0,
+        category: body.category,
+        is_active: body.is_active ?? true,
+      }),
+    }).then((r) =>
+      r.data ? { data: { service: r.data } } : { error: r.error },
+    ),
+  update: (id: string, body: Partial<Service>) =>
+    api<Service>(`/api/services/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data ? { data: { service: r.data } } : { error: r.error },
+    ),
+  delete: (id: string) =>
+    api<unknown>(`/api/services/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
+};
+
+export const productsApi = {
+  list: async () => {
+    const res = await api<Product[] | { data: Product[] }>("/api/products");
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { products: list } };
+  },
+  get: (id: string) =>
+    api<Product>(`/api/products/${id}`).then((r) =>
+      r.data ? { data: { product: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    name: string;
+    sku?: string;
+    unit?: string;
+    cost?: number;
+  }) => {
+    const sku = body.sku ?? "SKU-" + Date.now();
+    return api<Product>("/api/products", {
+      method: "POST",
+      body: JSON.stringify({
+        name: body.name,
+        sku,
+        cost_price: body.cost ?? 0,
+        selling_price: body.cost ?? 0,
+      }),
+    }).then((r) =>
+      r.data ? { data: { product: r.data } } : { error: r.error },
+    );
+  },
+  update: (id: string, body: Partial<Product>) =>
+    api<Product>(`/api/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data ? { data: { product: r.data } } : { error: r.error },
+    ),
+  delete: (id: string) =>
+    api<unknown>(`/api/products/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
+};
+
+export const inventoryApi = {
+  list: async (params?: { location_id?: string }) => {
+    if (!params?.location_id) return { data: { inventory: [] } };
+    const res = await api<Inventory[] | { data: Inventory[] }>(
+      `/api/inventory/${params.location_id}`,
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { inventory: list } };
+  },
+  lowStock: () =>
+    api<{ items: Inventory[] }>("/api/reports/low-stock").then((r) =>
+      r.data
+        ? {
+            data: {
+              items: listData(
+                r.data as unknown as Inventory[] | { data: Inventory[] },
+              ),
+            },
+          }
+        : { error: r.error },
+    ),
+  update: (
+    id: string,
+    body: {
+      quantity?: number;
+      low_stock_threshold?: number;
+      branch_id?: string;
+    },
+  ) =>
+    api<Inventory>("/api/inventory/stock", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: id,
+        branch_id: body.branch_id,
+        quantity: body.quantity ?? 0,
+      }),
+    }).then((r) =>
+      r.data ? { data: { inventory: r.data } } : { error: r.error },
+    ),
+};
+
+export const appointmentsApi = {
+  list: async (params?: {
+    location_id?: string;
+    staff_id?: string;
+    from?: string;
+    to?: string;
+    status?: string;
+  }) => {
+    const q = {
+      branch_id: params?.location_id,
+      staff_id: params?.staff_id,
+      from: params?.from,
+      to: params?.to,
+      status: params?.status,
+    };
+    const res = await api<unknown>(
+      "/api/appointments" + qs(q as Record<string, string>),
+    );
+    const list = listData(res.data as unknown as Array<Record<string, unknown>> | { data: Array<Record<string, unknown>> });
+    const appointments = list.map(normalizeAppointment);
+    return res.error ? { error: res.error } : { data: { appointments } };
+  },
+  getAvailability: (locationId: string, serviceId: string, date: string) =>
+    api<{ slots: { start: string; end: string }[] }>(
+      `/api/public/availability?location_id=${locationId}&service_id=${serviceId}&date=${date}`,
+    ),
+  get: (id: string) =>
+    api<Record<string, unknown>>(`/api/appointments/${id}`).then((r) =>
+      r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error },
+    ),
+  create: (body: {
+    location_id: string;
+    client_id: string;
+    staff_id: string;
+    service_id: string;
+    start_at: string;
+    source?: string;
+    notes?: string;
+  }) => {
+    const start = new Date(body.start_at);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    return api<Record<string, unknown>>("/api/appointments", {
+      method: "POST",
+      body: JSON.stringify({
+        branch_id: body.location_id,
+        customer_id: body.client_id,
+        staff_id: body.staff_id,
+        service_id: body.service_id,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        notes: body.notes,
+      }),
+    }).then((r) =>
+      r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error },
+    );
+  },
+  updateStatus: (id: string, status: string) =>
+    api<Record<string, unknown>>(`/api/appointments/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }).then((r) =>
+      r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error },
+    ),
+  cancel: (id: string) =>
+    api<Record<string, unknown>>(`/api/appointments/${id}`, { method: "DELETE" }).then(
+      (r) => (r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error }),
+    ),
+};
+
+function normalizeAppointment(raw: Record<string, unknown>): Appointment {
+  const start =
+    (raw.start_at as string | undefined) ??
+    (raw.starts_at as string | undefined) ??
+    (raw.startsAt as string | undefined) ??
+    '';
+  const end =
+    (raw.end_at as string | undefined) ??
+    (raw.ends_at as string | undefined) ??
+    (raw.endsAt as string | undefined) ??
+    '';
+
+  // Backend returns branch_id/customer_id/staff_id and may include relations.
+  const clientRaw = (raw.customer as Record<string, unknown> | undefined) ?? (raw.Client as Record<string, unknown> | undefined);
+  const serviceRaw =
+    (raw.service as Record<string, unknown> | undefined) ??
+    (raw.Service as Record<string, unknown> | undefined) ??
+    // If loaded through services.service, use the first line item
+    (((raw.services as Array<Record<string, unknown>> | undefined) ?? [])
+      .map((s) => (s.service as Record<string, unknown> | undefined) ?? undefined)
+      .filter(Boolean)[0] as Record<string, unknown> | undefined) ??
+    undefined;
+  const staffRaw = (raw.staff as Record<string, unknown> | undefined) ?? (raw.Staff as Record<string, unknown> | undefined);
+
+  return {
+    id: String(raw.id ?? ''),
+    tenant_id: String(raw.tenant_id ?? ''),
+    location_id: String(raw.branch_id ?? raw.location_id ?? ''),
+    client_id: String(raw.customer_id ?? raw.client_id ?? ''),
+    staff_id: String(raw.staff_id ?? ''),
+    service_id: String(raw.service_id ?? ''),
+    start_at: start,
+    end_at: end,
+    status: String(raw.status ?? ''),
+    source: String(raw.source ?? ''),
+    notes: (raw.notes as string | null | undefined) ?? null,
+    Client: clientRaw
+      ? {
+          id: String(clientRaw.id ?? ''),
+          tenant_id: String(clientRaw.tenant_id ?? ''),
+          full_name: String((clientRaw.full_name ?? clientRaw.name ?? '') as string),
+          phone: (clientRaw.phone as string | null | undefined) ?? null,
+          email: (clientRaw.email as string | null | undefined) ?? null,
+          notes: (clientRaw.notes as string | null | undefined) ?? null,
+          tags: (clientRaw.tags as string | null | undefined) ?? null,
+          created_at: (clientRaw.created_at as string | undefined) ?? undefined,
+          updated_at: (clientRaw.updated_at as string | undefined) ?? undefined,
+        }
+      : undefined,
+    Service: serviceRaw
+      ? ({
+          id: String(serviceRaw.id ?? ''),
+          tenant_id: String(serviceRaw.tenant_id ?? ''),
+          name: String(serviceRaw.name ?? ''),
+          description: (serviceRaw.description as string | null | undefined) ?? null,
+          duration_minutes: Number(serviceRaw.duration_minutes ?? 0),
+          price: (serviceRaw.price as string | number | undefined) ?? 0,
+          cost: (serviceRaw.cost as string | number | null | undefined) ?? null,
+          category: (serviceRaw.category as string | null | undefined) ?? null,
+          is_active: Boolean(serviceRaw.is_active ?? true),
+          created_at: (serviceRaw.created_at as string | undefined) ?? undefined,
+          updated_at: (serviceRaw.updated_at as string | undefined) ?? undefined,
+        } as Service)
+      : undefined,
+    Staff: staffRaw
+      ? ({
+          id: String(staffRaw.id ?? ''),
+          email: String(staffRaw.email ?? ''),
+          name: (staffRaw.name as string | null | undefined) ?? null,
+          role: String(staffRaw.role ?? ''),
+          tenantId: (staffRaw.tenantId as string | null | undefined) ?? null,
+          fullName: (staffRaw.fullName as string | null | undefined) ?? null,
+        } as AuthUser)
+      : undefined,
+  };
+}
+
+export const transactionsApi = {
+  list: async (params?: {
+    location_id?: string;
+    from?: string;
+    to?: string;
+  }) => {
+    const q = {
+      branch_id: params?.location_id,
+      from: params?.from,
+      to: params?.to,
+    };
+    const res = await api<Transaction[] | { data: Transaction[] }>(
+      "/api/sales" + qs(q as Record<string, string>),
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { transactions: list } };
+  },
+  get: (id: string) =>
+    api<Transaction>(`/api/sales/${id}`).then((r) =>
+      r.data ? { data: { transaction: r.data } } : { error: r.error },
+    ),
+  getReceipt: (id: string) =>
+    api<unknown>(`/api/sales/${id}`).then((r) =>
+      r.data ? { data: { receipt: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    client_id?: string;
+    location_id: string;
+    appointment_id?: string;
+    items: {
+      type: "service" | "product";
+      service_id?: string;
+      product_id?: string;
+      quantity: number;
+      unit_price: number;
+      staff_id?: string;
+    }[];
+    payments: { method: string; amount: number; reference?: string }[];
+  }) => {
+    const total = body.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const paymentMethod = (body.payments?.[0]?.method ?? "cash")
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+    const items = body.items.map((i) => ({
+      item_name: i.type === "service" ? "Service" : "Product",
+      service_id: i.service_id ?? null,
+      product_id: i.product_id ?? null,
+      quantity: i.quantity,
+      unit_price: i.unit_price,
+    }));
+    return api<Transaction>("/api/sales", {
+      method: "POST",
+      body: JSON.stringify({
+        branch_id: body.location_id,
+        customer_id: body.client_id ?? null,
+        staff_id: body.items[0]?.staff_id ?? null,
+        items,
+        payments: (body.payments ?? []).map((p) => ({
+          method: p.method,
+          amount: p.amount,
+          reference: p.reference,
+        })),
+        appointment_id: body.appointment_id ?? null,
+        payment_method:
+          paymentMethod === "card"
+            ? "card"
+            : paymentMethod === "transfer"
+              ? "bank_transfer"
+              : paymentMethod === "mobile"
+                ? "mobile"
+                : "cash",
+      }),
+    }).then((r) =>
+      r.data ? { data: { transaction: r.data } } : { error: r.error },
+    );
+  },
+};
+
+export const paymentsApi = {
+  listByTransaction: (transactionId: string) =>
+    api<Transaction>(`/api/sales/${transactionId}`).then((r) =>
+      r.data
+        ? { data: { payments: (r.data as Transaction).Payments ?? [] } }
+        : { error: r.error },
+    ),
+  refund: (body: { transaction_id: string; amount: number; reason?: string }) =>
+    api<Transaction>(`/api/sales/${body.transaction_id}/refund`, {
+      method: "POST",
+      body: JSON.stringify({
+        refund_reason: body.reason ?? "Refund requested",
+      }),
+    }).then((r) =>
+      r.data
+        ? {
+            data: {
+              refund: {
+                id: "",
+                transaction_id: body.transaction_id,
+                amount: body.amount,
+                reason: body.reason,
+              },
+            },
+          }
+        : { error: r.error },
+    ),
+};
+
+export const cashDrawerApi = {
+  list: (locationId: string, status?: string) =>
+    api<CashDrawerSession[] | { data: CashDrawerSession[] }>(
+      `/api/cash-drawers?branch_id=${locationId}` +
+        (status ? `&status=${status}` : ""),
+    ).then((r) =>
+      r.data ? { data: { sessions: listData(r.data) } } : { error: r.error },
+    ),
+  open: (body: { location_id: string; opening_balance?: number }) =>
+    api<CashDrawerSession>("/api/cash-drawers/open", {
+      method: "POST",
+      body: JSON.stringify({
+        branch_id: body.location_id,
+        opening_balance: body.opening_balance ?? 0,
+      }),
+    }).then((r) =>
+      r.data ? { data: { session: r.data } } : { error: r.error },
+    ),
+  movement: (
+    sessionId: string,
+    body: { type: "in" | "out"; amount: number; reason?: string },
+  ) =>
+    api<CashMovement>(`/api/cash-drawers/${sessionId}/transaction`, {
+      method: "POST",
+      body: JSON.stringify({
+        type: body.type === "in" ? "cash_in" : "cash_out",
+        amount: body.amount,
+        reason: body.reason ?? "Adjustment",
+      }),
+    }).then((r) =>
+      r.data ? { data: { movement: r.data } } : { error: r.error },
+    ),
+  close: (
+    sessionId: string,
+    body: { closing_balance: number; expected_balance?: number },
+  ) =>
+    api<CashDrawerSession>(`/api/cash-drawers/${sessionId}/close`, {
+      method: "POST",
+      body: JSON.stringify({ actual_cash: body.closing_balance, notes: "" }),
+    }).then((r) =>
+      r.data ? { data: { session: r.data } } : { error: r.error },
+    ),
+  reconcile: (sessionId: string) =>
+    api<CashDrawerSession>(`/api/cash-drawers/${sessionId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }).then((r) =>
+      r.data ? { data: { session: r.data } } : { error: r.error },
+    ),
+};
+
+export const debtApi = {
+  list: (clientId: string) =>
+    api<unknown>(`/api/debts?customer_id=${clientId}`).then((r) =>
+      r.data
+        ? {
+            data: {
+              entries: listData(
+                (r.data as any)?.entries ??
+                  (r.data as DebtLedgerEntry[] | { data: DebtLedgerEntry[] }),
+              ),
+              balance: typeof r.data === "object" && r.data && "balance" in (r.data as any) ? Number((r.data as any).balance) : 0,
+            },
+          }
+        : { error: r.error },
+    ),
+  aging: () =>
+    api<{ aging: DebtAgingRow[]; summary: Record<string, number> }>(
+      "/api/debts/aging-report",
+    ).then((r) =>
+      r.data
+        ? {
+            data:
+              typeof r.data === "object" && "aging" in r.data
+                ? r.data
+                : {
+                    aging: listData(r.data as unknown as DebtAgingRow[]),
+                    summary: {},
+                  },
+          }
+        : { error: r.error },
+    ),
+  addPayment: (body: {
+    client_id: string;
+    amount: number;
+    transaction_id?: string;
+    debt_id?: string;
+  }) => {
+    if (!body.debt_id) return Promise.resolve({ error: "debt_id required" });
+    return api<unknown>(`/api/debts/${body.debt_id}/payment`, {
+      method: "POST",
+      body: JSON.stringify({ amount: body.amount }),
+    }).then((r) =>
+      r.data
+        ? { data: { entry: r.data, balance_after: (r.data as any)?.balance_after ?? 0 } }
+        : { error: r.error },
+    );
+  },
+  writeOff: (body: { client_id: string; amount: number; debt_id?: string }) => {
+    if (!body.debt_id) return Promise.resolve({ error: "debt_id required" });
+    return api<unknown>(`/api/debts/${body.debt_id}/write-off`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }).then((r) =>
+      r.data
+        ? { data: { entry: r.data, balance_after: (r.data as any)?.balance_after ?? 0 } }
+        : { error: r.error },
+    );
+  },
+};
+
+export interface DebtAgingRow {
+  client_id: string;
+  client: Client;
+  balance: number;
+  oldest_debt_days: number;
+  bucket: string;
+}
+
+export const expensesApi = {
+  list: async (params?: {
+    location_id?: string;
+    from?: string;
+    to?: string;
+  }) => {
+    const q = {
+      branch_id: params?.location_id,
+      from: params?.from,
+      to: params?.to,
+    };
+    const res = await api<Expense[] | { data: Expense[] }>(
+      "/api/expenses" + qs(q as Record<string, string>),
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { expenses: list } };
+  },
+  get: (id: string) =>
+    api<Expense>(`/api/expenses/${id}`).then((r) =>
+      r.data ? { data: { expense: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    category: string;
+    amount: number;
+    expense_date: string;
+    description?: string;
+    location_id?: string;
+  }) =>
+    api<Expense>("/api/expenses", {
+      method: "POST",
+      body: JSON.stringify({
+        category: body.category,
+        amount: body.amount,
+        expense_date: body.expense_date,
+        description: body.description ?? body.category,
+        branch_id: body.location_id,
+      }),
+    }).then((r) =>
+      r.data ? { data: { expense: r.data } } : { error: r.error },
+    ),
+  update: (id: string, body: Partial<Expense>) =>
+    api<Expense>(`/api/expenses/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data ? { data: { expense: r.data } } : { error: r.error },
+    ),
+  delete: (id: string) =>
+    api<unknown>(`/api/expenses/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
+};
+
+export const commissionApi = {
+  listRules: async () => {
+    const res = await api<CommissionRule[] | { data: CommissionRule[] }>(
+      "/api/commissions",
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { rules: list } };
+  },
+  createRule: () =>
+    Promise.resolve({ error: "Not implemented in UI yet" }),
+  getRule: (id: string) =>
+    api<CommissionRule>(`/api/commissions/${id}`).then((r) =>
+      r.data ? { data: { rule: r.data } } : { error: r.error },
+    ),
+  updateRule: () => Promise.resolve({ error: "Not implemented" }),
+  deleteRule: () => Promise.resolve({ error: "Not implemented" }),
+  earnings: (params?: { staff_id?: string; from?: string; to?: string }) =>
+    api<unknown>(
+      `/api/commissions/staff/${params?.staff_id ?? 0}/earnings` +
+        qs(params || {}),
+    ).then((r) =>
+      r.data
+        ? {
+            data: {
+              records: listData(
+                r.data as CommissionRecord[] | { data: CommissionRecord[] },
+              ),
+              total: listData(
+                r.data as CommissionRecord[] | { data: CommissionRecord[] },
+              ).reduce((sum, x: any) => sum + Number(x.amount ?? 0), 0),
+            },
+          }
+        : { error: r.error },
+    ),
+};
+
+export const giftCardsApi = {
+  list: async () => {
+    const res = await api<GiftCard[] | { data: GiftCard[] }>("/api/gift-cards");
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { gift_cards: list } };
+  },
+  get: (id: string) =>
+    api<GiftCard>(`/api/gift-cards/${id}`).then((r) =>
+      r.data ? { data: { gift_card: r.data } } : { error: r.error },
+    ),
+  getByCode: (code: string) =>
+    api<GiftCard>("/api/gift-cards/verify", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }).then((r) =>
+      r.data ? { data: { gift_card: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    initial_balance: number;
+    currency?: string;
+    expires_at?: string;
+    code?: string;
+  }) =>
+    api<GiftCard>("/api/gift-cards", {
+      method: "POST",
+      body: JSON.stringify({
+        initial_amount: body.initial_balance,
+        code: body.code,
+      }),
+    }).then((r) =>
+      r.data ? { data: { gift_card: r.data } } : { error: r.error },
+    ),
+  redeem: (id: string, body: { amount: number; transaction_id: string }) =>
+    api<unknown>(`/api/gift-cards/${id}/redeem`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data
+        ? { data: { redemption: r.data, new_balance: body.amount } }
+        : { error: r.error },
+    ),
+};
+
+export const reportsApi = {
+  pnl: (period: string, locationId?: string) =>
+    api<{
+      period: string;
+      revenue: number;
+      expense: number;
+      commission: number;
+      profit: number;
+      entries: unknown;
+    }>(
+      `/api/reports/profit-loss?period=${period}` +
+        (locationId ? `&branch_id=${locationId}` : ""),
+    ),
+  pnlExportUrl: (period: string, locationId?: string) =>
+    `${API_BASE}/api/reports/profit-loss/export?period=${period}` +
+    (locationId ? `&branch_id=${locationId}` : ""),
+  vat: (period: string, locationId?: string) =>
+    api<{
+      period: string;
+      total_revenue: number;
+      vat_rate?: number | null;
+      estimated_vat?: number | null;
+      vat_report: unknown[];
+    }>(
+      `/api/reports/vat?period=${period}` +
+        (locationId ? `&branch_id=${locationId}` : ""),
+    ),
+  paymentBreakdown: (from: string, to: string, locationId?: string) =>
+    api<{
+      from: string;
+      to: string;
+      by_method: Record<string, number>;
+      transactions: number;
+    }>(
+      `/api/reports/payment-breakdown?from=${from}&to=${to}` +
+        (locationId ? `&branch_id=${locationId}` : ""),
+    ),
+  inventoryMovement: (params?: { location_id?: string }) =>
+    api<Inventory[] | { data: Inventory[] }>(
+      "/api/reports/inventory-movement" + qs(params || {}),
+    ).then((r) =>
+      r.data ? { data: { inventory: listData(r.data) } } : { error: r.error },
+    ),
+  monthlyClose: (period: string) => {
+    const [y, m] = period.split("-").map(Number);
+    const body = {
+      year: y || new Date().getFullYear(),
+      month: m || new Date().getMonth() + 1,
+    };
+    return api<unknown>("/api/monthly-closings/close", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data ? { data: { closing: r.data } } : { error: r.error },
+    );
+  },
+  margins: (from: string, to: string, locationId?: string) =>
+    api<{
+      from: string;
+      to: string;
+      rows: {
+        type: 'service' | 'product';
+        id: string;
+        name: string;
+        revenue: number;
+        cost: number;
+        margin: number;
+        margin_pct: number;
+      }[];
+    }>(
+      `/api/reports/margins?from=${from}&to=${to}` +
+        (locationId ? `&branch_id=${locationId}` : ''),
+    ),
+};
+
+export const franchiseApi = {
+  kpis: (params?: { tenant_id?: string; from?: string; to?: string }) =>
+    api<{ locations: FranchiseLocationKpi[]; summary: FranchiseSummary }>(
+      "/api/analytics/franchise" + qs(params || {}),
+    ).then((r) =>
+      r.data
+        ? {
+            data:
+              typeof r.data === "object" && "summary" in r.data
+                ? r.data
+                : {
+                    locations: listData(
+                      r.data as unknown as FranchiseLocationKpi[],
+                    ),
+                    summary: {} as FranchiseSummary,
+                  },
+          }
+        : { error: r.error },
+    ),
+};
+
+export const publicApi = {
+  salons: async (params?: {
+    search?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<{
+    data?: { salons: Tenant[] };
+    meta?: PaginationMeta;
+    error?: string;
+  }> => {
+    const q = qs({
+      search: params?.search,
+      page: params?.page,
+      per_page: params?.per_page,
+    });
+    const r = await publicRequest<Tenant[]>(`/api/public/salons${q}`);
+    if (r.error) return { error: r.error };
+    return {
+      data: { salons: listData(r.data as Tenant[] | { data: Tenant[] }) },
+      meta: r.meta,
+    };
+  },
+  salon: (slug: string) =>
+    publicRequest<{ salon: Tenant; branches: Location[]; services: Service[] }>(
+      `/api/public/salons/${slug}`,
+    ).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+  availability: (branchId: string, serviceId: string, date: string) =>
+    publicRequest<{ slots: { start: string; end: string; staff_id: string }[] }>(
+      `/api/public/availability?branch_id=${branchId}&service_id=${serviceId}&date=${date}`,
+    ),
+  book: async (body: {
+    tenant_id: string;
+    branch_id: string;
+    service_id: string;
+    staff_id?: string;
+    start_at: string;
+    client_name: string;
+    client_phone?: string;
+    client_email?: string;
+  }): Promise<{
+    data?: { appointment: PublicAppointment };
+    error?: string;
+  }> => {
+    const r = await publicRequest<{ appointment: PublicAppointment }>(
+      "/api/public/book",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
+    if (r.error) return { error: r.error };
+    const appt =
+      (r.data as { appointment?: PublicAppointment })?.appointment ??
+      (r.data as unknown as PublicAppointment);
+    return { data: { appointment: appt } };
+  },
+};
+
+export interface PublicAppointment {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  service: { name: string; duration_minutes: number; price: string | number };
+  branch: { id: string; name: string; address?: string | null };
+  staff: { id: string; name: string };
+  customer: { name: string; email?: string | null; phone?: string | null };
+}
+
+export const customerApi = {
+  myBookings: async () => {
+    const res = await api<Appointment[] | { bookings: Appointment[] }>(
+      "/api/customer/bookings",
+    );
+    const list = Array.isArray(
+      (res.data as { bookings?: Appointment[] })?.bookings,
+    )
+      ? (res.data as { bookings: Appointment[] }).bookings
+      : listData(res.data as Appointment[] | { data: Appointment[] });
+    return res.error ? { error: res.error } : { data: { bookings: list } };
+  },
+  getBooking: (id: string) =>
+    api<Appointment>(`/api/customer/bookings/${id}`).then((r) =>
+      r.data
+        ? {
+            data: {
+              booking: (r.data as { booking?: Appointment }).booking ?? r.data,
+            },
+          }
+        : { error: r.error },
+    ),
+  cancelBooking: (id: string) =>
+    api<Appointment>(`/api/customer/bookings/${id}/cancel`, {
+      method: "PATCH",
+    }).then((r) =>
+      r.data ? { data: { booking: r.data } } : { error: r.error },
+    ),
+};
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  tenantId: string | null;
+  fullName?: string | null;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  subscription_status?: string | null;
+  plan?: string | null;
+  domain?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  logo?: string | null;
+  timezone?: string | null;
+  currency?: string | null;
+  branch_count?: number;
+  service_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+function normalizeTenant(t: Tenant): Tenant {
+  const sub = (t as any).subscription_status ?? (t as any).subscriptionStatus ?? null;
+  const status = (t as any).status ?? sub ?? null;
+  return {
+    ...t,
+    subscription_status: sub,
+    status: status ?? "active",
+  };
+}
+
+export interface Location {
+  id: string;
+  tenant_id: string;
+  name: string;
+  address?: string | null;
+  timezone?: string | null;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Client {
+  id: string;
+  tenant_id: string;
+  user_id?: string | null;
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  tags?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Service {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string | null;
+  duration_minutes: number;
+  price: string | number;
+  cost?: string | number | null;
+  category?: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Product {
+  id: string;
+  tenant_id: string;
+  name: string;
+  sku?: string | null;
+  unit?: string | null;
+  cost?: string | number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Inventory {
+  id: string;
+  location_id: string;
+  product_id: string;
+  quantity: string | number;
+  low_stock_threshold?: string | number | null;
+  Product?: Product;
+  Location?: Location;
+}
+
+export interface Appointment {
+  id: string;
+  tenant_id: string;
+  location_id: string;
+  client_id: string;
+  staff_id: string;
+  service_id: string;
+  start_at: string;
+  end_at: string;
+  status: string;
+  source: string;
+  notes?: string | null;
+  Client?: Client;
+  Service?: Service;
+  Staff?: AuthUser;
+  Location?: Location;
+}
+
+export interface Transaction {
+  id: string;
+  tenant_id: string;
+  location_id: string;
+  appointment_id?: string | null;
+  total: string | number;
+  status: string;
+  TransactionItems?: TransactionItem[];
+  Payments?: Payment[];
+  Location?: Location;
+  created_at?: string;
+}
+
+export interface TransactionItem {
+  id: string;
+  type: string;
+  quantity: string | number;
+  unit_price: string | number;
+  total: string | number;
+  Service?: Service;
+  Product?: Product;
+}
+
+export interface Payment {
+  id: string;
+  transaction_id: string;
+  method: string;
+  amount: string | number;
+  reference?: string | null;
+}
+
+export interface Refund {
+  id: string;
+  transaction_id: string;
+  amount: string | number;
+  reason?: string | null;
+}
+
+export interface CashDrawerSession {
+  id: string;
+  location_id: string;
+  opened_at: string;
+  closed_at?: string | null;
+  opening_balance: string | number;
+  closing_balance?: string | number | null;
+  expected_balance?: string | number | null;
+  status: string;
+  CashMovements?: CashMovement[];
+}
+
+export interface CashMovement {
+  id: string;
+  type: "in" | "out";
+  amount: string | number;
+  reason?: string | null;
+}
+
+export interface DebtLedgerEntry {
+  id: string;
+  type: string;
+  amount: string | number;
+  balance_after: string | number;
+  created_at?: string;
+}
+
+export interface Expense {
+  id: string;
+  tenant_id: string;
+  location_id?: string | null;
+  category: string;
+  amount: string | number;
+  expense_date: string;
+  description?: string | null;
+}
+
+export interface CommissionRule {
+  id: string;
+  tenant_id: string;
+  name: string;
+  rule_type: string;
+  config?: unknown;
+  staff_id?: string | null;
+  role?: string | null;
+}
+
+export interface CommissionRecord {
+  id: string;
+  staff_id: string;
+  amount: string | number;
+  type: string;
+  reversed_at?: string | null;
+}
+
+export interface GiftCard {
+  id: string;
+  tenant_id: string;
+  code: string;
+  initial_balance: string | number;
+  current_balance: string | number;
+  currency: string;
+  expires_at?: string | null;
+}
+
+export interface GiftCardRedemption {
+  id: string;
+  gift_card_id: string;
+  transaction_id: string;
+  amount: string | number;
+}
+
+export interface FranchiseLocationKpi {
+  id: string;
+  name: string;
+  status: string;
+  revenue: number;
+  transaction_count: number;
+}
+
+export interface FranchiseSummary {
+  total_revenue: number;
+  location_count: number;
+  average_per_location: number;
+  underperforming_count: number;
+  underperforming: FranchiseLocationKpi[];
+}

@@ -1,0 +1,251 @@
+/* eslint-disable react/no-array-index-key */
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  Command as CommandIcon,
+  Dot,
+  Menu,
+  Search,
+  UserCircle2,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export type ShellNavItem = { href: string; label: string; icon?: React.ReactNode };
+
+export function AppShell({
+  brand,
+  userLabel,
+  nav,
+  onLogout,
+  children,
+  onOpenCommandPalette,
+}: {
+  brand: string;
+  userLabel?: string;
+  nav: ShellNavItem[];
+  onLogout?: () => void;
+  children: React.ReactNode;
+  onOpenCommandPalette?: () => void;
+}) {
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isActive = (href: string) =>
+    pathname === href || (href !== "/" && pathname?.startsWith(href + "/"));
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Global command palette hotkey (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    if (!onOpenCommandPalette) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      // If a dropdown/modal is open, don't steal focus.
+      const lock = document.body.getAttribute("data-ui-lock") ?? "";
+      if (lock.includes("combobox")) return;
+      const isK = e.key?.toLowerCase?.() === "k";
+      if (!isK) return;
+      const isMod = (e.ctrlKey || e.metaKey) && !e.altKey;
+      if (!isMod) return;
+      e.preventDefault();
+      onOpenCommandPalette();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onOpenCommandPalette]);
+
+  const renderNav = (mode: "desktop" | "mobile") => (
+    <nav className={cn("flex-1 overflow-auto", mode === "desktop" ? "p-2" : "p-3")}>
+      <div className="space-y-1">
+        {nav.map((i) => (
+          <Link
+            key={i.href}
+            href={i.href}
+            className={cn(
+              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              isActive(i.href)
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              collapsed && mode === "desktop" ? "justify-center" : "",
+            )}
+            title={collapsed && mode === "desktop" ? i.label : undefined}
+          >
+            <span className="text-muted-foreground group-hover:text-foreground">
+              {i.icon ?? <Dot className="size-5" />}
+            </span>
+            {!collapsed || mode === "mobile" ? <span>{i.label}</span> : null}
+          </Link>
+        ))}
+      </div>
+      {onLogout && (
+        <div className={cn("mt-6", mode === "desktop" ? "px-2" : "px-3")}>
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              "w-full justify-start",
+              collapsed && mode === "desktop" ? "justify-center px-0" : "",
+            )}
+            onClick={() => onLogout()}
+          >
+            <span className="text-muted-foreground">⟵</span>
+            {!collapsed || mode === "mobile" ? <span>Log out</span> : null}
+          </Button>
+        </div>
+      )}
+    </nav>
+  );
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close menu overlay"
+          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar desktop */}
+      <aside
+        className={cn(
+          "hidden lg:flex fixed inset-y-0 left-0 z-30 border-r bg-background/80 backdrop-blur-sm",
+          collapsed ? "w-[72px]" : "w-64",
+        )}
+      >
+        <div className="flex w-full flex-col">
+          <div
+            className={cn(
+              "h-14 shrink-0 border-b px-3 flex items-center",
+              collapsed ? "justify-center" : "justify-between",
+            )}
+          >
+            {!collapsed ? (
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">{brand}</div>
+                {userLabel ? (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {userLabel}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={cn(collapsed ? "" : "ml-2")}
+            >
+              {collapsed ? <ChevronRight /> : <ChevronLeft />}
+            </Button>
+          </div>
+          {renderNav("desktop")}
+        </div>
+      </aside>
+
+      {/* Sidebar mobile */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] border-r bg-background lg:hidden transform transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+        aria-hidden={!mobileOpen}
+      >
+        <div className="h-14 shrink-0 border-b px-4 flex items-center justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold truncate">{brand}</div>
+            {userLabel ? (
+              <div className="text-xs text-muted-foreground truncate">
+                {userLabel}
+              </div>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+          >
+            ✕
+          </Button>
+        </div>
+        {renderNav("mobile")}
+      </aside>
+
+      {/* Main column */}
+      <div className={cn("min-h-screen flex flex-col", "lg:pl-64", collapsed ? "lg:pl-[72px]" : "")}>
+        {/* Topbar */}
+        <header className="sticky top-0 z-20 h-14 border-b bg-background/80 backdrop-blur-sm">
+          <div className="h-full px-4 sm:px-6 flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu />
+            </Button>
+
+            <div className="flex-1">
+              <div className="relative max-w-xl">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search… (Ctrl+K)"
+                  className="pl-10 pr-24 h-9"
+                  // Important: don't open on focus (it can steal focus/clicks from dropdowns)
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const lock = document.body.getAttribute("data-ui-lock") ?? "";
+                    if (lock.includes("combobox")) return;
+                    onOpenCommandPalette?.();
+                  }}
+                  readOnly
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1"
+                  onClick={() => onOpenCommandPalette?.()}
+                >
+                  <CommandIcon className="size-3" />
+                  K
+                </button>
+              </div>
+            </div>
+
+            <Button type="button" variant="ghost" size="icon" aria-label="Notifications">
+              <Bell />
+            </Button>
+            <Button type="button" variant="ghost" size="icon" aria-label="Profile">
+              <UserCircle2 />
+            </Button>
+          </div>
+        </header>
+
+        <main className="flex-1">
+          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
