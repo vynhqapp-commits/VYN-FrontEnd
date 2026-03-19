@@ -361,8 +361,19 @@ export const adminAuditApi = {
 };
 
 export const locationsApi = {
-  list: async () => {
-    const res = await api<Location[] | { data: Location[] }>("/api/branches");
+  list: async (params?: { include_inactive?: boolean; q?: string }) => {
+    const res = await api<Location[] | { data: Location[] }>(
+      "/api/branches" +
+        qs({
+          include_inactive:
+            params?.include_inactive == null
+              ? undefined
+              : params.include_inactive
+                ? 1
+                : 0,
+          q: params?.q,
+        }),
+    );
     const list = listData(res.data);
     return res.error ? { error: res.error } : { data: { locations: list } };
   },
@@ -372,21 +383,23 @@ export const locationsApi = {
     ),
   create: (body: {
     name: string;
+    phone?: string;
+    contact_email?: string;
     address?: string;
     timezone?: string;
-    status?: string;
+    working_hours?: string;
+    is_active?: boolean;
   }) => {
-    const code =
-      (body.name?.replace(/\s+/g, "").slice(0, 4) || "LOC").toUpperCase() +
-      "-" +
-      Date.now();
     return api<Location>("/api/branches", {
       method: "POST",
       body: JSON.stringify({
         name: body.name,
-        code,
+        phone: body.phone,
+        contact_email: body.contact_email,
         address: body.address,
         timezone: body.timezone,
+        working_hours: body.working_hours,
+        is_active: body.is_active ?? true,
       }),
     }).then((r) =>
       r.data ? { data: { location: r.data } } : { error: r.error },
@@ -396,9 +409,12 @@ export const locationsApi = {
     id: string,
     body: {
       name?: string;
+      phone?: string;
+      contact_email?: string;
       address?: string;
       timezone?: string;
-      status?: string;
+      working_hours?: string;
+      is_active?: boolean;
     },
   ) =>
     api<Location>(`/api/branches/${id}`, {
@@ -407,7 +423,10 @@ export const locationsApi = {
     }).then((r) =>
       r.data ? { data: { location: r.data } } : { error: r.error },
     ),
-  delete: () => ({ error: "Backend does not support branch delete" }),
+  delete: (id: string) =>
+    api<unknown>(`/api/branches/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? r : { data: { deleted: true } },
+    ),
 };
 
 export const clientsApi = {
@@ -498,10 +517,27 @@ function normalizeClient(raw: Record<string, unknown>): Client {
 }
 
 export const servicesApi = {
-  list: async () => {
-    const res = await api<Service[] | { data: Service[] }>("/api/services");
+  list: async (params?: {
+    include_inactive?: boolean;
+    q?: string;
+    status?: "all" | "active" | "inactive";
+    page?: number;
+    per_page?: number;
+  }) => {
+    const query = {
+      ...params,
+      include_inactive:
+        params?.include_inactive == null
+          ? undefined
+          : params.include_inactive
+            ? 1
+            : 0,
+    };
+    const res = await api<Service[] | { data: Service[] }>(
+      "/api/services" + qs(query),
+    );
     const list = listData(res.data);
-    return res.error ? { error: res.error } : { data: { services: list } };
+    return res.error ? { error: res.error } : { data: { services: list }, meta: res.meta };
   },
   get: (id: string) =>
     api<Service>(`/api/services/${id}`).then((r) =>
@@ -509,19 +545,22 @@ export const servicesApi = {
     ),
   create: (body: {
     name: string;
-    duration_minutes?: number;
-    price?: number;
-    cost?: number;
-    category?: string;
+    service_category_id?: string | number | null;
+    description?: string | null;
+    duration_minutes: number;
+    price: number;
+    cost?: number | null;
     is_active?: boolean;
   }) =>
     api<Service>("/api/services", {
       method: "POST",
       body: JSON.stringify({
         name: body.name,
-        duration_minutes: body.duration_minutes ?? 30,
-        price: body.price ?? 0,
-        category: body.category,
+        service_category_id: body.service_category_id ?? null,
+        description: body.description ?? null,
+        duration_minutes: body.duration_minutes,
+        price: body.price,
+        cost: body.cost ?? 0,
         is_active: body.is_active ?? true,
       }),
     }).then((r) =>
@@ -538,13 +577,120 @@ export const servicesApi = {
     api<unknown>(`/api/services/${id}`, { method: "DELETE" }).then((r) =>
       r.error ? r : { data: { deleted: true } },
     ),
+  availability: {
+    list: (serviceId: string, branch_id: string) =>
+      api<unknown>(
+        `/api/services/${serviceId}/availabilities` + qs({ branch_id }),
+      ).then((r) =>
+        r.error ? { error: r.error } : { data: { availabilities: listData(r.data as any) } },
+      ),
+    create: (
+      serviceId: string,
+      body: {
+        branch_id: string;
+        day_of_week: number;
+        start_time: string; // HH:mm
+        end_time: string; // HH:mm
+        slot_minutes?: number | null;
+        is_active?: boolean;
+      },
+    ) =>
+      api<unknown>(`/api/services/${serviceId}/availabilities`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }).then((r) =>
+        r.error ? { error: r.error } : { data: { availability: (r.data as any) } },
+      ),
+    update: (
+      serviceId: string,
+      id: string,
+      body: Partial<{
+        day_of_week: number;
+        start_time: string;
+        end_time: string;
+        slot_minutes: number | null;
+        is_active: boolean;
+      }>,
+    ) =>
+      api<unknown>(`/api/services/${serviceId}/availabilities/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }).then((r) => (r.error ? { error: r.error } : { data: { availability: r.data } })),
+    delete: (serviceId: string, id: string) =>
+      api<unknown>(`/api/services/${serviceId}/availabilities/${id}`, {
+        method: "DELETE",
+      }).then((r) => (r.error ? { error: r.error } : { data: { deleted: true } })),
+  },
+  overrides: {
+    list: (
+      serviceId: string,
+      params: { branch_id: string; from?: string; to?: string },
+    ) =>
+      api<unknown>(
+        `/api/services/${serviceId}/availability-overrides` + qs(params),
+      ).then((r) =>
+        r.error ? { error: r.error } : { data: { overrides: listData(r.data as any) } },
+      ),
+    create: (
+      serviceId: string,
+      body: {
+        branch_id: string;
+        date: string; // YYYY-MM-DD
+        is_closed?: boolean;
+        start_time?: string | null;
+        end_time?: string | null;
+        slot_minutes?: number | null;
+      },
+    ) =>
+      api<unknown>(`/api/services/${serviceId}/availability-overrides`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }).then((r) => (r.error ? { error: r.error } : { data: { override: r.data } })),
+    update: (
+      serviceId: string,
+      id: string,
+      body: Partial<{
+        date: string;
+        is_closed: boolean;
+        start_time: string | null;
+        end_time: string | null;
+        slot_minutes: number | null;
+      }>,
+    ) =>
+      api<unknown>(`/api/services/${serviceId}/availability-overrides/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }).then((r) => (r.error ? { error: r.error } : { data: { override: r.data } })),
+    delete: (serviceId: string, id: string) =>
+      api<unknown>(`/api/services/${serviceId}/availability-overrides/${id}`, {
+        method: "DELETE",
+      }).then((r) => (r.error ? { error: r.error } : { data: { deleted: true } })),
+  },
 };
 
 export const productsApi = {
-  list: async () => {
-    const res = await api<Product[] | { data: Product[] }>("/api/products");
+  list: async (params?: {
+    search?: string;
+    is_active?: boolean;
+    category?: string;
+    page?: number;
+    per_page?: number;
+  }) => {
+    const res = await api<Product[] | { data: Product[] }>(
+      "/api/products" +
+        qs({
+          search: params?.search,
+          is_active:
+            params?.is_active == null ? undefined : params.is_active ? 1 : 0,
+          category: params?.category,
+          page: params?.page,
+          per_page: params?.per_page,
+        }),
+    );
     const list = listData(res.data);
-    return res.error ? { error: res.error } : { data: { products: list } };
+    return res.error
+      ? { error: res.error }
+      : { data: { products: list }, meta: res.meta };
   },
   get: (id: string) =>
     api<Product>(`/api/products/${id}`).then((r) =>
@@ -552,18 +698,27 @@ export const productsApi = {
     ),
   create: (body: {
     name: string;
+    description?: string;
+    category?: string;
     sku?: string;
-    unit?: string;
     cost?: number;
+    price?: number;
+    stock_quantity?: number;
+    low_stock_threshold?: number;
+    is_active?: boolean;
   }) => {
-    const sku = body.sku ?? "SKU-" + Date.now();
     return api<Product>("/api/products", {
       method: "POST",
       body: JSON.stringify({
         name: body.name,
-        sku,
-        cost_price: body.cost ?? 0,
-        selling_price: body.cost ?? 0,
+        description: body.description,
+        category: body.category,
+        sku: body.sku ?? "SKU-" + Date.now(),
+        cost: body.cost ?? 0,
+        price: body.price ?? body.cost ?? 0,
+        stock_quantity: body.stock_quantity ?? 0,
+        low_stock_threshold: body.low_stock_threshold ?? 5,
+        is_active: body.is_active ?? true,
       }),
     }).then((r) =>
       r.data ? { data: { product: r.data } } : { error: r.error },
@@ -1364,8 +1519,12 @@ export interface Location {
   id: string;
   tenant_id: string;
   name: string;
+  phone?: string | null;
+  contact_email?: string | null;
   address?: string | null;
   timezone?: string | null;
+  working_hours?: string | null;
+  is_active?: boolean;
   status: string;
   created_at?: string;
   updated_at?: string;
@@ -1402,9 +1561,14 @@ export interface Product {
   id: string;
   tenant_id: string;
   name: string;
+  description?: string | null;
+  category?: string | null;
   sku?: string | null;
-  unit?: string | null;
   cost?: string | number | null;
+  price?: string | number | null;
+  stock_quantity?: number;
+  low_stock_threshold?: number;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }
