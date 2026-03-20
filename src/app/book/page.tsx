@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle } from "lucide-react";
+import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft } from "lucide-react";
 import {
   publicApi,
   type Tenant,
@@ -303,9 +303,7 @@ export default function BookPage() {
             </p>
 
             <div className="relative mb-6">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                🔍
-              </span>
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Search salons…"
@@ -360,9 +358,13 @@ export default function BookPage() {
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
                     <p className="text-gray-400 text-sm">{meta.from}–{meta.to} of {meta.total}</p>
                     <div className="flex gap-2">
-                      <PagerBtn disabled={page <= 1} onClick={() => goToPage(page - 1)}>← Prev</PagerBtn>
+                      <PagerBtn disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+                        <ChevronLeft className="w-4 h-4 inline-block" /> Prev
+                      </PagerBtn>
                       <span className="px-3 py-2 text-sm text-gray-500">{page} / {meta.last_page}</span>
-                      <PagerBtn disabled={page >= meta.last_page} onClick={() => goToPage(page + 1)}>Next →</PagerBtn>
+                      <PagerBtn disabled={page >= meta.last_page} onClick={() => goToPage(page + 1)}>
+                        Next <ChevronRight className="w-4 h-4 inline-block" />
+                      </PagerBtn>
                     </div>
                   </div>
                 )}
@@ -440,7 +442,9 @@ export default function BookPage() {
                   </div>
 
                   <PrimaryBtn disabled={!branchId || !serviceId} onClick={() => setStep(3)}>
-                    Choose date &amp; time →
+                    <span className="flex items-center justify-center gap-2">
+                      Choose date &amp; time <ChevronRight className="w-4 h-4" />
+                    </span>
                   </PrimaryBtn>
                 </div>
               </>
@@ -614,9 +618,10 @@ function BackBtn({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1 text-gray-400 text-sm font-medium hover:text-salon-espresso mb-6 transition-colors"
+      className="flex items-center gap-1.5 text-gray-400 text-sm font-medium hover:text-salon-espresso mb-6 transition-colors"
     >
-      ← Back
+      <ChevronLeft className="w-4 h-4" />
+      Back
     </button>
   );
 }

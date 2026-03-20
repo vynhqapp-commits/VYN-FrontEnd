@@ -1661,19 +1661,30 @@ export interface Inventory {
 export interface Appointment {
   id: string;
   tenant_id: string;
-  location_id: string;
-  client_id: string;
-  staff_id: string;
-  service_id: string;
-  start_at: string;
-  end_at: string;
+  // Column names differ between old dashboard API (start_at) and new model (starts_at)
+  start_at?: string;
+  end_at?: string;
+  starts_at?: string;
+  ends_at?: string;
+  // FK names differ between old schema (location_id/client_id) and new (branch_id/customer_id)
+  location_id?: string;
+  branch_id?: string;
+  client_id?: string;
+  customer_id?: string;
+  staff_id?: string;
+  service_id?: string;
   status: string;
-  source: string;
+  source?: string;
   notes?: string | null;
+  // Old dashboard relations (PascalCase)
   Client?: Client;
   Service?: Service;
   Staff?: AuthUser;
   Location?: Location;
+  // New customer booking relations (snake_case, eagerly loaded)
+  branch?: { id: string; name: string; address?: string | null };
+  staff?: { id: string; name: string };
+  services?: { service: { id: string; name: string; duration_minutes: number; price: number | string } }[];
 }
 
 export interface Transaction {

@@ -8,12 +8,8 @@ import type { Appointment } from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { toast } from "sonner";
 
-// Extended type that covers the relations the backend eagerly loads
-type BookingRow = Appointment & {
-  branch?: { id: string; name: string; address?: string };
-  staff?: { id: string; name: string };
-  services?: { service: { id: string; name: string; duration_minutes: number; price: number } }[];
-};
+// The Appointment interface already covers both old and new field shapes.
+type BookingRow = Appointment;
 
 const STATUS_STYLES: Record<string, string> = {
   scheduled: "bg-blue-50 text-blue-700 border border-blue-100",
@@ -155,26 +151,31 @@ function BookingCard({
   onCancel?: (id: string) => void;
   cancelling?: boolean;
 }) {
-  const serviceName =
-    b.services?.[0]?.service?.name ?? "—";
-  const branchName = b.branch?.name ?? "—";
+  // Support new model field names (starts_at/ends_at) and old schema (start_at/end_at)
+  const startIso = b.starts_at ?? b.start_at;
+  const endIso   = b.ends_at   ?? b.end_at;
+
+  // Support new snake_case relations and old PascalCase relations
+  const serviceName = b.services?.[0]?.service?.name ?? b.Service?.name ?? "—";
+  const branchName  = b.branch?.name ?? b.Location?.name ?? "—";
   const branchAddress = b.branch?.address ?? null;
-  const staffName = b.staff?.name ?? "—";
+  const staffName   = b.staff?.name ?? "—";
+
   const status = String(b.status);
   const canCancel = CANCELLABLE.includes(status) && onCancel;
 
-  const dateStr = b.starts_at
-    ? localDate(b.starts_at).toLocaleDateString(undefined, {
+  const dateStr = startIso
+    ? localDate(startIso).toLocaleDateString(undefined, {
         weekday: "short",
         month: "short",
         day: "numeric",
         year: "numeric",
       })
     : "—";
-  const timeStr = b.starts_at && b.ends_at
-    ? `${fmt(b.starts_at)} – ${fmt(b.ends_at)}`
-    : b.starts_at
-      ? fmt(b.starts_at)
+  const timeStr = startIso && endIso
+    ? `${fmt(startIso)} – ${fmt(endIso)}`
+    : startIso
+      ? fmt(startIso)
       : "—";
 
   return (
