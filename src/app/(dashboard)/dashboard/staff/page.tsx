@@ -239,9 +239,10 @@ export default function StaffPage() {
         </div>
       </div>
 
+      {/* ── Staff table + form panel (side-by-side on wide screens) ── */}
       <div className="flex gap-4 items-start">
-        {/* ── staff table ── */}
-        <div className={`flex-1 min-w-0 transition-all ${panelOpen || scheduleOpen ? 'hidden xl:block' : ''}`}>
+        {/* Staff table — hidden on small screens when form is open */}
+        <div className={`flex-1 min-w-0 transition-all ${panelOpen ? 'hidden xl:block' : ''}`}>
           <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
             <Table>
               <TableHeader>
@@ -270,7 +271,7 @@ export default function StaffPage() {
                   <TableRow key={s.id} className="hover:bg-salon-cream/20">
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-salon-gold/20 flex items-center justify-center text-salon-gold font-semibold text-sm">
+                        <div className="w-8 h-8 rounded-full bg-salon-gold/20 flex items-center justify-center text-salon-gold font-semibold text-sm shrink-0">
                           {s.name[0]?.toUpperCase()}
                         </div>
                         <span className="font-medium text-salon-espresso">{s.name}</span>
@@ -316,7 +317,7 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {/* ── Add / Edit Staff panel ── */}
+        {/* ── Add / Edit Staff panel (inline on xl+, full-width on smaller) ── */}
         {panelOpen && (
           <div className="w-full xl:w-96 shrink-0 bg-white rounded-xl border border-salon-sand/40 shadow-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -336,10 +337,7 @@ export default function StaffPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-salon-espresso mb-1.5">Branch</label>
-                  <select
-                    {...form.register('branch_id')}
-                    className={inputCls}
-                  >
+                  <select {...form.register('branch_id')} className={inputCls}>
                     <option value="">Select branch</option>
                     {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
@@ -392,85 +390,141 @@ export default function StaffPage() {
             )}
           </div>
         )}
+      </div>
 
-        {/* ── Schedule editor panel ── */}
-        {scheduleOpen && scheduleStaff && (
-          <div className="w-full xl:w-[480px] shrink-0 bg-white rounded-xl border border-salon-sand/40 shadow-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-base font-semibold text-salon-espresso">
-                  Weekly schedule
-                </h2>
-                <p className="text-xs text-salon-stone">{scheduleStaff.name}</p>
-              </div>
-              <button onClick={() => setScheduleOpen(false)} className="p-1 rounded-lg hover:bg-salon-cream transition-colors">
-                <X className="w-4 h-4 text-salon-stone" />
-              </button>
-            </div>
+      {/* ── Schedule editor — FIXED MODAL OVERLAY (never clipped by parent) ── */}
+      {scheduleOpen && scheduleStaff && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            onClick={() => setScheduleOpen(false)}
+          />
 
-            {scheduleLoading ? (
-              <p className="text-sm text-salon-stone py-4 text-center">Loading schedule…</p>
-            ) : (
-              <div className="space-y-2">
-                {/* Column headers */}
-                <div className="grid grid-cols-[80px_1fr_1fr_auto] gap-2 px-1">
-                  <span className="text-xs font-medium text-salon-stone">Day</span>
-                  <span className="text-xs font-medium text-salon-stone">Start</span>
-                  <span className="text-xs font-medium text-salon-stone">End</span>
-                  <span className="text-xs font-medium text-salon-stone">Working</span>
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl border border-salon-sand/40 flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-salon-sand/30 shrink-0">
+                <div>
+                  <h2 className="font-display text-base font-semibold text-salon-espresso">Weekly schedule</h2>
+                  <p className="text-xs text-salon-stone mt-0.5">{scheduleStaff.name}</p>
                 </div>
+                <button
+                  onClick={() => setScheduleOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-salon-cream transition-colors"
+                >
+                  <X className="w-4 h-4 text-salon-stone" />
+                </button>
+              </div>
 
-                {schedule.map((row, idx) => (
-                  <div
-                    key={row.day_of_week}
-                    className={`grid grid-cols-[80px_1fr_1fr_auto] gap-2 items-center p-2 rounded-xl border ${row.is_day_off ? 'border-salon-sand/30 bg-salon-cream/30 opacity-60' : 'border-salon-sand/50 bg-white'}`}
-                  >
-                    <span className={`text-sm font-medium ${row.is_day_off ? 'text-salon-stone' : 'text-salon-espresso'}`}>
-                      {DAY_SHORT[row.day_of_week]}
-                    </span>
-                    <input
-                      type="time"
-                      value={row.start_time}
-                      onChange={(e) => updateTime(idx, 'start_time', e.target.value)}
-                      disabled={row.is_day_off}
-                      className="border border-salon-sand/60 rounded-lg px-2 py-1.5 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 disabled:opacity-40 disabled:cursor-not-allowed w-full"
-                    />
-                    <input
-                      type="time"
-                      value={row.end_time}
-                      onChange={(e) => updateTime(idx, 'end_time', e.target.value)}
-                      disabled={row.is_day_off}
-                      className="border border-salon-sand/60 rounded-lg px-2 py-1.5 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 disabled:opacity-40 disabled:cursor-not-allowed w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleDayOff(idx)}
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${row.is_day_off ? 'bg-salon-sand/30 text-salon-stone hover:bg-salon-sand/50' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
-                      title={row.is_day_off ? 'Click to mark as working' : 'Click to mark as day off'}
-                    >
-                      {row.is_day_off ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
-                    </button>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                {scheduleLoading ? (
+                  <p className="text-sm text-salon-stone text-center py-6">Loading schedule…</p>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Column headers — match grid exactly */}
+                    <div className="grid items-center gap-2 px-1" style={{ gridTemplateColumns: '52px 1fr 1fr 36px' }}>
+                      <span className="text-xs font-medium text-salon-stone">Day</span>
+                      <span className="text-xs font-medium text-salon-stone">Start</span>
+                      <span className="text-xs font-medium text-salon-stone">End</span>
+                      <span className="text-xs font-medium text-salon-stone text-center">On</span>
+                    </div>
+
+                    {schedule.map((row, idx) => (
+                      <div
+                        key={row.day_of_week}
+                        className={`grid items-center gap-2 px-2 py-2 rounded-xl border transition-colors ${
+                          row.is_day_off
+                            ? 'border-salon-sand/25 bg-salon-cream/20'
+                            : 'border-salon-sand/50 bg-white'
+                        }`}
+                        style={{ gridTemplateColumns: '52px 1fr 1fr 36px' }}
+                      >
+                        {/* Day label */}
+                        <span className={`text-sm font-medium truncate ${row.is_day_off ? 'text-salon-stone/60' : 'text-salon-espresso'}`}>
+                          {DAY_SHORT[row.day_of_week]}
+                        </span>
+
+                        {/* Start time */}
+                        <input
+                          type="time"
+                          value={row.start_time}
+                          onChange={(e) => updateTime(idx, 'start_time', e.target.value)}
+                          disabled={row.is_day_off}
+                          className={`w-full min-w-0 border rounded-lg px-2 py-1.5 text-sm bg-salon-cream/50
+                            focus:outline-none focus:ring-2 focus:ring-salon-gold/40
+                            disabled:opacity-35 disabled:cursor-not-allowed
+                            ${row.is_day_off ? 'border-salon-sand/30' : 'border-salon-sand/60'}`}
+                        />
+
+                        {/* End time */}
+                        <input
+                          type="time"
+                          value={row.end_time}
+                          onChange={(e) => updateTime(idx, 'end_time', e.target.value)}
+                          disabled={row.is_day_off}
+                          className={`w-full min-w-0 border rounded-lg px-2 py-1.5 text-sm bg-salon-cream/50
+                            focus:outline-none focus:ring-2 focus:ring-salon-gold/40
+                            disabled:opacity-35 disabled:cursor-not-allowed
+                            ${row.is_day_off ? 'border-salon-sand/30' : 'border-salon-sand/60'}`}
+                        />
+
+                        {/* Working toggle */}
+                        <button
+                          type="button"
+                          onClick={() => toggleDayOff(idx)}
+                          title={row.is_day_off ? 'Mark as working' : 'Mark as day off'}
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                            ${row.is_day_off
+                              ? 'bg-salon-sand/30 text-salon-stone hover:bg-salon-sand/50'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                        >
+                          {row.is_day_off
+                            ? <X className="w-3.5 h-3.5" />
+                            : <Check className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 pt-1 text-xs text-salon-stone">
+                      <span className="flex items-center gap-1">
+                        <span className="w-4 h-4 rounded bg-green-100 flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5 text-green-700" />
+                        </span>
+                        Working
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-4 h-4 rounded bg-salon-sand/30 flex items-center justify-center">
+                          <X className="w-2.5 h-2.5 text-salon-stone" />
+                        </span>
+                        Day off
+                      </span>
+                    </div>
                   </div>
-                ))}
-
-                <div className="pt-2 flex items-center gap-3 text-xs text-salon-stone">
-                  <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-600" /> Working day</span>
-                  <span className="flex items-center gap-1"><X className="w-3 h-3 text-salon-stone" /> Day off</span>
-                </div>
+                )}
               </div>
-            )}
 
-            <div className="flex gap-2 pt-2">
-              <Button onClick={saveSchedule} disabled={scheduleSaving || scheduleLoading} className="flex-1">
-                {scheduleSaving ? 'Saving…' : 'Save schedule'}
-              </Button>
-              <Button variant="outline" onClick={() => setScheduleOpen(false)}>
-                Cancel
-              </Button>
+              {/* Footer */}
+              <div className="flex gap-2 px-5 pb-5 pt-3 border-t border-salon-sand/30 shrink-0">
+                <Button onClick={saveSchedule} disabled={scheduleSaving || scheduleLoading} className="flex-1">
+                  {scheduleSaving ? 'Saving…' : 'Save schedule'}
+                </Button>
+                <Button variant="outline" onClick={() => setScheduleOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
