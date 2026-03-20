@@ -160,7 +160,7 @@ export default function AppointmentsPage() {
                     const cellEnd = new Date(d);
                     cellEnd.setHours(hour + 1, 0, 0, 0);
                     const inCell = appointments.filter((a) => {
-                      const start = new Date(a.start_at);
+                      const start = new Date(a.start_at ?? '');
                       return start >= cellStart && start < cellEnd;
                     });
                     return (
@@ -216,7 +216,7 @@ export default function AppointmentsPage() {
                       {a.Service?.name ?? a.service_id}
                     </p>
                     <p className="text-xs text-salon-stone mt-1">
-                      {isNaN(new Date(a.start_at).getTime()) ? '—' : new Date(a.start_at).toLocaleString()}
+                      {isNaN(new Date(a.start_at ?? '').getTime()) ? '—' : new Date(a.start_at ?? '').toLocaleString()}
                     </p>
                   </div>
                   <span className="text-xs px-2 py-1 rounded-full border border-salon-sand/60 text-salon-stone">
@@ -261,7 +261,7 @@ export default function AppointmentsPage() {
                 {appointments.map((a) => (
                   <tr key={a.id}>
                     <td className="px-4 py-3 text-sm text-salon-stone">
-                      {isNaN(new Date(a.start_at).getTime()) ? '—' : new Date(a.start_at).toLocaleString()}
+                      {isNaN(new Date(a.start_at ?? '').getTime()) ? '—' : new Date(a.start_at ?? '').toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-sm text-salon-espresso">{a.Client?.full_name ?? a.client_id}</td>
                     <td className="px-4 py-3 text-sm text-salon-stone">{a.Service?.name ?? a.service_id}</td>
