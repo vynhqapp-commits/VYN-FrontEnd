@@ -20,6 +20,7 @@ import {
   Package,
   Receipt,
   Settings2,
+  UserCog,
   Users,
   Wallet,
 } from "lucide-react";
@@ -47,8 +48,10 @@ export default function DashboardLayout({
             ? <CalendarDays className="size-5" />
             : i.href === "/dashboard/clients"
               ? <Users className="size-5" />
-              : i.href === "/dashboard/locations"
-                ? <MapPin className="size-5" />
+              : i.href === "/dashboard/staff"
+                ? <UserCog className="size-5" />
+                : i.href === "/dashboard/locations"
+                  ? <MapPin className="size-5" />
                 : i.href === "/dashboard/services"
                   ? <Settings2 className="size-5" />
                   : i.href === "/dashboard/products"

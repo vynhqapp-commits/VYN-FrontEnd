@@ -6,6 +6,7 @@ const ownerMenu: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/appointments", label: "Calendar" },
   { href: "/dashboard/clients", label: "Clients" },
+  { href: "/dashboard/staff", label: "Staff" },
   { href: "/dashboard/locations", label: "Locations" },
   { href: "/dashboard/services", label: "Services" },
   { href: "/dashboard/products", label: "Products" },

@@ -1311,6 +1311,19 @@ export const giftCardsApi = {
     ),
 };
 
+export interface MonthlyClosing {
+  id: string;
+  year: number;
+  month: number;
+  period: string;
+  status: 'open' | 'closed';
+  notes?: string | null;
+  closed_by?: string | null;
+  closed_by_name?: string | null;
+  closed_at?: string | null;
+  created_at?: string;
+}
+
 export const reportsApi = {
   pnl: (period: string, locationId?: string) =>
     api<{
@@ -1319,13 +1332,22 @@ export const reportsApi = {
       expense: number;
       commission: number;
       profit: number;
-      entries: unknown;
+      entries: {
+        by_type: { type: string; total: number }[];
+        by_category: { type: string; category: string | null; total: number }[];
+      };
     }>(
       `/api/reports/profit-loss?period=${period}` +
         (locationId ? `&branch_id=${locationId}` : ""),
     ),
   pnlExportUrl: (period: string, locationId?: string) =>
     `${API_BASE}/api/reports/profit-loss/export?period=${period}` +
+    (locationId ? `&branch_id=${locationId}` : ""),
+  vatExportUrl: (period: string, locationId?: string) =>
+    `${API_BASE}/api/reports/vat/export?period=${period}` +
+    (locationId ? `&branch_id=${locationId}` : ""),
+  paymentsExportUrl: (from: string, to: string, locationId?: string) =>
+    `${API_BASE}/api/reports/payment-breakdown/export?from=${from}&to=${to}` +
     (locationId ? `&branch_id=${locationId}` : ""),
   vat: (period: string, locationId?: string) =>
     api<{
@@ -1368,19 +1390,24 @@ export const reportsApi = {
           product_id: params?.product_id,
         }),
     ).then((r) => (r.data ? { data: r.data } : { error: r.error })),
-  monthlyClose: (period: string) => {
+  monthlyClose: (period: string, notes?: string) => {
     const [y, m] = period.split("-").map(Number);
-    const body = {
+    const body: Record<string, unknown> = {
       year: y || new Date().getFullYear(),
       month: m || new Date().getMonth() + 1,
     };
-    return api<unknown>("/api/monthly-closings/close", {
+    if (notes) body.notes = notes;
+    return api<MonthlyClosing>("/api/monthly-closings/close", {
       method: "POST",
       body: JSON.stringify(body),
     }).then((r) =>
-      r.data ? { data: { closing: r.data } } : { error: r.error },
+      r.data ? { data: r.data } : { error: r.error },
     );
   },
+  monthlyClosings: () =>
+    api<{ data: MonthlyClosing[]; meta: { total: number; last_page: number } }>(
+      "/api/monthly-closings",
+    ).then((r) => (r.data ? { data: r.data } : { error: r.error })),
   margins: (from: string, to: string, locationId?: string) =>
     api<{
       from: string;
@@ -1799,3 +1826,74 @@ export interface FranchiseSummary {
   underperforming_count: number;
   underperforming: FranchiseLocationKpi[];
 }
+
+/* ─── Staff ─────────────────────────────────────────────────────────── */
+
+export interface StaffMember {
+  id: string;
+  tenant_id?: string;
+  branch_id?: string | null;
+  user_id?: string | null;
+  name: string;
+  phone?: string | null;
+  specialization?: string | null;
+  is_active: boolean;
+  branch?: { id: string; name: string } | null;
+  schedules?: StaffScheduleRow[];
+}
+
+export interface StaffScheduleRow {
+  id?: string;
+  day_of_week: number; // 0=Sun … 6=Sat
+  start_time: string;  // HH:mm
+  end_time: string;
+  is_day_off: boolean;
+}
+
+export interface StaffInput {
+  branch_id: string;
+  name: string;
+  phone?: string;
+  specialization?: string;
+  is_active?: boolean;
+  user_id?: string;
+}
+
+export interface ScheduleInput {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_day_off: boolean;
+}
+
+export const staffApi = {
+  list: (params?: { branch_id?: string; include_inactive?: boolean }) =>
+    api<StaffMember[]>('/api/staff' + qs(params ?? {})),
+
+  get: (id: string) =>
+    api<StaffMember>(`/api/staff/${id}`),
+
+  create: (body: StaffInput) =>
+    api<StaffMember>('/api/staff', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  update: (id: string, body: Partial<StaffInput>) =>
+    api<StaffMember>(`/api/staff/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  delete: (id: string) =>
+    api<null>(`/api/staff/${id}`, { method: 'DELETE' }),
+
+  getSchedules: (staffId: string) =>
+    api<StaffScheduleRow[]>(`/api/staff/${staffId}/schedules`),
+
+  setSchedules: (staffId: string, schedules: ScheduleInput[]) =>
+    api<StaffScheduleRow[]>(`/api/staff/${staffId}/schedules`, {
+      method: 'POST',
+      body: JSON.stringify({ schedules }),
+    }),
+};
