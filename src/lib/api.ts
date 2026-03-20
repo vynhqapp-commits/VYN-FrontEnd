@@ -69,11 +69,16 @@ export async function publicRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<{ data?: T; meta?: PaginationMeta; error?: string }> {
-  const headers: HeadersInit = {
+  // Include Bearer token when available so logged-in customers can be identified
+  // by the backend (e.g. to link user_id on booking). X-Tenant is intentionally
+  // NOT sent — public endpoints are tenant-agnostic.
+  const token = getToken();
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
     ...(options.headers as Record<string, string>),
   };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let res: Response;
   try {
