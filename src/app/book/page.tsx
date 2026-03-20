@@ -157,7 +157,8 @@ export default function BookPage() {
       if (data?.slots) {
         const buffer = new Date(Date.now() + 30 * 60 * 1000); // 30 min buffer
         const future = (data.slots as Slot[]).filter(
-          (slot) => new Date(slot.start) > buffer,
+          // slot.start has no Z → treated as naive local time, same basis as buffer
+          (slot) => localDate(slot.start) > buffer,
         );
         setSlots(future);
       }
@@ -223,7 +224,7 @@ export default function BookPage() {
               <Row label="Staff" value={confirmed.staff.name} />
               <Row
                 label="Date"
-                value={new Date(confirmed.starts_at).toLocaleDateString(
+                value={localDate(confirmed.starts_at).toLocaleDateString(
                   undefined,
                   {
                     weekday: "long",
@@ -578,7 +579,7 @@ export default function BookPage() {
               <Row label="Location" value={selectedBranch?.name ?? "—"} />
               <Row
                 label="Date"
-                value={new Date(selected.slot.start).toLocaleDateString(
+                value={localDate(selected.slot.start).toLocaleDateString(
                   undefined,
                   { weekday: "long", month: "short", day: "numeric" },
                 )}
@@ -717,9 +718,20 @@ function Field({
   );
 }
 
+/**
+ * Display a time string as the salon's local time.
+ * Strips the UTC "Z" marker so the browser does not apply a timezone offset —
+ * the DB times are naive (no TZ), meant to represent the salon's clock.
+ */
 function fmt(iso: string) {
-  return new Date(iso).toLocaleTimeString([], {
+  const local = iso.replace(/Z$/, "");
+  return new Date(local).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Parse a potentially UTC-marked ISO string as naive local time. */
+function localDate(iso: string): Date {
+  return new Date(iso.replace(/Z$/, ""));
 }
