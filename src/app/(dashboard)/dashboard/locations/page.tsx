@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -221,7 +222,7 @@ export default function LocationsPage() {
               <h2 className="font-display text-xl font-semibold text-salon-espresso">
                 {editing ? 'Edit location' : 'New location'}
               </h2>
-              <Button variant="ghost" size="icon" onClick={() => setModalOpen(false)}>✕</Button>
+              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-5">
               <Form {...form}>

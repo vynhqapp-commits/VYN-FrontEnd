@@ -397,12 +397,12 @@ export default function StaffPage() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
             onClick={() => setScheduleOpen(false)}
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
             <div
               className="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl border border-salon-sand/40 flex flex-col max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}

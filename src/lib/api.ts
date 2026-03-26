@@ -64,7 +64,56 @@ export async function api<T>(
   return { data: payload, meta };
 }
 
-/** Public API helper: never sends Authorization or X-Tenant headers */
+/**
+ * Auth API helper: sends NO Authorization and NO X-Tenant headers.
+ * Use for login / register / OTP endpoints where the user has no session yet
+ * and a stale salon_tenant_id in localStorage must not leak into the request.
+ */
+async function plainRequest<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ data?: T; meta?: PaginationMeta; error?: string }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Network error";
+    if (
+      msg === "Failed to fetch" ||
+      msg.includes("NetworkError") ||
+      msg.includes("REFUSED")
+    ) {
+      return {
+        error:
+          "Cannot reach the server. Make sure the backend is running (e.g. php artisan serve in the backend folder).",
+      };
+    }
+    return { error: msg };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    return {
+      error: (json as { message?: string }).message || "Request failed",
+    };
+  }
+
+  const payload =
+    (json as { data?: T }).data !== undefined
+      ? (json as { data: T }).data
+      : (json as T);
+  const meta = (json as { meta?: PaginationMeta }).meta;
+  return { data: payload, meta };
+}
+
+/** Public API helper: never sends X-Tenant; sends Bearer token when available */
 export async function publicRequest<T>(
   path: string,
   options: RequestInit = {},
@@ -142,17 +191,17 @@ function qs(
 
 export const authApi = {
   login: (email: string, password: string) =>
-    api<{ user: AuthUser; token: string }>("/api/auth/login", {
+    plainRequest<{ user: AuthUser; token: string }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
   otpSend: (email: string, purpose?: string) =>
-    api<{ message?: string }>("/api/auth/request-otp", {
+    plainRequest<{ message?: string }>("/api/auth/request-otp", {
       method: "POST",
       body: JSON.stringify({ email, ...(purpose ? { purpose } : {}) }),
     }),
   otpVerify: (email: string, code: string, purpose?: string) =>
-    api<{ user: AuthUser; token: string } | { verified: boolean }>("/api/auth/verify-otp", {
+    plainRequest<{ user: AuthUser; token: string } | { verified: boolean }>("/api/auth/verify-otp", {
       method: "POST",
       body: JSON.stringify({ email, code, ...(purpose ? { purpose } : {}) }),
     }),
@@ -168,7 +217,7 @@ export const authApi = {
     full_name?: string;
     phone?: string;
   }) =>
-    api<{ user: AuthUser; token: string }>("/api/auth/register/customer", {
+    plainRequest<{ user: AuthUser; token: string }>("/api/auth/register/customer", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -180,7 +229,24 @@ export const authApi = {
     full_name?: string;
     phone?: string;
   }) =>
-    api<{ user: AuthUser; token: string }>("/api/auth/register/salon-owner", {
+    plainRequest<{ user: AuthUser; token: string }>("/api/auth/register/salon-owner", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const profileApi = {
+  update: (body: { name?: string; email?: string; phone?: string }) =>
+    api<{ user: AuthUser }>("/api/profile", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  changePassword: (body: {
+    current_password: string;
+    new_password: string;
+    new_password_confirmation: string;
+  }) =>
+    api<null>("/api/profile/change-password", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -234,7 +300,7 @@ export const adminReportsApi = {
       `/api/admin/reports/financial?from=${from}&to=${to}`,
     ),
   franchiseKpis: (from: string, to: string) =>
-    api<{ from: string; to: string; rows: { tenant_id: string; tenant_name: string; plan: string; status: string; revenue: number }[] }>(
+    api<{ from: string; to: string; rows: { tenant_id: string; tenant_name: string; plan: string; status: string; revenue: number; booking_count: number; avg_ticket: number }[] }>(
       `/api/admin/franchise/kpis?from=${from}&to=${to}`,
     ),
 };
@@ -1274,10 +1340,11 @@ export const commissionApi = {
 };
 
 export const giftCardsApi = {
-  list: async () => {
-    const res = await api<GiftCard[] | { data: GiftCard[] }>("/api/gift-cards");
-    const list = listData(res.data);
-    return res.error ? { error: res.error } : { data: { gift_cards: list } };
+  list: async (params?: { status?: string; search?: string; page?: number }) => {
+    const qs = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString() : "";
+    const res = await api<{ data: GiftCard[]; meta?: unknown }>(`/api/gift-cards${qs}`);
+    const list = Array.isArray(res.data) ? res.data : (res.data as { data: GiftCard[] })?.data ?? [];
+    return res.error ? { error: res.error } : { data: { gift_cards: list, meta: (res.data as { meta?: unknown })?.meta } };
   },
   get: (id: string) =>
     api<GiftCard>(`/api/gift-cards/${id}`).then((r) =>
@@ -1299,20 +1366,26 @@ export const giftCardsApi = {
     api<GiftCard>("/api/gift-cards", {
       method: "POST",
       body: JSON.stringify({
-        initial_amount: body.initial_balance,
+        initial_balance: body.initial_balance,
+        currency: body.currency,
+        expires_at: body.expires_at,
         code: body.code,
       }),
     }).then((r) =>
       r.data ? { data: { gift_card: r.data } } : { error: r.error },
     ),
-  redeem: (id: string, body: { amount: number; transaction_id: string }) =>
-    api<unknown>(`/api/gift-cards/${id}/redeem`, {
+  redeem: (id: string, body: { amount: number }) =>
+    api<GiftCard>(`/api/gift-cards/${id}/redeem`, {
       method: "POST",
       body: JSON.stringify(body),
     }).then((r) =>
-      r.data
-        ? { data: { redemption: r.data, new_balance: body.amount } }
-        : { error: r.error },
+      r.data ? { data: { gift_card: r.data } } : { error: r.error },
+    ),
+  void: (id: string) =>
+    api<GiftCard>(`/api/gift-cards/${id}/void`, {
+      method: "POST",
+    }).then((r) =>
+      r.data ? { data: { gift_card: r.data } } : { error: r.error },
     ),
 };
 
@@ -1433,16 +1506,21 @@ export const reportsApi = {
 };
 
 export const franchiseApi = {
-  kpis: (params?: { tenant_id?: string; from?: string; to?: string }) =>
-    api<{ locations: FranchiseLocationKpi[]; summary: FranchiseSummary }>(
-      "/api/analytics/franchise" + qs(params || {}),
-    ).then((r) =>
+  kpis: (params?: { from?: string; to?: string }) =>
+    api<{
+      from: string;
+      to: string;
+      locations: FranchiseLocationKpi[];
+      summary: FranchiseSummary;
+    }>("/api/analytics/franchise" + qs(params || {})).then((r) =>
       r.data
         ? {
             data:
               typeof r.data === "object" && "summary" in r.data
                 ? r.data
                 : {
+                    from: "",
+                    to: "",
                     locations: listData(
                       r.data as unknown as FranchiseLocationKpi[],
                     ),
@@ -1556,6 +1634,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string | null;
+  phone?: string | null;
   role: string;
   tenantId: string | null;
   fullName?: string | null;
@@ -1815,9 +1894,13 @@ export interface GiftCard {
   tenant_id: string;
   code: string;
   initial_balance: string | number;
+  remaining_balance: string | number;
   current_balance: string | number;
   currency: string;
+  status: string;
   expires_at?: string | null;
+  customer_id?: string | null;
+  created_at?: string;
 }
 
 export interface GiftCardRedemption {
@@ -1833,6 +1916,11 @@ export interface FranchiseLocationKpi {
   status: string;
   revenue: number;
   transaction_count: number;
+  booking_volume: number;
+  completed_appointments: number;
+  avg_ticket: number;
+  utilization_rate: number;
+  is_underperforming: boolean;
 }
 
 export interface FranchiseSummary {

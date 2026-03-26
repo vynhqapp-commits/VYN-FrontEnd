@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { clientsApi, debtApi, type Client } from '@/lib/api';
 
 export default function ClientsPage() {
@@ -183,7 +184,7 @@ export default function ClientsPage() {
 
       {openClient && (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           role="dialog"
           aria-modal="true"
           onClick={() => setOpenClient(null)}
@@ -200,9 +201,9 @@ export default function ClientsPage() {
               <button
                 type="button"
                 onClick={() => setOpenClient(null)}
-                className="text-salon-stone hover:text-salon-espresso"
+                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

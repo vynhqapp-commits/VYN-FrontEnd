@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { expensesApi, locationsApi, type Expense, type Location } from '@/lib/api';
 
 const CATEGORIES = ['rent', 'utilities', 'salaries', 'marketing', 'supplies', 'other'] as const;
@@ -234,7 +235,7 @@ export default function ExpensesPage() {
       </div>
 
       {showAdd && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAdd(false)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <h2 className="font-display text-xl font-semibold text-salon-espresso">
@@ -244,9 +245,9 @@ export default function ExpensesPage() {
                 type="button"
                 onClick={() => setShowAdd(false)}
                 disabled={saving}
-                className="text-salon-stone hover:text-salon-espresso disabled:opacity-50"
+                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors disabled:opacity-50"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             {formError && (

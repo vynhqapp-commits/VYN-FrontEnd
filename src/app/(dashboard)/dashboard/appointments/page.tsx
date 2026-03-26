@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { appointmentsApi, clientsApi, locationsApi, servicesApi, type Appointment, type Client, type Location, type Service } from '@/lib/api';
 
 export default function AppointmentsPage() {
@@ -295,16 +296,16 @@ export default function AppointmentsPage() {
       )}
 
       {showWalkIn && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowWalkIn(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-xl font-semibold text-salon-espresso">New walk-in appointment</h2>
               <button
                 type="button"
                 onClick={() => setShowWalkIn(false)}
-                className="text-salon-stone hover:text-salon-espresso text-sm"
+                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             {walkInError && (
@@ -314,7 +315,7 @@ export default function AppointmentsPage() {
             )}
             <div className="space-y-3 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-salon-espresso mb-1">Location</label>
+                <label className="block text-xs font-semibold text-salon-stone mb-1">Location</label>
                 <select
                   className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
                   value={walkInForm.location_id}
@@ -329,7 +330,7 @@ export default function AppointmentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-espresso mb-1">Client</label>
+                <label className="block text-xs font-semibold text-salon-stone mb-1">Client</label>
                 <select
                   className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
                   value={walkInForm.client_id}
@@ -344,7 +345,7 @@ export default function AppointmentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-espresso mb-1">Service</label>
+                <label className="block text-xs font-semibold text-salon-stone mb-1">Service</label>
                 <select
                   className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
                   value={walkInForm.service_id}
@@ -360,7 +361,7 @@ export default function AppointmentsPage() {
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-salon-espresso mb-1">Date</label>
+                  <label className="block text-xs font-semibold text-salon-stone mb-1">Date</label>
                   <input
                     type="date"
                     className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
@@ -369,7 +370,7 @@ export default function AppointmentsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-salon-espresso mb-1">Time</label>
+                  <label className="block text-xs font-semibold text-salon-stone mb-1">Time</label>
                   <input
                     type="time"
                     className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
@@ -379,7 +380,7 @@ export default function AppointmentsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-espresso mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-salon-stone mb-1">Notes</label>
                 <textarea
                   className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
                   rows={2}
@@ -392,7 +393,7 @@ export default function AppointmentsPage() {
               <button
                 type="button"
                 onClick={() => setShowWalkIn(false)}
-                className="px-4 py-2 rounded-xl text-sm text-salon-stone bg-salon-sand/40 hover:bg-salon-sand/60"
+                className="px-4 py-2 rounded-xl text-sm border border-salon-sand/60 text-salon-espresso hover:bg-salon-sand/30 transition-colors"
               >
                 Cancel
               </button>

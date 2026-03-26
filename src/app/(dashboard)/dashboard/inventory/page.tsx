@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { inventoryApi, locationsApi, productsApi, type Inventory, type Location, type Product } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Combobox } from '@/components/ui/combobox';
@@ -180,7 +181,7 @@ export default function InventoryPage() {
       </div>
 
       {showAdjust && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAdjust(false)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <h2 className="font-display text-xl font-semibold text-salon-espresso">Adjust stock</h2>
@@ -188,9 +189,9 @@ export default function InventoryPage() {
                 type="button"
                 onClick={() => setShowAdjust(false)}
                 disabled={saving}
-                className="text-salon-stone hover:text-salon-espresso disabled:opacity-50"
+                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors disabled:opacity-50"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-3">

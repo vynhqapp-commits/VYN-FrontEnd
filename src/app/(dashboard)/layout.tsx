@@ -117,6 +117,7 @@ export default function DashboardLayout({
       brand={APP_NAME}
       userLabel={user.email}
       nav={nav}
+      profileHref="/dashboard/profile"
       onLogout={() => {
         logout();
         router.push("/");

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -496,7 +497,7 @@ export default function ServicesPage() {
                 disabled={saving}
                 aria-label="Close"
               >
-                ✕
+                <X className="w-4 h-4" />
               </Button>
             </div>
 
@@ -605,7 +606,7 @@ export default function ServicesPage() {
                 onClick={() => setAvailabilityOpen(false)}
                 aria-label="Close"
               >
-                ✕
+                <X className="w-4 h-4" />
               </Button>
             </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -226,7 +227,7 @@ export default function ProductsPage() {
               <h2 className="font-display text-xl font-semibold text-salon-espresso">
                 {editing ? 'Edit product' : 'New product'}
               </h2>
-              <Button variant="ghost" size="icon" onClick={() => setModalOpen(false)}>✕</Button>
+              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-5">
               <Form {...form}>

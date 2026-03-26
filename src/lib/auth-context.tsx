@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authApi, setTenantId, type AuthUser } from './api';
+import { api, authApi, setTenantId, type AuthUser } from './api';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -78,8 +78,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    // Fire-and-forget: invalidate JWT on the server (don't block UI on this)
+    api('/api/logout', { method: 'POST' }).catch(() => {});
+    // Clear all persisted session data
+    setToken(null);       // removes salon_token from localStorage
+    setTenantId(null);    // removes salon_tenant_id from localStorage
     setUser(null);
-    setToken(null);
   };
 
   const registerCustomer = async (body: { email: string; password: string; full_name?: string; phone?: string }) => {

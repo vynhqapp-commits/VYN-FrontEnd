@@ -1,7 +1,7 @@
 /* eslint-disable react/no-array-index-key */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,9 +10,12 @@ import {
   ChevronRight,
   Command as CommandIcon,
   Dot,
+  LogOut,
   Menu,
   Search,
+  User,
   UserCircle2,
+  X,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -21,11 +24,125 @@ import { Input } from "@/components/ui/input";
 
 export type ShellNavItem = { href: string; label: string; icon?: React.ReactNode };
 
+// ── UserMenu ─────────────────────────────────────────────────────────────────
+
+function UserMenu({
+  userLabel,
+  profileHref,
+  onLogout,
+}: {
+  userLabel?: string;
+  profileHref?: string;
+  onLogout?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-label="User menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex items-center justify-center w-9 h-9 rounded-full border transition-colors",
+          open
+            ? "bg-accent border-border text-foreground"
+            : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
+        )}
+      >
+        <UserCircle2 className="size-5" />
+      </button>
+
+      {open && (
+        <div
+          className={cn(
+            "absolute right-0 top-full mt-2 w-56 z-50",
+            "bg-background border border-border rounded-xl shadow-lg",
+            "overflow-hidden",
+          )}
+        >
+          {/* User info header */}
+          <div className="px-4 py-3 border-b border-border bg-muted/40">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <UserCircle2 className="size-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground truncate">
+                  {userLabel ?? "User"}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Signed in
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Menu items */}
+          <div className="py-1">
+            {profileHref && (
+              <Link
+                href={profileHref}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors"
+              >
+                <User className="size-4 text-muted-foreground shrink-0" />
+                Profile
+              </Link>
+            )}
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onLogout();
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              >
+                <LogOut className="size-4 shrink-0" />
+                Log out
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── AppShell ──────────────────────────────────────────────────────────────────
+
 export function AppShell({
   brand,
   userLabel,
   nav,
   onLogout,
+  profileHref,
   children,
   onOpenCommandPalette,
 }: {
@@ -33,6 +150,7 @@ export function AppShell({
   userLabel?: string;
   nav: ShellNavItem[];
   onLogout?: () => void;
+  profileHref?: string;
   children: React.ReactNode;
   onOpenCommandPalette?: () => void;
 }) {
@@ -51,7 +169,6 @@ export function AppShell({
   useEffect(() => {
     if (!onOpenCommandPalette) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      // If a dropdown/modal is open, don't steal focus.
       const lock = document.body.getAttribute("data-ui-lock") ?? "";
       if (lock.includes("combobox")) return;
       const isK = e.key?.toLowerCase?.() === "k";
@@ -88,22 +205,6 @@ export function AppShell({
           </Link>
         ))}
       </div>
-      {onLogout && (
-        <div className={cn("mt-6", mode === "desktop" ? "px-2" : "px-3")}>
-          <Button
-            type="button"
-            variant="ghost"
-            className={cn(
-              "w-full justify-start",
-              collapsed && mode === "desktop" ? "justify-center px-0" : "",
-            )}
-            onClick={() => onLogout()}
-          >
-            <span className="text-muted-foreground">⟵</span>
-            {!collapsed || mode === "mobile" ? <span>Log out</span> : null}
-          </Button>
-        </div>
-      )}
     </nav>
   );
 
@@ -182,7 +283,7 @@ export function AppShell({
             onClick={() => setMobileOpen(false)}
             aria-label="Close menu"
           >
-            ✕
+            <X className="size-4" />
           </Button>
         </div>
         {renderNav("mobile")}
@@ -191,7 +292,7 @@ export function AppShell({
       {/* Main column */}
       <div className={cn("min-h-screen flex flex-col", "lg:pl-64", collapsed ? "lg:pl-[72px]" : "")}>
         {/* Topbar */}
-        <header className="sticky top-0 z-20 h-14 border-b bg-background/80 backdrop-blur-sm">
+        <header className="sticky top-0 z-30 h-14 border-b bg-background">
           <div className="h-full px-4 sm:px-6 flex items-center gap-3">
             <Button
               type="button"
@@ -210,7 +311,6 @@ export function AppShell({
                 <Input
                   placeholder="Search… (Ctrl+K)"
                   className="pl-10 pr-24 h-9"
-                  // Important: don't open on focus (it can steal focus/clicks from dropdowns)
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const lock = document.body.getAttribute("data-ui-lock") ?? "";
@@ -233,9 +333,13 @@ export function AppShell({
             <Button type="button" variant="ghost" size="icon" aria-label="Notifications">
               <Bell />
             </Button>
-            <Button type="button" variant="ghost" size="icon" aria-label="Profile">
-              <UserCircle2 />
-            </Button>
+
+            {/* User menu dropdown */}
+            <UserMenu
+              userLabel={userLabel}
+              profileHref={profileHref}
+              onLogout={onLogout}
+            />
           </div>
         </header>
 
@@ -248,4 +352,3 @@ export function AppShell({
     </div>
   );
 }
-

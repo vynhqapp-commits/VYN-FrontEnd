@@ -58,6 +58,9 @@ export const allowedPrefixesByRole: Record<AppRole, string[]> = {
 };
 
 export function isRouteAllowed(role: string, pathname: string): boolean {
+  // Profile is always accessible for any authenticated user
+  if (pathname === "/dashboard/profile" || pathname === "/admin/profile") return true;
+
   const r = role as AppRole;
   const allowed = allowedPrefixesByRole[r];
   if (!allowed) return false;

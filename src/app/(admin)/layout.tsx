@@ -17,7 +17,6 @@ import {
   KeyRound,
   LayoutDashboard,
   ListChecks,
-  Users,
 } from 'lucide-react';
 
 export default function AdminLayout({
@@ -34,7 +33,6 @@ export default function AdminLayout({
     () => [
       { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="size-5" /> },
       { href: '/admin/tenants', label: 'Tenants', icon: <Building2 className="size-5" /> },
-      { href: '/admin/users', label: 'Users', icon: <Users className="size-5" /> },
       { href: '/admin/roles', label: 'Roles & permissions', icon: <KeyRound className="size-5" /> },
       { href: '/admin/subscriptions', label: 'Subscriptions', icon: <CreditCard className="size-5" /> },
       { href: '/admin/reports', label: 'Global reports', icon: <FileText className="size-5" /> },
@@ -65,6 +63,7 @@ export default function AdminLayout({
       brand={`${APP_NAME} Admin`}
       userLabel={user.email}
       nav={nav}
+      profileHref="/admin/profile"
       onLogout={() => {
         logout();
         router.push('/');
