@@ -1,16 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import CalendarGrid from '@/components/calendar/CalendarGrid';
+import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
 import { appointmentsApi, clientsApi, locationsApi, servicesApi, type Appointment, type Client, type Location, type Service } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'day' | 'week'>('list');
-  const [focusDate, setFocusDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [viewMode, setViewMode] = useState<'list' | 'day' | 'week' | 'month'>('week');
+  // When `viewMode === 'list'`, we still respect a date window based on the last selected range.
+  const [rangeMode, setRangeMode] = useState<'day' | 'week' | 'month'>('week');
+  const [focusDate, setFocusDate] = useState(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showWalkIn, setShowWalkIn] = useState(false);
 
   // Walk-in modal state
@@ -37,21 +47,115 @@ export default function AppointmentsPage() {
     notes: 'Walk-in',
   });
 
+  const parseDateKey = (key: string) => {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  const formatDateKey = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
+  const addDays = (d: Date, days: number) => {
+    const x = new Date(d);
+    x.setDate(x.getDate() + days);
+    return x;
+  };
+
+  const addMonths = (d: Date, months: number) => {
+    const x = new Date(d);
+    x.setMonth(x.getMonth() + months);
+    return x;
+  };
+
+  const getAppointmentStartDate = (a: Appointment): Date | null => {
+    const raw = a.start_at ?? a.starts_at ?? '';
+    if (!raw) return null;
+    const d = new Date(String(raw));
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const getAppointmentEndDate = (a: Appointment, start: Date): Date => {
+    const rawEnd = a.end_at ?? a.ends_at ?? '';
+    if (!rawEnd) return new Date(start.getTime() + 30 * 60 * 1000);
+    const d = new Date(String(rawEnd));
+    if (Number.isNaN(d.getTime())) return new Date(start.getTime() + 30 * 60 * 1000);
+    return d;
+  };
+
+  const filterAppointmentsForSelectedRange = (list: Appointment[]) => {
+    if (viewMode !== 'list') return list;
+
+    const focus = parseDateKey(focusDate);
+    const effectiveMode = rangeMode;
+
+    const fromKey =
+      effectiveMode === 'week'
+        ? focusDate
+        : effectiveMode === 'month'
+          ? (() => formatDateKey(new Date(focus.getFullYear(), focus.getMonth(), 1)))()
+          : focusDate;
+    const toKey =
+      effectiveMode === 'week'
+        ? formatDateKey(addDays(focus, 6))
+        : effectiveMode === 'month'
+          ? (() => formatDateKey(new Date(focus.getFullYear(), focus.getMonth() + 1, 0)))()
+          : focusDate;
+
+    const rangeStart = parseDateKey(fromKey);
+    const rangeEndExclusive = addDays(parseDateKey(toKey), 1);
+
+    return list.filter((a) => {
+      const start = getAppointmentStartDate(a);
+      if (!start) return false;
+      const end = getAppointmentEndDate(a, start);
+      // Overlap check: appointment intersects [rangeStart, rangeEndExclusive)
+      return start < rangeEndExclusive && end > rangeStart;
+    });
+  };
+
   const loadAppointments = () => {
+    // Clear previous global errors so the UI doesn't get "stuck" in an error-only render.
+    setError(null);
     setLoading(true);
-    const params = viewMode === 'list' ? {} : viewMode === 'week'
-      ? { from: focusDate, to: new Date(new Date(focusDate).setDate(new Date(focusDate).getDate() + 6)).toISOString().slice(0, 10) }
-      : { from: focusDate, to: focusDate };
+    const focus = parseDateKey(focusDate);
+
+    const effectiveMode = viewMode === 'list' ? rangeMode : viewMode;
+    const params =
+      effectiveMode === 'week'
+        ? { from: focusDate, to: formatDateKey(addDays(focus, 6)) }
+        : effectiveMode === 'month'
+          ? (() => {
+              const from = new Date(focus.getFullYear(), focus.getMonth(), 1);
+              const to = new Date(focus.getFullYear(), focus.getMonth() + 1, 0);
+              return { from: formatDateKey(from), to: formatDateKey(to) };
+            })()
+          : { from: focusDate, to: focusDate }; // day
     appointmentsApi.list(params).then((res) => {
       setLoading(false);
       if ('error' in res && res.error) setError(res.error);
-      else if (res.data?.appointments) setAppointments(res.data.appointments);
+      else if (res.data?.appointments) setAppointments(filterAppointmentsForSelectedRange(res.data.appointments));
     });
   };
 
   useEffect(() => {
     loadAppointments();
-  }, [focusDate, viewMode]);
+  }, [focusDate, viewMode, rangeMode]);
+
+  // Responsive default: on small screens show a single-column day agenda
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth < 768) setViewMode('day');
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'list') setSelectedAppointmentId(null);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'list') setRangeMode(viewMode);
+  }, [viewMode]);
 
   // Lightweight "real-time" sync via polling
   useEffect(() => {
@@ -79,6 +183,7 @@ export default function AppointmentsPage() {
       setError(res.error);
       return;
     }
+    setError(null);
     // Refresh list for real-time view
     loadAppointments();
   };
@@ -108,27 +213,82 @@ export default function AppointmentsPage() {
     loadAppointments();
   };
 
+  // Non-blocking global error handling:
+  // - Keep UI mounted (calendar/list + detail panel)
+  // - Show errors via toast
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError(null);
+  }, [error]);
+
   if (loading && appointments.length === 0) return <p className="text-salon-stone">Loading appointments...</p>;
-  if (error) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{error}</div>;
 
   const statuses = ['scheduled', 'checked_in', 'completed', 'cancelled'] as const;
 
-  const focus = new Date(focusDate);
-  const dayStart = new Date(focus);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(focus);
-  dayEnd.setHours(23, 59, 59, 999);
-  const weekDays = viewMode === 'week' ? Array.from({ length: 7 }, (_, i) => { const d = new Date(focus); d.setDate(d.getDate() + i); return d; }) : [focus];
-  const slots = Array.from({ length: 10 }, (_, i) => i + 9);
+  const focus = parseDateKey(focusDate);
+  const selectedAppointment = selectedAppointmentId ? appointments.find((a) => a.id === selectedAppointmentId) ?? null : null;
+
+  const moveFocus = (dir: 'prev' | 'next' | 'today') => {
+    if (dir === 'today') {
+      const d = new Date();
+      setFocusDate(formatDateKey(d));
+      return;
+    }
+
+    const stepMode = viewMode === 'list' ? rangeMode : viewMode;
+    if (stepMode === 'day') {
+      setFocusDate(formatDateKey(addDays(focus, dir === 'prev' ? -1 : 1)));
+      return;
+    }
+
+    if (stepMode === 'week') {
+      setFocusDate(formatDateKey(addDays(focus, dir === 'prev' ? -7 : 7)));
+      return;
+    }
+
+    // month
+    setFocusDate(formatDateKey(addMonths(focus, dir === 'prev' ? -1 : 1)));
+  };
+
+  const navLabel = () => {
+    const labelMode = viewMode === 'list' ? rangeMode : viewMode;
+    if (labelMode === 'day') {
+      return focus.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    if (labelMode === 'week') {
+      const a = focus.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const b = addDays(focus, 6).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${a} - ${b}`;
+    }
+    // month
+    return focus.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  };
 
   return (
     <div>
       <h1 className="font-display text-2xl font-semibold text-salon-espresso mb-4">Calendar / Appointments</h1>
       <div className="flex gap-2 mb-4 flex-wrap items-center">
-        <input type="date" value={focusDate} onChange={(e) => setFocusDate(e.target.value)} className="border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/40" />
-        <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>List</button>
-        <button type="button" onClick={() => setViewMode('day')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Day</button>
-        <button type="button" onClick={() => setViewMode('week')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Week</button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label="Previous">
+            <ChevronLeft className="size-4" />
+          </button>
+          <button type="button" onClick={() => moveFocus('today')} className="px-3 py-2 rounded-xl text-sm font-semibold border border-salon-sand/60 bg-white hover:bg-salon-cream/50 transition-colors text-salon-stone" aria-label="Today">
+            Today
+          </button>
+          <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label="Next">
+            <ChevronRight className="size-4" />
+          </button>
+          <span className="ml-2 text-sm font-medium text-salon-stone">{navLabel()}</span>
+        </div>
+
+        <div className="flex gap-2 ml-auto">
+          <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>List</button>
+          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Day</button>
+          <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Week</button>
+          <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'month' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Month</button>
+        </div>
+
         <button
           type="button"
           onClick={() => setShowWalkIn(true)}
@@ -138,69 +298,27 @@ export default function AppointmentsPage() {
         </button>
       </div>
 
-      {(viewMode === 'day' || viewMode === 'week') && (
-        <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-x-auto">
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr className="border-b border-salon-sand/60">
-                <th className="w-16 p-3 text-left text-xs font-semibold text-salon-stone">Time</th>
-                {weekDays.map((d) => (
-                  <th key={d.toISOString()} className="p-3 min-w-[120px] text-left text-xs font-semibold text-salon-stone">
-                    {d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {slots.map((hour) => (
-                <tr key={hour} className="border-b border-salon-sand/40">
-                  <td className="p-2 text-sm text-salon-stone">{hour}:00</td>
-                  {weekDays.map((d) => {
-                    const cellStart = new Date(d);
-                    cellStart.setHours(hour, 0, 0, 0);
-                    const cellEnd = new Date(d);
-                    cellEnd.setHours(hour + 1, 0, 0, 0);
-                    const inCell = appointments.filter((a) => {
-                      const start = new Date(a.start_at ?? '');
-                      return start >= cellStart && start < cellEnd;
-                    });
-                    return (
-                      <td key={d.toISOString() + hour} className="p-1 align-top">
-                        {inCell.map((a) => (
-                          <div key={a.id} className="text-xs bg-salon-gold/10 border border-salon-gold/20 rounded-lg p-2 mb-1">
-                            <div className="font-medium text-salon-espresso">{a.Client?.full_name ?? a.client_id}</div>
-                            <div className="text-salon-stone">{a.Service?.name}</div>
-                          <div className="flex items-center justify-between gap-2 mt-1">
-                            <span className="text-salon-stone">{a.status}</span>
-                            <div className="flex gap-1">
-                              {statuses.map((st) => (
-                                <button
-                                  key={st}
-                                  type="button"
-                                  disabled={changingId === a.id || a.status === st}
-                                  onClick={() => updateStatus(a.id, st)}
-                                  className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                                    a.status === st
-                                      ? 'bg-salon-gold text-white border-salon-gold'
-                                      : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
-                                  } disabled:opacity-40 disabled:cursor-not-allowed`}
-                                >
-                                  {st.replace('_', ' ')}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          </div>
-                        ))}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {viewMode !== 'list' &&
+        ((viewMode === 'day' || viewMode === 'week') && appointments.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-8 text-center text-salon-stone">
+            No appointments found for the selected time range.
+          </div>
+        ) : (
+          <CalendarGrid
+            view={viewMode}
+            focusDate={focus}
+            appointments={appointments}
+            changingId={changingId}
+            onStatusChange={updateStatus}
+            onAppointmentClick={(id) => setSelectedAppointmentId(id)}
+            onDayClick={(d) => {
+              setSelectedAppointmentId(null);
+              setRangeMode('day');
+              setViewMode('day');
+              setFocusDate(formatDateKey(d));
+            }}
+          />
+        ))}
 
       {viewMode === 'list' && (
         <>
@@ -217,7 +335,10 @@ export default function AppointmentsPage() {
                       {a.Service?.name ?? a.service_id}
                     </p>
                     <p className="text-xs text-salon-stone mt-1">
-                      {isNaN(new Date(a.start_at ?? '').getTime()) ? '—' : new Date(a.start_at ?? '').toLocaleString()}
+                      {(() => {
+                        const start = getAppointmentStartDate(a);
+                        return start ? start.toLocaleString() : '—';
+                      })()}
                     </p>
                   </div>
                   <span className="text-xs px-2 py-1 rounded-full border border-salon-sand/60 text-salon-stone">
@@ -243,7 +364,7 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             ))}
-            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">No appointments found.</p>}
+            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">No appointments found for the selected time range.</p>}
           </div>
 
           {/* Desktop/tablet: table */}
@@ -262,7 +383,10 @@ export default function AppointmentsPage() {
                 {appointments.map((a) => (
                   <tr key={a.id}>
                     <td className="px-4 py-3 text-sm text-salon-stone">
-                      {isNaN(new Date(a.start_at ?? '').getTime()) ? '—' : new Date(a.start_at ?? '').toLocaleString()}
+                      {(() => {
+                        const start = getAppointmentStartDate(a);
+                        return start ? start.toLocaleString() : '—';
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-salon-espresso">{a.Client?.full_name ?? a.client_id}</td>
                     <td className="px-4 py-3 text-sm text-salon-stone">{a.Service?.name ?? a.service_id}</td>
@@ -290,9 +414,19 @@ export default function AppointmentsPage() {
                 ))}
               </tbody>
             </table>
-            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">No appointments found.</p>}
+            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">No appointments found for the selected time range.</p>}
           </div>
         </>
+      )}
+
+      {selectedAppointment && selectedAppointmentId && viewMode !== 'list' && (
+        <AppointmentDetailPanel
+          appointment={selectedAppointment}
+          onClose={() => setSelectedAppointmentId(null)}
+          onStatusChange={updateStatus}
+          changingId={changingId}
+          statuses={statuses}
+        />
       )}
 
       {showWalkIn && (
