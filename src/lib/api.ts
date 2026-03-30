@@ -569,6 +569,34 @@ export const clientsApi = {
       method: "POST",
       body: JSON.stringify({ note }),
     }).then((r) => (r.error ? { error: r.error } : { data: { created: true } })),
+
+  // CRM tracking (Packages, Memberships, Stats)
+  packages: async (clientId: string) => {
+    const res = await api<unknown>(`/api/customers/${clientId}/packages`);
+    const raw = res.data as unknown;
+    const packages = Array.isArray(raw) ? raw : listData(raw as any);
+    return res.error ? { error: res.error } : { data: { packages: packages as any[] } };
+  },
+
+  memberships: async (clientId: string) => {
+    const res = await api<unknown>(`/api/customers/${clientId}/memberships`);
+    const raw = res.data as unknown;
+    const memberships = Array.isArray(raw) ? raw : listData(raw as any);
+    return res.error ? { error: res.error } : { data: { memberships: memberships as any[] } };
+  },
+
+  stats: async (clientId: string) => {
+    const res = await api<unknown>(`/api/customers/${clientId}/stats`);
+    return res.error ? { error: res.error } : { data: { stats: res.data } };
+  },
+
+  renewMembership: async (clientId: string, membershipId: string) => {
+    const res = await api<unknown>(`/api/customers/${clientId}/memberships/${membershipId}/renew`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    return res.error ? { error: res.error } : { data: { membership: res.data } };
+  },
 };
 
 function normalizeClient(raw: Record<string, unknown>): Client {
@@ -1735,6 +1763,34 @@ export interface Client {
   tags?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface ClientPackage {
+  id: string;
+  name?: string | null;
+  total_services: number;
+  remaining_services: number;
+  expires_at?: string | null;
+  status?: string;
+  membership_id?: string | null;
+}
+
+export interface ClientMembership {
+  id: string;
+  name?: string | null;
+  plan?: string | null;
+  start_date?: string | null;
+  renewal_date?: string | null;
+  interval_months: number;
+  service_credits_per_renewal: number;
+  remaining_services: number;
+  status?: string;
+}
+
+export interface ClientStats {
+  total_spent: number;
+  invoice_count: number;
+  avg_ticket: number;
 }
 
 export interface Service {
