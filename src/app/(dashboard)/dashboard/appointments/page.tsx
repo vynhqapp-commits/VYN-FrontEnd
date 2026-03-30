@@ -69,6 +69,33 @@ export default function AppointmentsPage() {
     return x;
   };
 
+  const staffPalette = [
+    { bg: 'bg-emerald-100/80', border: 'border-emerald-200', text: 'text-emerald-900' },
+    { bg: 'bg-blue-100/80', border: 'border-blue-200', text: 'text-blue-900' },
+    { bg: 'bg-violet-100/80', border: 'border-violet-200', text: 'text-violet-900' },
+    { bg: 'bg-rose-100/80', border: 'border-rose-200', text: 'text-rose-900' },
+    { bg: 'bg-amber-100/80', border: 'border-amber-200', text: 'text-amber-900' },
+    { bg: 'bg-teal-100/80', border: 'border-teal-200', text: 'text-teal-900' },
+    { bg: 'bg-sky-100/80', border: 'border-sky-200', text: 'text-sky-900' },
+    { bg: 'bg-fuchsia-100/80', border: 'border-fuchsia-200', text: 'text-fuchsia-900' },
+  ] as const;
+
+  const getStaffLabel = (a: Appointment) => a.Staff?.name ?? a.staff?.name ?? a.staff_id ?? '—';
+
+  const staffHash = (s: string) => {
+    // Small deterministic hash so the same staff_id gets the same color.
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    return hash;
+  };
+
+  const getStaffColorMeta = (staffId: string | undefined | null) => {
+    const id = staffId ? String(staffId) : '';
+    if (!id) return { bg: 'bg-salon-sand/30', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+    const idx = staffHash(id) % staffPalette.length;
+    return staffPalette[idx];
+  };
+
   const getAppointmentStartDate = (a: Appointment): Date | null => {
     const raw = a.start_at ?? a.starts_at ?? '';
     if (!raw) return null;
@@ -334,6 +361,19 @@ export default function AppointmentsPage() {
                     <p className="text-xs text-salon-stone mt-0.5">
                       {a.Service?.name ?? a.service_id}
                     </p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {(() => {
+                        const staffLabel = getStaffLabel(a);
+                        const staffMeta = getStaffColorMeta(a.staff_id);
+                        return (
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                          >
+                            {staffLabel}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <p className="text-xs text-salon-stone mt-1">
                       {(() => {
                         const start = getAppointmentStartDate(a);
@@ -375,6 +415,7 @@ export default function AppointmentsPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Start</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Client</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Service</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Staff</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
                 </tr>
@@ -390,6 +431,19 @@ export default function AppointmentsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-salon-espresso">{a.Client?.full_name ?? a.client_id}</td>
                     <td className="px-4 py-3 text-sm text-salon-stone">{a.Service?.name ?? a.service_id}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {(() => {
+                        const staffLabel = getStaffLabel(a);
+                        const staffMeta = getStaffColorMeta(a.staff_id);
+                        return (
+                          <span
+                            className={`inline-flex items-center text-xs px-2 py-1 rounded-full border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                          >
+                            {staffLabel}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-sm text-salon-stone">{a.status}</td>
                     <td className="px-4 py-3 text-sm text-salon-stone">
                       <div className="flex flex-wrap gap-1">

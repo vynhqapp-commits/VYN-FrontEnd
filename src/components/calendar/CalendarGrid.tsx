@@ -28,6 +28,33 @@ export default function CalendarGrid({
   // `new Date(isoWithZ)` converts to local time and can shift the day boundary.
   const pad2 = (n: number) => String(n).padStart(2, '0');
 
+  const staffPalette = [
+    { bg: 'bg-emerald-100/80', border: 'border-emerald-200', text: 'text-emerald-900' },
+    { bg: 'bg-blue-100/80', border: 'border-blue-200', text: 'text-blue-900' },
+    { bg: 'bg-violet-100/80', border: 'border-violet-200', text: 'text-violet-900' },
+    { bg: 'bg-rose-100/80', border: 'border-rose-200', text: 'text-rose-900' },
+    { bg: 'bg-amber-100/80', border: 'border-amber-200', text: 'text-amber-900' },
+    { bg: 'bg-teal-100/80', border: 'border-teal-200', text: 'text-teal-900' },
+    { bg: 'bg-sky-100/80', border: 'border-sky-200', text: 'text-sky-900' },
+    { bg: 'bg-fuchsia-100/80', border: 'border-fuchsia-200', text: 'text-fuchsia-900' },
+  ] as const;
+
+  const staffName = (a: Appointment) => a.Staff?.name ?? a.staff?.name ?? a.staff_id ?? '—';
+
+  const staffHash = (s: string) => {
+    // Small deterministic hash so the same staff_id gets the same color.
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    return hash;
+  };
+
+  const staffColorMeta = (staffId: string | undefined | null) => {
+    const id = staffId ? String(staffId) : '';
+    if (!id) return { bg: 'bg-salon-sand/30', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+    const idx = staffHash(id) % staffPalette.length;
+    return staffPalette[idx];
+  };
+
   const dateKeyLocal = (d: Date) =>
     `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; // local Y-M-D
 
@@ -277,23 +304,26 @@ export default function CalendarGrid({
     const top = ((clampedStart.getTime() - dayRangeStart.getTime()) / 60000 / 60) * HOUR_HEIGHT;
     const height = (heightMinutes / 60) * HOUR_HEIGHT;
 
-    const meta = statusMeta(a.status);
+    const statusMetaForBlock = statusMeta(a.status);
+    const staffMeta = staffColorMeta(a.staff_id);
 
     return (
       <button
         type="button"
         key={a.id}
         onClick={() => onAppointmentClick?.(a.id)}
-        className={`absolute rounded-lg border shadow-sm p-2 text-left cursor-pointer ${meta.bg} ${meta.border} ${meta.text}`}
+        className={`absolute rounded-lg border shadow-sm p-2 text-left cursor-pointer ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
         style={{ top, height, left: 6, right: 6 } as React.CSSProperties}
-        title={`${clientName(a)} - ${serviceName(a)}`}
-        aria-label={`Appointment ${a.id}`}
+        title={`${clientName(a)} - ${serviceName(a)} - ${staffName(a)}`}
+        aria-label={`Appointment ${a.id} (${staffName(a)})`}
         disabled={changingId === a.id}
       >
         <div className="text-[11px] font-medium truncate">{clientName(a)}</div>
-        <div className="text-[10px] truncate opacity-90">{serviceName(a)}</div>
+        <div className="text-[10px] truncate opacity-90">
+          {serviceName(a)} • {staffName(a)}
+        </div>
         <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="text-[10px] font-medium">{meta.label}</span>
+          <span className="text-[10px] font-medium">{statusMetaForBlock.label}</span>
         </div>
       </button>
     );
