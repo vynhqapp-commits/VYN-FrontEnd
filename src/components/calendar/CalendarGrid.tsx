@@ -13,6 +13,7 @@ export default function CalendarGrid({
   onDayClick,
   onAppointmentClick,
   changingId,
+  onReschedule,
 }: {
   view: CalendarView;
   focusDate: Date;
@@ -21,6 +22,7 @@ export default function CalendarGrid({
   onDayClick?: (date: Date) => void;
   onAppointmentClick?: (id: string) => void;
   changingId: string | null;
+  onReschedule?: (id: string, start: Date, end: Date) => Promise<void>;
 }) {
   const HOUR_HEIGHT = 64;
   // Helpers to make calendar alignment timezone-safe.
@@ -54,6 +56,13 @@ export default function CalendarGrid({
     const idx = staffHash(id) % staffPalette.length;
     return staffPalette[idx];
   };
+
+  const ACTIVE_STATUSES = ['pending', 'scheduled', 'confirmed', 'checked_in'] as const;
+  const isActiveStatus = (status: string) =>
+    (ACTIVE_STATUSES as readonly string[]).includes(status);
+
+  const isDraggingRef = React.useRef(false);
+  const draggingAppointmentIdRef = React.useRef<string | null>(null);
 
   const dateKeyLocal = (d: Date) =>
     `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; // local Y-M-D
@@ -173,7 +182,44 @@ export default function CalendarGrid({
                     className={`p-2 text-left border-r border-b border-salon-sand/30 hover:bg-salon-cream/20 transition-colors cursor-pointer ${
                       inMonth ? 'bg-white' : 'bg-salon-cream/20'
                     }`}
-                    onClick={() => onDayClick?.(d)}
+                    onClick={() => {
+                      if (isDraggingRef.current) return;
+                      onDayClick?.(d);
+                    }}
+                    onDragOver={(e) => {
+                      // Allow drop.
+                      e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (!onReschedule) return;
+
+                      const droppedId =
+                        e.dataTransfer.getData('text/appointment-id') || draggingAppointmentIdRef.current;
+                      if (!droppedId) return;
+
+                      const dragged = appointments.find((a) => a.id === droppedId);
+                      if (!dragged) return;
+
+                      const draggedStart = parseStart(dragged);
+                      if (!draggedStart) return;
+                      const draggedEnd = parseEnd(dragged, draggedStart);
+
+                      const durationMinutes = Math.max(
+                        1,
+                        Math.round((draggedEnd.getTime() - draggedStart.getTime()) / 60000),
+                      );
+
+                      // Month view has no time grid; preserve the dragged appointment time-of-day.
+                      const newStart = new Date(d);
+                      newStart.setHours(draggedStart.getHours(), draggedStart.getMinutes(), 0, 0);
+                      const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
+
+                      isDraggingRef.current = false;
+                      draggingAppointmentIdRef.current = null;
+
+                      void onReschedule(droppedId, newStart, newEnd);
+                    }}
                     title={fmtMonthDay(d)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') onDayClick?.(d);
@@ -193,13 +239,30 @@ export default function CalendarGrid({
                     <div className="mt-2 space-y-1">
                       {top.map((a) => {
                         const meta = statusMeta(a.status);
+                        const draggable = isActiveStatus(a.status) && changingId !== a.id;
                         return (
                           <button
                             key={a.id}
                             type="button"
                             className={`rounded-md border px-2 py-1 text-[10px] truncate ${meta.bg} ${meta.border} ${meta.text}`}
+                            draggable={draggable}
+                            onDragStart={(e) => {
+                              if (!draggable) {
+                                e.preventDefault();
+                                return;
+                              }
+                              isDraggingRef.current = true;
+                              draggingAppointmentIdRef.current = a.id;
+                              e.dataTransfer.setData('text/appointment-id', a.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragEnd={() => {
+                              isDraggingRef.current = false;
+                              draggingAppointmentIdRef.current = null;
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (isDraggingRef.current) return;
                               onAppointmentClick?.(a.id);
                             }}
                             aria-label={`Appointment ${a.id}`}
@@ -306,12 +369,32 @@ export default function CalendarGrid({
 
     const statusMetaForBlock = statusMeta(a.status);
     const staffMeta = staffColorMeta(a.staff_id);
+    const draggable = isActiveStatus(a.status) && changingId !== a.id;
 
     return (
       <button
         type="button"
         key={a.id}
-        onClick={() => onAppointmentClick?.(a.id)}
+        onClick={() => {
+          // When dragging, ignore click-to-open to avoid accidental panel opens.
+          if (isDraggingRef.current) return;
+          onAppointmentClick?.(a.id);
+        }}
+        draggable={draggable}
+        onDragStart={(e) => {
+          if (!draggable) {
+            e.preventDefault();
+            return;
+          }
+          isDraggingRef.current = true;
+          draggingAppointmentIdRef.current = a.id;
+          e.dataTransfer.setData('text/appointment-id', a.id);
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragEnd={() => {
+          isDraggingRef.current = false;
+          draggingAppointmentIdRef.current = null;
+        }}
         className={`absolute rounded-lg border shadow-sm p-2 text-left cursor-pointer ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
         style={{ top, height, left: 6, right: 6 } as React.CSSProperties}
         title={`${clientName(a)} - ${serviceName(a)} - ${staffName(a)}`}
@@ -363,6 +446,57 @@ export default function CalendarGrid({
                   key={day.toISOString()}
                   className="relative border-b border-salon-sand/30"
                   style={{ height: totalHeight }}
+                  onDragOver={(e) => {
+                    // Allow dropping.
+                    e.preventDefault();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!onReschedule) return;
+
+                    const droppedId =
+                      e.dataTransfer.getData('text/appointment-id') || draggingAppointmentIdRef.current;
+                    if (!droppedId) return;
+
+                    const dragged = appointments.find((a) => a.id === droppedId);
+                    if (!dragged) return;
+
+                    const draggedStart = parseStart(dragged);
+                    if (!draggedStart) return;
+                    const draggedEnd = parseEnd(dragged, draggedStart);
+
+                    const durationMinutes = Math.max(
+                      1,
+                      Math.round((draggedEnd.getTime() - draggedStart.getTime()) / 60000),
+                    );
+
+                    // Convert drop Y to minutes from the visible start hour.
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const y = e.clientY - rect.top;
+                    const minutesFromVisibleStart = (y / HOUR_HEIGHT) * 60;
+                    const snappedMinutes = Math.round(minutesFromVisibleStart / 30) * 30;
+
+                    const dayStartAbs = TIME_START * 60;
+                    const dayEndAbs = TIME_END * 60;
+
+                    let newStartAbs = dayStartAbs + snappedMinutes;
+                    const maxStartAbs = dayEndAbs - durationMinutes;
+                    if (maxStartAbs < dayStartAbs) return;
+
+                    newStartAbs = Math.max(dayStartAbs, Math.min(newStartAbs, maxStartAbs));
+                    const newEndAbs = newStartAbs + durationMinutes;
+
+                    const newStart = new Date(day);
+                    newStart.setHours(Math.floor(newStartAbs / 60), newStartAbs % 60, 0, 0);
+                    const newEnd = new Date(day);
+                    newEnd.setHours(Math.floor(newEndAbs / 60), newEndAbs % 60, 0, 0);
+
+                    // Reset drag state before calling callback.
+                    isDraggingRef.current = false;
+                    draggingAppointmentIdRef.current = null;
+
+                    void onReschedule(droppedId, newStart, newEnd);
+                  }}
                 >
                   {hours.map((h, i) => (
                     <div key={h} className="absolute left-0 right-0 border-t border-salon-sand/30" style={{ top: i * HOUR_HEIGHT }} />

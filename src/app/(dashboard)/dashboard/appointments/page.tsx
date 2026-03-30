@@ -20,6 +20,7 @@ export default function AppointmentsPage() {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   });
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showWalkIn, setShowWalkIn] = useState(false);
 
@@ -215,6 +216,25 @@ export default function AppointmentsPage() {
     loadAppointments();
   };
 
+  const rescheduleAppointment = async (id: string, start: Date, end: Date) => {
+    setReschedulingId(id);
+    const res = await appointmentsApi.reschedule(id, {
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+    });
+    setReschedulingId(null);
+
+    if ('error' in res && res.error) {
+      setError(res.error);
+      return;
+    }
+
+    // Refresh calendar/list for the updated time window.
+    setError(null);
+    setSelectedAppointmentId(null);
+    loadAppointments();
+  };
+
   const handleWalkInCreate = async () => {
     if (!walkInForm.location_id || !walkInForm.client_id || !walkInForm.service_id || !walkInForm.time) return;
     setWalkInLoading(true);
@@ -335,9 +355,10 @@ export default function AppointmentsPage() {
             view={viewMode}
             focusDate={focus}
             appointments={appointments}
-            changingId={changingId}
+            changingId={changingId ?? reschedulingId}
             onStatusChange={updateStatus}
             onAppointmentClick={(id) => setSelectedAppointmentId(id)}
+            onReschedule={rescheduleAppointment}
             onDayClick={(d) => {
               setSelectedAppointmentId(null);
               setRangeMode('day');
@@ -478,7 +499,7 @@ export default function AppointmentsPage() {
           appointment={selectedAppointment}
           onClose={() => setSelectedAppointmentId(null)}
           onStatusChange={updateStatus}
-          changingId={changingId}
+          changingId={changingId ?? reschedulingId}
           statuses={statuses}
         />
       )}

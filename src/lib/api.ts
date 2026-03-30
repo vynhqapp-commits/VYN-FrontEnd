@@ -913,6 +913,13 @@ export const appointmentsApi = {
     }).then((r) =>
       r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error },
     ),
+  reschedule: (id: string, body: { start_time: string; end_time: string }) =>
+    api<Record<string, unknown>>(`/api/appointments/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error },
+    ),
   cancel: (id: string) =>
     api<Record<string, unknown>>(`/api/appointments/${id}`, { method: "DELETE" }).then(
       (r) => (r.data ? { data: { appointment: normalizeAppointment(r.data) } } : { error: r.error }),
