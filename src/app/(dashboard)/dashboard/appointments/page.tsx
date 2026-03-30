@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
@@ -21,6 +21,7 @@ export default function AppointmentsPage() {
   });
   const [changingId, setChangingId] = useState<string | null>(null);
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const pollInFlightRef = useRef(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showWalkIn, setShowWalkIn] = useState(false);
 
@@ -143,7 +144,7 @@ export default function AppointmentsPage() {
     });
   };
 
-  const loadAppointments = () => {
+  const loadAppointments = async () => {
     // Clear previous global errors so the UI doesn't get "stuck" in an error-only render.
     setError(null);
     setLoading(true);
@@ -160,11 +161,16 @@ export default function AppointmentsPage() {
               return { from: formatDateKey(from), to: formatDateKey(to) };
             })()
           : { from: focusDate, to: focusDate }; // day
-    appointmentsApi.list(params).then((res) => {
-      setLoading(false);
+    try {
+      const res = await appointmentsApi.list(params);
       if ('error' in res && res.error) setError(res.error);
       else if (res.data?.appointments) setAppointments(filterAppointmentsForSelectedRange(res.data.appointments));
-    });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to load appointments';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -187,12 +193,15 @@ export default function AppointmentsPage() {
 
   // Lightweight "real-time" sync via polling
   useEffect(() => {
-    if (viewMode === 'list') return;
     const id = setInterval(() => {
-      loadAppointments();
-    }, 30000);
+      if (pollInFlightRef.current) return;
+      pollInFlightRef.current = true;
+      void loadAppointments().finally(() => {
+        pollInFlightRef.current = false;
+      });
+    }, 5000);
     return () => clearInterval(id);
-  }, [viewMode, focusDate]);
+  }, [viewMode, focusDate, rangeMode]);
 
   // Preload reference data for walk-in bookings
   useEffect(() => {
