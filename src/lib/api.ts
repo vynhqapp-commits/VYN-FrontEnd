@@ -1311,14 +1311,23 @@ export const commissionApi = {
     const list = listData(res.data);
     return res.error ? { error: res.error } : { data: { rules: list } };
   },
-  createRule: () =>
-    Promise.resolve({ error: "Not implemented in UI yet" }),
+  createRule: (body: { type: string; value: number; tier_threshold?: number; staff_id?: string; service_id?: string; is_active?: boolean }) =>
+    api<CommissionRule>("/api/commissions/rules", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => r.data ? { data: { rule: r.data } } : { error: r.error }),
   getRule: (id: string) =>
     api<CommissionRule>(`/api/commissions/${id}`).then((r) =>
       r.data ? { data: { rule: r.data } } : { error: r.error },
     ),
-  updateRule: () => Promise.resolve({ error: "Not implemented" }),
-  deleteRule: () => Promise.resolve({ error: "Not implemented" }),
+  updateRule: (id: string, body: { type?: string; value?: number; tier_threshold?: number; staff_id?: string; service_id?: string; is_active?: boolean }) =>
+    api<CommissionRule>(`/api/commissions/rules/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }).then((r) => r.data ? { data: { rule: r.data } } : { error: r.error }),
+  deleteRule: (id: string) =>
+    api<null>(`/api/commissions/rules/${id}`, { method: "DELETE" })
+      .then((r) => r.error ? { error: r.error } : { data: null }),
   earnings: (params?: { staff_id?: string; from?: string; to?: string }) =>
     api<unknown>(
       `/api/commissions/staff/${params?.staff_id ?? 0}/earnings` +
@@ -1337,6 +1346,30 @@ export const commissionApi = {
           }
         : { error: r.error },
     ),
+};
+
+export const invoicesApi = {
+  list: async (params?: { status?: string; search?: string; from?: string; to?: string; page?: number }) => {
+    const qsPart = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString() : "";
+    const res = await api<{ data: InvoiceData[]; meta?: PaginationMeta }>(`/api/invoices${qsPart}`);
+    return res.error ? { error: res.error } : { data: { invoices: (res.data as { data: InvoiceData[] })?.data ?? [], meta: (res.data as { meta?: PaginationMeta })?.meta } };
+  },
+  get: (id: string) =>
+    api<{ data: InvoiceData }>(`/api/invoices/${id}`).then((r) =>
+      r.data ? { data: { invoice: (r.data as { data: InvoiceData }).data } } : { error: r.error },
+    ),
+  void: (id: string) =>
+    api<{ data: InvoiceData }>(`/api/invoices/${id}/void`, { method: "POST" }).then((r) =>
+      r.data ? { data: { invoice: (r.data as { data: InvoiceData }).data } } : { error: r.error },
+    ),
+};
+
+export const ledgerApi = {
+  list: async (params?: { type?: string; category?: string; from?: string; to?: string; is_locked?: string; page?: number }) => {
+    const qsPart = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString() : "";
+    const res = await api<{ data: LedgerEntryRow[]; meta?: PaginationMeta }>(`/api/ledger${qsPart}`);
+    return res.error ? { error: res.error } : { data: { entries: (res.data as { data: LedgerEntryRow[] })?.data ?? [], meta: (res.data as { meta?: PaginationMeta })?.meta } };
+  },
 };
 
 export const giftCardsApi = {
@@ -1876,9 +1909,13 @@ export interface CommissionRule {
   tenant_id: string;
   name: string;
   rule_type: string;
-  config?: unknown;
+  type: string;
+  value: number;
+  tier_threshold?: number | null;
   staff_id?: string | null;
-  role?: string | null;
+  service_id?: string | null;
+  is_active: boolean;
+  created_at?: string;
 }
 
 export interface CommissionRecord {
@@ -2001,3 +2038,39 @@ export const staffApi = {
       body: JSON.stringify({ schedules }),
     }),
 };
+
+export interface InvoiceData {
+  id: string;
+  invoice_number: string;
+  branch_id?: string | null;
+  customer_id?: string | null;
+  appointment_id?: string | null;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paid_amount: number;
+  status: string;
+  notes?: string | null;
+  customer?: { id: string; name: string } | null;
+  branch?: { id: string; name: string } | null;
+  items?: unknown[];
+  payments?: unknown[];
+  created_at?: string;
+}
+
+export interface LedgerEntryRow {
+  id: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
+  type: string;
+  category: string;
+  amount: number;
+  tax_amount: number;
+  reference_type?: string | null;
+  reference_id?: string | null;
+  description?: string | null;
+  entry_date?: string | null;
+  is_locked: boolean;
+  created_at?: string;
+}

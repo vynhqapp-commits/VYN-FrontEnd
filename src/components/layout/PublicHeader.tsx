@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarCheck, UserCircle, LayoutDashboard } from "lucide-react";
+import { CalendarCheck, UserCircle, LayoutDashboard, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getRedirectForRole } from "@/lib/role-redirect";
 import { APP_NAME } from "@/lib/app-name";
@@ -55,6 +55,9 @@ export default function PublicHeader() {
               <NavLink href="/book" active={pathname.startsWith("/book")}>
                 Book a visit
               </NavLink>
+              <NavLink href="/profile" active={pathname === "/profile"}>
+                Profile
+              </NavLink>
             </nav>
           )}
         </div>
@@ -71,16 +74,25 @@ export default function PublicHeader() {
 
               {/* Role-specific action */}
               {isCustomer && (
-                <Link
-                  href="/my-bookings"
-                  className="flex items-center gap-1.5 text-sm font-medium text-white
-                    bg-salon-gold hover:bg-salon-goldLight px-3 py-1.5 rounded-lg
-                    transition-colors shadow-sm"
-                >
-                  <CalendarCheck className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">My bookings</span>
-                  <span className="sm:hidden">Bookings</span>
-                </Link>
+                <>
+                  <Link
+                    href="/profile"
+                    className="flex items-center justify-center size-8 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
+                    title="Profile"
+                  >
+                    <UserRound className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href="/my-bookings"
+                    className="flex items-center gap-1.5 text-sm font-medium text-white
+                      bg-salon-gold hover:bg-salon-goldLight px-3 py-1.5 rounded-lg
+                      transition-colors shadow-sm"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">My bookings</span>
+                    <span className="sm:hidden">Bookings</span>
+                  </Link>
+                </>
               )}
 
               {isSalonRole && (

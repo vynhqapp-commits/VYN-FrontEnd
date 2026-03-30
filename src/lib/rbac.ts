@@ -13,11 +13,13 @@ const ownerMenu: NavItem[] = [
   { href: "/dashboard/inventory", label: "Inventory" },
   { href: "/dashboard/transactions", label: "POS / Sales" },
   { href: "/dashboard/pos", label: "New sale (POS)" },
+  { href: "/dashboard/invoices", label: "Invoices" },
   { href: "/dashboard/cash-drawer", label: "Cash drawer" },
   { href: "/dashboard/debt-aging", label: "Debt aging" },
   { href: "/dashboard/commission", label: "Commission" },
   { href: "/dashboard/gift-cards", label: "Gift cards" },
   { href: "/dashboard/expenses", label: "Expenses" },
+  { href: "/dashboard/ledger", label: "Ledger" },
   { href: "/dashboard/reports", label: "Reports" },
   { href: "/dashboard/franchise", label: "Franchise" },
 ];
@@ -51,7 +53,7 @@ export const menuByRole: Record<AppRole, NavItem[]> = {
 // Keep prefixes broad but safe: any page not listed here is blocked by the guard.
 export const allowedPrefixesByRole: Record<AppRole, string[]> = {
   super_admin: ["/admin"],
-  customer: ["/my-bookings"],
+  customer: ["/my-bookings", "/profile"],
   salon_owner: ownerMenu.map((i) => i.href),
   manager: managerMenu.map((i) => i.href),
   staff: staffMenu.map((i) => i.href),
