@@ -190,7 +190,7 @@ export default function ClientsPage() {
           onClick={() => setOpenClient(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6"
+            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -250,18 +250,18 @@ export default function ClientsPage() {
                   )}
                 </div>
 
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <input
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
-                    className="flex-1 border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                    className="flex-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
                     placeholder="Add a note..."
                   />
                   <button
                     type="button"
                     onClick={addNote}
                     disabled={savingNote || !noteText.trim()}
-                    className="px-4 py-2 rounded-xl bg-salon-espresso text-white font-semibold text-sm hover:bg-salon-bark disabled:opacity-40"
+                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-salon-espresso text-white font-semibold text-sm hover:bg-salon-bark disabled:opacity-40"
                   >
                     {savingNote ? 'Adding…' : 'Add'}
                   </button>
@@ -283,21 +283,21 @@ export default function ClientsPage() {
                       </p>
                       {debtBalance > 0 && (
                         <>
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex flex-col gap-2 mt-2 sm:flex-row">
                             <input
                               type="number"
                               min={0}
                               step="0.01"
                               value={debtPaymentAmount}
                               onChange={(e) => setDebtPaymentAmount(e.target.value)}
-                              className="flex-1 border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm"
+                              className="flex-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm"
                               placeholder="Payment amount"
                             />
                             <button
                               type="button"
                               disabled={!debtPaymentAmount}
                               onClick={handleDebtPayment}
-                              className="px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight disabled:opacity-40"
+                              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight disabled:opacity-40"
                             >
                               Record payment
                             </button>
@@ -305,18 +305,18 @@ export default function ClientsPage() {
                           <p className="text-[11px] text-salon-stone mt-1">
                             Applies to the oldest open debt entry.
                           </p>
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex flex-col gap-2 mt-2 sm:flex-row">
                             <input
                               type="text"
                               value={writeOffReason}
                               onChange={(e) => setWriteOffReason(e.target.value)}
-                              className="flex-1 border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm"
+                              className="flex-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm"
                               placeholder="Write-off reason (optional)"
                             />
                             <button
                               type="button"
                               onClick={handleRequestWriteOff}
-                              className="px-4 py-2 rounded-xl border border-amber-300 text-amber-700 text-sm font-semibold hover:bg-amber-50"
+                              className="w-full sm:w-auto px-4 py-2 rounded-xl border border-amber-300 text-amber-700 text-sm font-semibold hover:bg-amber-50"
                             >
                               Request write-off
                             </button>
