@@ -29,6 +29,10 @@ const schema = z.object({
     (v) => (v === '' || v == null ? undefined : Number(v)),
     z.number().min(0, 'Price must be 0 or more'),
   ),
+  deposit_amount: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : Number(v)),
+    z.number().min(0, 'Deposit must be 0 or more').optional(),
+  ),
   cost: z.preprocess(
     (v) => (v === '' || v == null ? undefined : Number(v)),
     z.number().min(0, 'Cost must be 0 or more').optional(),
@@ -70,6 +74,7 @@ export default function ServicesPage() {
       description: '',
       duration_minutes: 30,
       price: 0,
+      deposit_amount: 0,
       cost: 0,
       is_active: true,
     },
@@ -117,6 +122,7 @@ export default function ServicesPage() {
       description: '',
       duration_minutes: 30,
       price: 0,
+      deposit_amount: 0,
       cost: 0,
       is_active: true,
     });
@@ -130,6 +136,7 @@ export default function ServicesPage() {
       description: (s.description as any) ?? '',
       duration_minutes: Number(s.duration_minutes ?? 30),
       price: Number(s.price ?? 0),
+      deposit_amount: s.deposit_amount != null ? Number(s.deposit_amount) : 0,
       cost: s.cost != null ? Number(s.cost) : 0,
       is_active: !!s.is_active,
     });
@@ -145,6 +152,7 @@ export default function ServicesPage() {
           description: values.description ?? null,
           duration_minutes: values.duration_minutes,
           price: values.price,
+          deposit_amount: values.deposit_amount ?? 0,
           cost: values.cost ?? 0,
           is_active: values.is_active,
         } as any);
@@ -160,6 +168,7 @@ export default function ServicesPage() {
           description: values.description ?? null,
           duration_minutes: values.duration_minutes,
           price: values.price,
+          deposit_amount: values.deposit_amount ?? 0,
           cost: values.cost ?? 0,
           is_active: values.is_active,
         });
@@ -399,6 +408,7 @@ export default function ServicesPage() {
                 <TableHead>Name</TableHead>
                 <TableHead className="w-[140px]">Duration</TableHead>
                 <TableHead className="w-[140px]">Price</TableHead>
+                <TableHead className="w-[140px]">Deposit</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
                 <TableHead className="text-right w-[220px]">Actions</TableHead>
               </TableRow>
@@ -421,6 +431,9 @@ export default function ServicesPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {Number(s.price ?? 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {Number(s.deposit_amount ?? 0).toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <span
@@ -539,6 +552,15 @@ export default function ServicesPage() {
                       control={form.control}
                       name="cost"
                       label="Cost"
+                      placeholder="0"
+                      type="number"
+                      inputMode="decimal"
+                      disabled={saving}
+                    />
+                    <RHFTextField
+                      control={form.control}
+                      name="deposit_amount"
+                      label="Deposit amount"
                       placeholder="0"
                       type="number"
                       inputMode="decimal"

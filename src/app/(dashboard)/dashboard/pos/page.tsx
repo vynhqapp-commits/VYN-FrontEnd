@@ -6,12 +6,14 @@ import {
   clientsApi,
   locationsApi,
   productsApi,
+  staffApi,
   servicesApi,
   transactionsApi,
   type Appointment,
   type Client,
   type Location,
   type Product,
+  type StaffMember,
   type Service,
 } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
@@ -29,6 +31,7 @@ type PosLine = {
   name: string;
   quantity: number;
   unit_price: number;
+  deposit_amount?: number;
 };
 
 type PaymentRow = {
@@ -38,7 +41,14 @@ type PaymentRow = {
   reference?: string;
 };
 
-const paymentMethods = ['Cash', 'Card', 'Whish', 'OMT', 'Transfer'];
+const paymentMethods = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'card', label: 'Card' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'wallet', label: 'Wallet' },
+  { value: 'whish', label: 'Whish' },
+  { value: 'omt', label: 'OMT' },
+];
 
 export default function PosPage() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -50,14 +60,23 @@ export default function PosPage() {
   const [clientId, setClientId] = useState('');
   const [appointmentId, setAppointmentId] = useState('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
 
   const [lines, setLines] = useState<PosLine[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([
-    { id: 'p-1', method: 'Cash', amount: 0 },
+    { id: 'p-1', method: 'cash', amount: 0 },
   ]);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat');
+  const [discountValue, setDiscountValue] = useState(0);
+  const [tipsAmount, setTipsAmount] = useState(0);
+  const [tipMode, setTipMode] = useState<'single' | 'equal_split' | 'custom'>('single');
+  const [tipRows, setTipRows] = useState<Array<{ id: string; staff_id: string; amount: number }>>([
+    { id: 'tip-1', staff_id: '', amount: 0 },
+  ]);
 
   useEffect(() => {
     Promise.all([
@@ -84,6 +103,12 @@ export default function PosPage() {
     appointmentsApi.list({ location_id: locationId, from: today, to: today }).then((res) => {
       if (!('error' in res) && res.data?.appointments) setAppointments(res.data.appointments);
     });
+    staffApi.list({ branch_id: locationId, include_inactive: false }).then((res) => {
+      if (!('error' in res) && res.data) {
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setStaff(rows);
+      }
+    });
   }, [locationId]);
 
   const pickAppointment = (id: string) => {
@@ -92,6 +117,9 @@ export default function PosPage() {
     const appt = appointments.find((a) => a.id === id);
     if (!appt) return;
     if (appt.client_id) setClientId(appt.client_id);
+    if (appt.staff_id) {
+      setTipRows([{ id: 'tip-1', staff_id: String(appt.staff_id), amount: 0 }]);
+    }
     // Autofill a service line from the appointment
     if (appt.Service?.id) {
       setLines([
@@ -102,6 +130,7 @@ export default function PosPage() {
           name: appt.Service.name,
           quantity: 1,
           unit_price: Number(appt.Service.price ?? 0),
+          deposit_amount: Number(appt.Service.deposit_amount ?? 0),
         },
       ]);
     }
@@ -132,11 +161,28 @@ export default function PosPage() {
     () => lines.reduce((sum, l) => sum + l.quantity * l.unit_price, 0),
     [lines]
   );
+  const discountAmount = useMemo(() => {
+    if (discountValue <= 0) return 0;
+    if (discountType === 'percent') return Math.min(subtotal, (subtotal * discountValue) / 100);
+    return Math.min(subtotal, discountValue);
+  }, [discountType, discountValue, subtotal]);
+  const grandTotal = useMemo(
+    () => Math.max(0, subtotal - discountAmount + tipsAmount),
+    [subtotal, discountAmount, tipsAmount],
+  );
   const paid = useMemo(
     () => payments.reduce((sum, p) => sum + (Number.isFinite(p.amount) ? p.amount : 0), 0),
     [payments]
   );
-  const remaining = useMemo(() => Math.max(0, subtotal - paid), [subtotal, paid]);
+  const requiredDeposit = useMemo(
+    () =>
+      lines.reduce((sum, l) => {
+        if (l.type !== 'service') return sum;
+        return sum + Number(l.deposit_amount ?? 0) * Number(l.quantity ?? 1);
+      }, 0),
+    [lines],
+  );
+  const remaining = useMemo(() => Math.max(0, grandTotal - paid), [grandTotal, paid]);
 
   const addLine = (type: LineType, sourceId: string) => {
     if (!sourceId) return;
@@ -152,6 +198,7 @@ export default function PosPage() {
           name: svc.name,
           quantity: 1,
           unit_price: Number(svc.price ?? 0),
+          deposit_amount: Number(svc.deposit_amount ?? 0),
         },
       ]);
     } else {
@@ -190,7 +237,7 @@ export default function PosPage() {
   const addPaymentRow = () => {
     setPayments((prev) => [
       ...prev,
-      { id: `p-${Date.now()}-${prev.length}`, method: 'Cash', amount: 0 },
+      { id: `p-${Date.now()}-${prev.length}`, method: 'cash', amount: 0 },
     ]);
   };
 
@@ -211,8 +258,12 @@ export default function PosPage() {
       toastError('Add at least one service or product to the sale.');
       return;
     }
-    if (paid > subtotal + 0.01) {
+    if (paid > grandTotal + 0.01) {
       toastError('Payment total cannot exceed the order total.');
+      return;
+    }
+    if (requiredDeposit > 0 && paid + 0.01 < requiredDeposit) {
+      toastError(`Minimum required deposit is ${requiredDeposit.toFixed(2)}.`);
       return;
     }
 
@@ -221,6 +272,20 @@ export default function PosPage() {
       client_id: clientId,
       location_id: locationId,
       appointment_id: appointmentId || undefined,
+      discount_code: discountCode.trim() || undefined,
+      discount_type: discountValue > 0 ? discountType : undefined,
+      discount_value: discountValue > 0 ? discountValue : undefined,
+      tips_amount: tipsAmount > 0 ? tipsAmount : undefined,
+      tip_allocation_mode: tipsAmount > 0 ? tipMode : undefined,
+      tip_allocations:
+        tipsAmount > 0
+          ? tipRows
+              .filter((r) => r.staff_id)
+              .map((r) => ({
+                staff_id: r.staff_id,
+                amount: tipMode === 'custom' ? r.amount : undefined,
+              }))
+          : undefined,
       items: lines.map((l) => ({
         type: l.type,
         service_id: l.service_id,
@@ -239,11 +304,12 @@ export default function PosPage() {
       return;
     }
     setLines([]);
-    setPayments([{ id: 'p-1', method: 'Cash', amount: 0 }]);
+    setPayments([{ id: 'p-1', method: 'cash', amount: 0 }]);
+    const invoiceNumber = data?.transaction?.invoice_number ? String(data.transaction.invoice_number) : null;
     toastSuccess(
       remaining > 0
-        ? 'Sale recorded. Remaining amount has been added to client debt.'
-        : 'Sale completed successfully.',
+        ? `Sale recorded${invoiceNumber ? ` (Invoice ${invoiceNumber})` : ''}. Remaining amount has been added to client debt.`
+        : `Sale completed successfully${invoiceNumber ? ` (Invoice ${invoiceNumber})` : ''}.`,
     );
   };
 
@@ -412,14 +478,125 @@ export default function PosPage() {
               <span>Subtotal</span>
               <span className="text-salon-espresso font-medium">{subtotal.toFixed(2)}</span>
             </div>
+            <div className="space-y-2 rounded-lg border border-salon-sand/60 bg-salon-cream/30 p-2">
+              <p className="text-xs font-semibold text-salon-stone">Promo / Discount</p>
+              <Input
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value)}
+                placeholder="Code (optional)"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as 'flat' | 'percent')}
+                  className="w-full bg-white border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso focus:outline-none focus:ring-1 focus:ring-salon-gold/40 focus:border-salon-gold"
+                >
+                  <option value="flat">Flat</option>
+                  <option value="percent">Percent %</option>
+                </select>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2 rounded-lg border border-salon-sand/60 bg-salon-cream/30 p-2">
+              <p className="text-xs font-semibold text-salon-stone">Tips</p>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={tipsAmount}
+                onChange={(e) => setTipsAmount(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="Tip amount"
+              />
+              <select
+                value={tipMode}
+                onChange={(e) => setTipMode(e.target.value as 'single' | 'equal_split' | 'custom')}
+                className="w-full bg-white border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso focus:outline-none focus:ring-1 focus:ring-salon-gold/40 focus:border-salon-gold"
+              >
+                <option value="single">Single staff</option>
+                <option value="equal_split">Equal split</option>
+                <option value="custom">Custom split</option>
+              </select>
+              <div className="space-y-2">
+                {tipRows.map((row) => (
+                  <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-2 items-center">
+                    <select
+                      value={row.staff_id}
+                      onChange={(e) =>
+                        setTipRows((prev) =>
+                          prev.map((x) => (x.id === row.id ? { ...x, staff_id: e.target.value } : x)),
+                        )
+                      }
+                      className="w-full bg-white border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso focus:outline-none focus:ring-1 focus:ring-salon-gold/40 focus:border-salon-gold"
+                    >
+                      <option value="">Select staff</option>
+                      {staff.map((s) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={row.amount}
+                      onChange={(e) =>
+                        setTipRows((prev) =>
+                          prev.map((x) =>
+                            x.id === row.id ? { ...x, amount: Math.max(0, Number(e.target.value) || 0) } : x,
+                          ),
+                        )
+                      }
+                      disabled={tipMode !== 'custom'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setTipRows((prev) => (prev.length > 1 ? prev.filter((x) => x.id !== row.id) : prev))}
+                      className="text-xs text-salon-stone hover:text-salon-espresso"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTipRows((prev) => [...prev, { id: `tip-${Date.now()}-${prev.length}`, staff_id: '', amount: 0 }])
+                  }
+                  className="text-xs font-medium text-salon-gold hover:text-salon-goldLight"
+                >
+                  + Add staff
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-between text-sm text-salon-stone">
+              <span>Discount</span>
+              <span className="text-salon-espresso font-medium">-{discountAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-salon-stone">
+              <span>Tips</span>
+              <span className="text-salon-espresso font-medium">{tipsAmount.toFixed(2)}</span>
+            </div>
             <div className="flex justify-between text-sm text-salon-stone">
               <span>Tax</span>
               <span className="text-salon-espresso font-medium">0.00</span>
             </div>
+            {requiredDeposit > 0 && (
+              <div className="flex justify-between text-sm text-salon-stone">
+                <span>Required deposit</span>
+                <span className="text-salon-espresso font-medium">{requiredDeposit.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm text-salon-stone border-t border-salon-sand/60 pt-2">
               <span className="font-semibold text-salon-espresso">Total</span>
               <span className="font-display text-xl font-semibold text-salon-espresso">
-                {subtotal.toFixed(2)}
+                {grandTotal.toFixed(2)}
               </span>
             </div>
           </div>
@@ -447,8 +624,8 @@ export default function PosPage() {
                     className="w-full bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso focus:outline-none focus:ring-1 focus:ring-salon-gold/40 focus:border-salon-gold"
                   >
                     {paymentMethods.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
+                      <option key={m.value} value={m.value}>
+                        {m.label}
                       </option>
                     ))}
                   </select>
@@ -485,6 +662,11 @@ export default function PosPage() {
                 <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
                   Partial payment: remaining amount will be added to the client&apos;s debt ledger after
                   checkout.
+                </p>
+              )}
+              {requiredDeposit > 0 && paid + 0.01 < requiredDeposit && (
+                <p className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1 mt-1">
+                  Deposit rule not met. Collect at least {requiredDeposit.toFixed(2)} before checkout.
                 </p>
               )}
             </div>

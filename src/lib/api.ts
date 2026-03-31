@@ -648,6 +648,7 @@ export const servicesApi = {
     description?: string | null;
     duration_minutes: number;
     price: number;
+    deposit_amount?: number | null;
     cost?: number | null;
     is_active?: boolean;
   }) =>
@@ -659,6 +660,7 @@ export const servicesApi = {
         description: body.description ?? null,
         duration_minutes: body.duration_minutes,
         price: body.price,
+        deposit_amount: (body as any).deposit_amount ?? 0,
         cost: body.cost ?? 0,
         is_active: body.is_active ?? true,
       }),
@@ -1060,6 +1062,12 @@ export const transactionsApi = {
     client_id?: string;
     location_id: string;
     appointment_id?: string;
+    discount_code?: string;
+    discount_type?: "flat" | "percent";
+    discount_value?: number;
+    tips_amount?: number;
+    tip_allocation_mode?: "single" | "equal_split" | "custom";
+    tip_allocations?: { staff_id: string; amount?: number }[];
     items: {
       type: "service" | "product";
       service_id?: string;
@@ -1093,20 +1101,38 @@ export const transactionsApi = {
           amount: p.amount,
           reference: p.reference,
         })),
+        discount_code: body.discount_code ?? null,
+        discount_type: body.discount_type ?? null,
+        discount_value: body.discount_value ?? 0,
+        tips_amount: body.tips_amount ?? 0,
+        tip_allocation_mode: body.tip_allocation_mode ?? null,
+        tip_allocations: (body.tip_allocations ?? []).map((r) => ({
+          staff_id: r.staff_id,
+          amount: r.amount ?? null,
+        })),
         appointment_id: body.appointment_id ?? null,
         payment_method:
           paymentMethod === "card"
             ? "card"
-            : paymentMethod === "transfer"
+            : paymentMethod === "bank_transfer" || paymentMethod === "transfer"
               ? "bank_transfer"
-              : paymentMethod === "mobile"
-                ? "mobile"
+              : paymentMethod === "wallet" || paymentMethod === "mobile"
+                ? "wallet"
+                : paymentMethod === "whish"
+                  ? "whish"
+                  : paymentMethod === "omt"
+                    ? "omt"
                 : "cash",
       }),
     }).then((r) =>
       r.data ? { data: { transaction: r.data } } : { error: r.error },
     );
   },
+  notifyReceipt: (id: string, channel: "email" | "sms") =>
+    api<{ sms_url?: string }>(`/api/sales/${id}/receipt/notify`, {
+      method: "POST",
+      body: JSON.stringify({ channel }),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
 };
 
 export const paymentsApi = {
@@ -1386,16 +1412,26 @@ export const commissionApi = {
 export const invoicesApi = {
   list: async (params?: { status?: string; search?: string; from?: string; to?: string; page?: number }) => {
     const qsPart = params ? "?" + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString() : "";
-    const res = await api<{ data: InvoiceData[]; meta?: PaginationMeta }>(`/api/invoices${qsPart}`);
-    return res.error ? { error: res.error } : { data: { invoices: (res.data as { data: InvoiceData[] })?.data ?? [], meta: (res.data as { meta?: PaginationMeta })?.meta } };
+    // api() already unwraps Laravel { data: ... } into res.data
+    const res = await api<InvoiceData[] | { data?: InvoiceData[]; meta?: PaginationMeta }>(`/api/invoices${qsPart}`);
+    const rows = Array.isArray(res.data)
+      ? res.data
+      : ((res.data as { data?: InvoiceData[] } | undefined)?.data ?? []);
+    return res.error
+      ? { error: res.error }
+      : { data: { invoices: rows, meta: res.meta ?? (res.data as { meta?: PaginationMeta } | undefined)?.meta } };
   },
   get: (id: string) =>
-    api<{ data: InvoiceData }>(`/api/invoices/${id}`).then((r) =>
-      r.data ? { data: { invoice: (r.data as { data: InvoiceData }).data } } : { error: r.error },
+    api<InvoiceData | { data?: InvoiceData }>(`/api/invoices/${id}`).then((r) =>
+      r.data
+        ? { data: { invoice: (r.data as { data?: InvoiceData }).data ?? (r.data as InvoiceData) } }
+        : { error: r.error },
     ),
   void: (id: string) =>
-    api<{ data: InvoiceData }>(`/api/invoices/${id}/void`, { method: "POST" }).then((r) =>
-      r.data ? { data: { invoice: (r.data as { data: InvoiceData }).data } } : { error: r.error },
+    api<InvoiceData | { data?: InvoiceData }>(`/api/invoices/${id}/void`, { method: "POST" }).then((r) =>
+      r.data
+        ? { data: { invoice: (r.data as { data?: InvoiceData }).data ?? (r.data as InvoiceData) } }
+        : { error: r.error },
     ),
 };
 
@@ -1800,6 +1836,7 @@ export interface Service {
   description?: string | null;
   duration_minutes: number;
   price: string | number;
+  deposit_amount?: string | number | null;
   cost?: string | number | null;
   category?: string | null;
   is_active: boolean;
@@ -1867,11 +1904,13 @@ export interface Transaction {
   tenant_id: string;
   location_id: string;
   appointment_id?: string | null;
+  invoice_number?: string;
   total: string | number;
   status: string;
   TransactionItems?: TransactionItem[];
   Payments?: Payment[];
   Location?: Location;
+  customer?: { id: string; name: string; email?: string | null; phone?: string | null } | null;
   created_at?: string;
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { transactionsApi, paymentsApi } from '@/lib/api';
+import { toastError, toastSuccess } from '@/lib/toast';
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -21,6 +22,7 @@ export default function ReceiptPage() {
         Product?: { name: string };
       }[];
       Payments?: { method: string; amount: string }[];
+      Customer?: { name?: string; email?: string; phone?: string };
       created_at?: string;
     };
   } | null>(null);
@@ -28,6 +30,7 @@ export default function ReceiptPage() {
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refunded, setRefunded] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState<'email' | 'sms' | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -67,6 +70,22 @@ export default function ReceiptPage() {
     setRefunded(true);
   };
 
+  const handleNotify = async (channel: 'email' | 'sms') => {
+    if (!id) return;
+    setNotifyLoading(channel);
+    const { data, error } = await transactionsApi.notifyReceipt(id, channel);
+    setNotifyLoading(null);
+    if (error) {
+      toastError(error);
+      return;
+    }
+    if (channel === 'sms' && data?.sms_url) {
+      window.open(data.sms_url, '_self');
+      return;
+    }
+    toastSuccess(channel === 'email' ? 'Receipt email queued.' : 'SMS link generated.');
+  };
+
   if (!receipt?.receipt) {
     return <div className="p-6 text-salon-stone">Loading receipt...</div>;
   }
@@ -77,6 +96,22 @@ export default function ReceiptPage() {
       <div className="flex gap-2 mb-4 no-print">
         <button type="button" onClick={() => router.back()} className="px-4 py-2 border border-salon-sand/60 rounded-xl text-salon-espresso hover:bg-salon-sand/30 transition-colors">Back</button>
         <button type="button" onClick={handlePrint} className="px-4 py-2 bg-salon-gold text-white rounded-xl font-medium hover:bg-salon-goldLight transition-colors">Print receipt</button>
+        <button
+          type="button"
+          onClick={() => handleNotify('email')}
+          disabled={notifyLoading !== null}
+          className="px-4 py-2 bg-salon-espresso text-white rounded-xl font-medium hover:bg-salon-bark disabled:opacity-50 transition-colors"
+        >
+          {notifyLoading === 'email' ? 'Sending…' : 'Email receipt'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleNotify('sms')}
+          disabled={notifyLoading !== null}
+          className="px-4 py-2 border border-salon-sand/60 rounded-xl text-salon-espresso hover:bg-salon-sand/30 disabled:opacity-50 transition-colors"
+        >
+          {notifyLoading === 'sms' ? 'Preparing…' : 'SMS receipt'}
+        </button>
         <button
           type="button"
           onClick={handleRefund}
