@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { locationsApi, servicesApi, type Location, type Service } from '@/lib/api';
+import { salonProfileApi } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<Location[]>([]);
+  const [currency, setCurrency] = useState('USD');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = useState(1);
@@ -103,6 +105,9 @@ export default function ServicesPage() {
     load();
     locationsApi.list().then((r) => {
       if (!('error' in r) && r.data?.locations) setBranches(r.data.locations);
+    });
+    salonProfileApi.get().then((r) => {
+      if (!('error' in r) && r.data?.salon?.currency) setCurrency(r.data.salon.currency);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -430,10 +435,10 @@ export default function ServicesPage() {
                     {Number(s.duration_minutes ?? 0)} min
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {Number(s.price ?? 0).toFixed(2)}
+                    {Number(s.price ?? 0).toLocaleString('en-US', { style: 'currency', currency })}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {Number(s.deposit_amount ?? 0).toFixed(2)}
+                    {Number(s.deposit_amount ?? 0).toLocaleString('en-US', { style: 'currency', currency })}
                   </TableCell>
                   <TableCell>
                     <span

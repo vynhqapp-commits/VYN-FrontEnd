@@ -22,6 +22,7 @@ const ownerMenu: NavItem[] = [
   { href: "/dashboard/ledger", label: "Ledger" },
   { href: "/dashboard/reports", label: "Reports" },
   { href: "/dashboard/franchise", label: "Franchise" },
+  { href: "/dashboard/profile", label: "Salon Settings" },
 ];
 
 const managerMenu: NavItem[] = ownerMenu.filter(

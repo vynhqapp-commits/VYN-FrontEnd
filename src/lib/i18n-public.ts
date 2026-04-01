@@ -31,6 +31,16 @@ export function getPublicT(locale: PublicLocale) {
   };
 }
 
+/**
+ * Maps our 2-letter UI locale to a full BCP 47 tag for Intl formatting.
+ * "ar" alone produces Eastern Arabic numerals; "ar-u-nu-latn" forces Latin digits.
+ */
+const LOCALE_TO_BCP47: Record<PublicLocale, string> = {
+  en: "en-US",
+  ar: "ar-u-nu-latn", // Arabic script, Latin numerals — readable in mixed UIs
+  fr: "fr-FR",
+};
+
 export function formatPublicCurrency(amount: number, currency: string | null | undefined, locale: PublicLocale) {
   const envDefault = (process.env.NEXT_PUBLIC_DEFAULT_CURRENCY ?? "").trim().toUpperCase();
   const platformDefault = /^[A-Z]{3}$/.test(envDefault) ? envDefault : DEFAULT_PUBLIC_CURRENCY;
@@ -38,11 +48,12 @@ export function formatPublicCurrency(amount: number, currency: string | null | u
   const raw = (currency ?? "").trim().toUpperCase();
   const currencyCode = /^[A-Z]{3}$/.test(raw) ? raw : platformDefault;
 
+  const bcp47 = LOCALE_TO_BCP47[locale] ?? "en-US";
+
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency: currencyCode }).format(amount);
+    return new Intl.NumberFormat(bcp47, { style: "currency", currency: currencyCode }).format(amount);
   } catch {
-    // Last-resort fallback keeps a currency label instead of dropping to plain numeric.
-    const numeric = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    const numeric = new Intl.NumberFormat(bcp47, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
     return `${currencyCode} ${numeric}`;
   }
 }

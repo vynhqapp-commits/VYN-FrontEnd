@@ -18,6 +18,12 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Spinner, ErrorBox } from "@/components/ui";
 import PublicHeader from "@/components/layout/PublicHeader";
 
+const LOCALE_BCP47: Record<PublicLocale, string> = {
+  en: "en-US",
+  ar: "ar-u-nu-latn",
+  fr: "fr-FR",
+};
+
 type Slot = { start: string; end: string; staff_id: string };
 
 type SalonDetail = {
@@ -399,13 +405,13 @@ export default function BookPage() {
               <SummaryRow label={t("summaryStaff")} value={confirmed.staff.name} />
               <SummaryRow
                 label={t("summaryDate")}
-                value={localDate(confirmed.starts_at).toLocaleDateString(locale, {
+                value={localDate(confirmed.starts_at).toLocaleDateString(LOCALE_BCP47[locale], {
                   weekday: "long", month: "long", day: "numeric", year: "numeric",
                 })}
               />
               <SummaryRow
                 label={t("summaryTime")}
-                value={`${fmt(confirmed.starts_at, locale)} – ${fmt(confirmed.ends_at, locale)}`}
+                value={`${fmt(confirmed.starts_at, LOCALE_BCP47[locale])} – ${fmt(confirmed.ends_at, LOCALE_BCP47[locale])}`}
               />
               <SummaryRow
                 label={t("summaryDuration")}
@@ -828,7 +834,7 @@ export default function BookPage() {
                           transition-all duration-150 animate-fade-in-up"
                         style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
                       >
-                        {fmt(slot.start, locale)}
+                        {fmt(slot.start, LOCALE_BCP47[locale])}
                       </button>
                     ))}
                   </div>
@@ -855,13 +861,13 @@ export default function BookPage() {
               <SummaryRow label={t("summaryLocation")} value={selectedBranch?.name ?? "—"} />
               <SummaryRow
                 label={t("summaryDate")}
-                value={localDate(selected.slot.start).toLocaleDateString(locale, {
+                value={localDate(selected.slot.start).toLocaleDateString(LOCALE_BCP47[locale], {
                   weekday: "long", month: "short", day: "numeric",
                 })}
               />
               <SummaryRow
                 label={t("summaryTime")}
-                value={`${fmt(selected.slot.start, locale)} – ${fmt(selected.slot.end, locale)}`}
+                value={`${fmt(selected.slot.start, LOCALE_BCP47[locale])} – ${fmt(selected.slot.end, LOCALE_BCP47[locale])}`}
               />
               <SummaryRow
                 label={t("summaryPrice")}
@@ -1087,7 +1093,7 @@ function Field({
  * Strips the UTC "Z" marker so the browser does not apply a timezone offset —
  * the DB times are naive (no TZ), meant to represent the salon's clock.
  */
-function fmt(iso: string, locale?: PublicLocale) {
+function fmt(iso: string, locale?: string) {
   const local = iso.replace(/Z$/, "");
   return new Date(local).toLocaleTimeString(locale, {
     hour: "2-digit",

@@ -252,6 +252,25 @@ export const profileApi = {
     }),
 };
 
+export const salonProfileApi = {
+  get: () =>
+    api<Tenant>("/api/salon/profile").then((r) =>
+      r.data ? { data: { salon: r.data } } : { error: r.error },
+    ),
+  update: (body: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    timezone?: string;
+    currency?: string;
+    logo?: string;
+  }) =>
+    api<Tenant>("/api/salon/profile", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: { salon: r.data } } : { error: r.error })),
+};
+
 export const tenantsApi = {
   list: async (params?: { page?: number; per_page?: number }) => {
     const qsPart = params?.page || params?.per_page ? qs(params) : "";
@@ -979,6 +998,7 @@ function normalizeAppointment(raw: Record<string, unknown>): Appointment {
       .filter(Boolean)[0] as Record<string, unknown> | undefined) ??
     undefined;
   const staffRaw = (raw.staff as Record<string, unknown> | undefined) ?? (raw.Staff as Record<string, unknown> | undefined);
+  const reviewRaw = (raw.review as Record<string, unknown> | undefined) ?? undefined;
 
   return {
     id: String(raw.id ?? ''),
@@ -1029,6 +1049,20 @@ function normalizeAppointment(raw: Record<string, unknown>): Appointment {
           tenantId: (staffRaw.tenantId as string | null | undefined) ?? null,
           fullName: (staffRaw.fullName as string | null | undefined) ?? null,
         } as AuthUser)
+      : undefined,
+    review: reviewRaw
+      ? {
+          id: String(reviewRaw.id ?? ''),
+          salon_id: String(reviewRaw.salon_id ?? ''),
+          customer_id: (reviewRaw.customer_id as string | null | undefined) ?? null,
+          appointment_id: (reviewRaw.appointment_id as string | null | undefined) ?? null,
+          rating: Number(reviewRaw.rating ?? 0),
+          comment: (reviewRaw.comment as string | null | undefined) ?? null,
+          status: String(reviewRaw.status ?? 'pending'),
+          approved_at: (reviewRaw.approved_at as string | null | undefined) ?? null,
+          approved_by: (reviewRaw.approved_by as string | null | undefined) ?? null,
+          created_at: (reviewRaw.created_at as string | undefined) ?? undefined,
+        }
       : undefined,
   };
 }
@@ -1814,6 +1848,22 @@ export const customerApi = {
     api<{ deleted: boolean }>(`/api/customer/favorites/${salonId}`, {
       method: "DELETE",
     }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+  myReviews: () =>
+    api<{ reviews: CustomerReview[] } | CustomerReview[]>("/api/customer/reviews").then((r) => {
+      if (!r.data) return { error: r.error };
+      const reviews = Array.isArray((r.data as { reviews?: CustomerReview[] }).reviews)
+        ? ((r.data as { reviews: CustomerReview[] }).reviews)
+        : listData(r.data as CustomerReview[] | { data: CustomerReview[] });
+      return { data: { reviews } };
+    }),
+  submitReview: (
+    bookingId: string,
+    body: { rating: number; comment?: string },
+  ) =>
+    api<{ review: CustomerReview; message?: string }>(`/api/customer/bookings/${bookingId}/review`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
 };
 
 export interface BookingPolicy {
@@ -1834,6 +1884,19 @@ export interface FavoriteSalon {
     logo?: string | null;
     address?: string | null;
   } | null;
+}
+
+export interface CustomerReview {
+  id: string;
+  salon_id: string;
+  customer_id?: string | null;
+  appointment_id?: string | null;
+  rating: number;
+  comment?: string | null;
+  status: "pending" | "approved" | "rejected" | string;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  created_at?: string;
 }
 
 export interface AuthUser {
@@ -1863,6 +1926,13 @@ export interface Tenant {
   service_count?: number;
   created_at?: string;
   updated_at?: string;
+  reviews?: {
+    id: string;
+    rating: number;
+    comment?: string | null;
+    customer_name?: string | null;
+    created_at?: string;
+  }[];
 }
 
 function normalizeTenant(t: Tenant): Tenant {
@@ -1999,6 +2069,7 @@ export interface Appointment {
   branch?: { id: string; name: string; address?: string | null };
   staff?: { id: string; name: string };
   services?: { service: { id: string; name: string; duration_minutes: number; price: number | string } }[];
+  review?: CustomerReview | null;
 }
 
 export interface Transaction {

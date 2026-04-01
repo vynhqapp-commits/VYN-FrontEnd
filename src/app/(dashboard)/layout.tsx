@@ -13,6 +13,7 @@ import {
   BarChart3,
   Boxes,
   BriefcaseBusiness,
+  Building2,
   CalendarDays,
   CreditCard,
   Gift,
@@ -76,7 +77,9 @@ export default function DashboardLayout({
                                       ? <BarChart3 className="size-5" />
                                       : i.href === "/dashboard/franchise"
                                         ? <BriefcaseBusiness className="size-5" />
-                                        : null,
+                                        : i.href === "/dashboard/profile"
+                                          ? <Building2 className="size-5" />
+                                          : null,
     }));
   }, [roleCandidate]);
   const cmdItems = useMemo(

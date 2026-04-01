@@ -8,8 +8,13 @@ import type { Appointment, FavoriteSalon } from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { toast } from "sonner";
 import { useLocale } from "@/components/LocaleProvider";
-import { getPublicT } from "@/lib/i18n-public";
-import type { PublicI18nKey } from "@/lib/i18n-public";
+import { getPublicT, type PublicLocale, type PublicI18nKey } from "@/lib/i18n-public";
+
+const LOCALE_BCP47: Record<PublicLocale, string> = {
+  en: "en-US",
+  ar: "ar-u-nu-latn",
+  fr: "fr-FR",
+};
 
 type BookingRow = Appointment;
 
@@ -35,6 +40,10 @@ export default function MyBookingsPage() {
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleStartAt, setRescheduleStartAt] = useState("");
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReviewId, setSubmittingReviewId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<FavoriteSalon[]>([]);
   const [favoriteSalonIds, setFavoriteSalonIds] = useState<Set<string>>(new Set());
 
@@ -131,6 +140,33 @@ export default function MyBookingsPage() {
     toast.success("Removed from favorites.");
   };
 
+  const openReview = (booking: BookingRow) => {
+    setReviewBookingId(booking.id);
+    setReviewRating(5);
+    setReviewComment("");
+  };
+
+  const submitReview = async (bookingId: string) => {
+    setSubmittingReviewId(bookingId);
+    const { data, error } = await customerApi.submitReview(bookingId, {
+      rating: reviewRating,
+      comment: reviewComment.trim() || undefined,
+    });
+    setSubmittingReviewId(null);
+    if (error || !data?.review) {
+      toast.error(error ?? "Failed to submit review.");
+      return;
+    }
+
+    setBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, review: data.review } : b)),
+    );
+    setReviewBookingId(null);
+    setReviewComment("");
+    setReviewRating(5);
+    toast.success("Review submitted and pending approval.");
+  };
+
   const upcoming = bookings.filter((b) =>
     ["scheduled", "confirmed", "pending"].includes(String(b.status))
   );
@@ -213,11 +249,20 @@ export default function MyBookingsPage() {
                   onStartReschedule={() => openReschedule(b)}
                   onSubmitReschedule={submitReschedule}
                   onDismissReschedule={() => { setRescheduleId(null); setRescheduleStartAt(""); }}
+                  onOpenReview={() => openReview(b)}
+                  onSubmitReview={submitReview}
+                  onDismissReview={() => { setReviewBookingId(null); setReviewComment(""); setReviewRating(5); }}
                   rescheduleOpen={rescheduleId === b.id}
                   rescheduleValue={rescheduleStartAt}
                   onRescheduleValueChange={setRescheduleStartAt}
+                  reviewOpen={reviewBookingId === b.id}
+                  reviewRating={reviewRating}
+                  reviewComment={reviewComment}
+                  onReviewRatingChange={setReviewRating}
+                  onReviewCommentChange={setReviewComment}
                   cancelling={cancellingId === b.id}
                   rescheduling={reschedulingId === b.id}
+                  submittingReview={submittingReviewId === b.id}
                   locale={locale}
                   statusLabel={statusLabel}
                   cancelLabel={t("cancelBooking")}
@@ -233,6 +278,15 @@ export default function MyBookingsPage() {
                 <BookingCard
                   key={b.id}
                   booking={b}
+                  onOpenReview={() => openReview(b)}
+                  onSubmitReview={submitReview}
+                  onDismissReview={() => { setReviewBookingId(null); setReviewComment(""); setReviewRating(5); }}
+                  reviewOpen={reviewBookingId === b.id}
+                  reviewRating={reviewRating}
+                  reviewComment={reviewComment}
+                  onReviewRatingChange={setReviewRating}
+                  onReviewCommentChange={setReviewComment}
+                  submittingReview={submittingReviewId === b.id}
                   locale={locale}
                   statusLabel={statusLabel}
                   cancelLabel={t("cancelBooking")}
@@ -283,11 +337,20 @@ function BookingCard({
   onStartReschedule,
   onSubmitReschedule,
   onDismissReschedule,
+  onOpenReview,
+  onSubmitReview,
+  onDismissReview,
   rescheduleOpen,
   rescheduleValue,
   onRescheduleValueChange,
+  reviewOpen,
+  reviewRating,
+  reviewComment,
+  onReviewRatingChange,
+  onReviewCommentChange,
   cancelling,
   rescheduling,
+  submittingReview,
   locale,
   statusLabel,
   cancelLabel,
@@ -302,12 +365,21 @@ function BookingCard({
   onStartReschedule?: () => void;
   onSubmitReschedule?: (id: string) => void;
   onDismissReschedule?: () => void;
+  onOpenReview?: () => void;
+  onSubmitReview?: (id: string) => void;
+  onDismissReview?: () => void;
   rescheduleOpen?: boolean;
   rescheduleValue?: string;
   onRescheduleValueChange?: (v: string) => void;
+  reviewOpen?: boolean;
+  reviewRating?: number;
+  reviewComment?: string;
+  onReviewRatingChange?: (v: number) => void;
+  onReviewCommentChange?: (v: string) => void;
   cancelling?: boolean;
   rescheduling?: boolean;
-  locale: string;
+  submittingReview?: boolean;
+  locale: PublicLocale;
   statusLabel: Record<string, string>;
   cancelLabel: string;
   cancellingLabel: string;
@@ -323,9 +395,10 @@ function BookingCard({
   const status = String(b.status);
   const canCancel = CANCELLABLE.includes(status) && onCancel;
   const canReschedule = RESCHEDULABLE.includes(status) && onStartReschedule;
+  const canReview = status === "completed" && !b.review && onOpenReview;
 
   const dateStr = startIso
-    ? localDate(startIso).toLocaleDateString(locale, {
+    ? localDate(startIso).toLocaleDateString(LOCALE_BCP47[locale], {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -333,9 +406,9 @@ function BookingCard({
       })
     : "—";
   const timeStr = startIso && endIso
-    ? `${fmt(startIso, locale)} – ${fmt(endIso, locale)}`
+    ? `${fmt(startIso, LOCALE_BCP47[locale])} – ${fmt(endIso, LOCALE_BCP47[locale])}`
     : startIso
-      ? fmt(startIso, locale)
+      ? fmt(startIso, LOCALE_BCP47[locale])
       : "—";
 
   return (
@@ -375,7 +448,7 @@ function BookingCard({
           </p>
         </div>
 
-        {(canCancel || canReschedule) && (
+        {(canCancel || canReschedule || canReview || b.review) && (
           <div className="shrink-0 flex flex-col gap-2">
             {rebookHref && (
               <Link
@@ -418,6 +491,21 @@ function BookingCard({
                 {cancelling ? cancellingLabel : cancelLabel}
               </button>
             )}
+            {canReview && (
+              <button
+                type="button"
+                onClick={onOpenReview}
+                className="text-xs font-medium text-salon-espresso hover:text-salon-gold
+                  border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Rate &amp; Review
+              </button>
+            )}
+            {b.review && (
+              <span className="text-[11px] px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 text-center">
+                Review: {String(b.review.status ?? "pending")}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -442,6 +530,49 @@ function BookingCard({
             <button
               type="button"
               onClick={onDismissReschedule}
+              className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {reviewOpen && (
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Rating</label>
+            <select
+              value={reviewRating ?? 5}
+              onChange={(e) => onReviewRatingChange?.(Number(e.target.value))}
+              className="w-full sm:w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            >
+              {[5, 4, 3, 2, 1].map((r) => (
+                <option key={r} value={r}>{r} star{r > 1 ? "s" : ""}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Comment (optional)</label>
+            <textarea
+              value={reviewComment ?? ""}
+              onChange={(e) => onReviewCommentChange?.(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              placeholder="Share your experience..."
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onSubmitReview?.(b.id)}
+              disabled={!!submittingReview}
+              className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
+            >
+              {submittingReview ? "Submitting..." : "Submit review"}
+            </button>
+            <button
+              type="button"
+              onClick={onDismissReview}
               className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
             >
               Cancel

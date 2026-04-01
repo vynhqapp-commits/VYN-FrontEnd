@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Mail, MessageCircle, Phone, RefreshCw, X } from 'lucide-react';
-import { clientsApi, debtApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
+import { clientsApi, debtApi, salonProfileApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -35,6 +35,16 @@ export default function ClientsPage() {
   const [stats, setStats] = useState<ClientStats | null>(null);
 
   const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
+  const [currency, setCurrency] = useState('USD');
+
+  useEffect(() => {
+    salonProfileApi.get().then((r) => {
+      if (!('error' in r) && r.data?.salon?.currency) setCurrency(r.data.salon.currency);
+    });
+  }, []);
+
+  const fmt = (amount: number) =>
+    amount.toLocaleString('en-US', { style: 'currency', currency });
 
   const loadClients = () => {
     setLoading(true);
@@ -410,7 +420,7 @@ export default function ClientsPage() {
                       <p className="text-sm">
                         Outstanding balance:{' '}
                         <span className="font-semibold text-salon-espresso">
-                          {debtBalance.toFixed ? debtBalance.toFixed(2) : Number(debtBalance || 0).toFixed(2)}
+                          {fmt(typeof debtBalance === 'number' ? debtBalance : Number(debtBalance || 0))}
                         </span>
                       </p>
                       {debtBalance > 0 && (
@@ -561,13 +571,13 @@ export default function ClientsPage() {
                         <p className="text-sm">
                           Total spent:{' '}
                           <span className="font-semibold text-salon-espresso">
-                            {Number(stats.total_spent ?? 0).toFixed(2)}
+                            {fmt(Number(stats.total_spent ?? 0))}
                           </span>
                         </p>
                         <p className="text-sm">
                           Avg ticket:{' '}
                           <span className="font-semibold text-salon-espresso">
-                            {Number(stats.avg_ticket ?? 0).toFixed(2)}
+                            {fmt(Number(stats.avg_ticket ?? 0))}
                           </span>
                         </p>
                         <p className="text-xs text-salon-stone">
