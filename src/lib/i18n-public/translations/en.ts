@@ -17,7 +17,7 @@ export const publicTranslationsEn = {
   step1Title: "Book a salon",
   step1Subtitle: "Choose a salon to see services and availability.",
 
-  searchSalonsPlaceholder: "Search salons…",
+  searchSalonsPlaceholder: "Search salons by name, service, stylist",
   noSalonsMatchSearch: "No salons match your search.",
   noSalonsAvailableYet: "No salons available yet.",
 

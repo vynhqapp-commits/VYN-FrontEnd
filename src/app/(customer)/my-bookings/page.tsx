@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, MapPin, User, Plus, AlertCircle } from "lucide-react";
 import { customerApi } from "@/lib/api";
-import type { Appointment } from "@/lib/api";
+import type { Appointment, FavoriteSalon } from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { toast } from "sonner";
 import { useLocale } from "@/components/LocaleProvider";
@@ -35,6 +35,8 @@ export default function MyBookingsPage() {
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleStartAt, setRescheduleStartAt] = useState("");
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteSalon[]>([]);
+  const [favoriteSalonIds, setFavoriteSalonIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     customerApi.myBookings().then((res) => {
@@ -44,6 +46,11 @@ export default function MyBookingsPage() {
       } else if (res.data?.bookings) {
         setBookings(res.data.bookings as BookingRow[]);
       }
+    });
+    customerApi.myFavorites().then((res) => {
+      if ("error" in res || !res.data?.favorites) return;
+      setFavorites(res.data.favorites);
+      setFavoriteSalonIds(new Set(res.data.favorites.map((f) => String(f.salon_id))));
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -95,6 +102,35 @@ export default function MyBookingsPage() {
     setRescheduleStartAt("");
   };
 
+  const addFavorite = async (salonId: string) => {
+    const { data, error } = await customerApi.addFavoriteSalon(salonId);
+    if (error || !data?.favorite) {
+      toast.error(error ?? "Failed to add favorite.");
+      return;
+    }
+    setFavoriteSalonIds((prev) => new Set([...prev, String(salonId)]));
+    setFavorites((prev) => {
+      const exists = prev.some((f) => String(f.salon_id) === String(salonId));
+      return exists ? prev : [data.favorite, ...prev];
+    });
+    toast.success("Added to favorites.");
+  };
+
+  const removeFavorite = async (salonId: string) => {
+    const { error } = await customerApi.removeFavoriteSalon(salonId);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setFavoriteSalonIds((prev) => {
+      const next = new Set(prev);
+      next.delete(String(salonId));
+      return next;
+    });
+    setFavorites((prev) => prev.filter((f) => String(f.salon_id) !== String(salonId)));
+    toast.success("Removed from favorites.");
+  };
+
   const upcoming = bookings.filter((b) =>
     ["scheduled", "confirmed", "pending"].includes(String(b.status))
   );
@@ -132,6 +168,29 @@ export default function MyBookingsPage() {
         </Link>
       </div>
 
+      {favorites.length > 0 && (
+        <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Favorites</p>
+          <div className="flex flex-wrap gap-2">
+            {favorites.map((fav) => (
+              <div key={fav.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs">
+                <Link href={`/book?salon_id=${fav.salon?.id ?? fav.salon_id}`} className="text-salon-espresso hover:text-salon-gold">
+                  {fav.salon?.name ?? "Salon"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => removeFavorite(String(fav.salon?.id ?? fav.salon_id))}
+                  className="text-red-500 hover:text-red-700"
+                  title="Remove favorite"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-20">
           <Spinner size="lg" />
@@ -146,6 +205,10 @@ export default function MyBookingsPage() {
                 <BookingCard
                   key={b.id}
                   booking={b}
+                  rebookHref={buildRebookHref(b)}
+                  isFavorite={favoriteSalonIds.has(String(b.tenant_id))}
+                  onAddFavorite={() => addFavorite(String(b.tenant_id))}
+                  onRemoveFavorite={() => removeFavorite(String(b.tenant_id))}
                   onCancel={handleCancel}
                   onStartReschedule={() => openReschedule(b)}
                   onSubmitReschedule={submitReschedule}
@@ -212,6 +275,10 @@ function Section({
 
 function BookingCard({
   booking: b,
+  rebookHref,
+  isFavorite,
+  onAddFavorite,
+  onRemoveFavorite,
   onCancel,
   onStartReschedule,
   onSubmitReschedule,
@@ -227,6 +294,10 @@ function BookingCard({
   cancellingLabel,
 }: {
   booking: BookingRow;
+  rebookHref?: string;
+  isFavorite?: boolean;
+  onAddFavorite?: () => void;
+  onRemoveFavorite?: () => void;
   onCancel?: (id: string) => void;
   onStartReschedule?: () => void;
   onSubmitReschedule?: (id: string) => void;
@@ -306,6 +377,25 @@ function BookingCard({
 
         {(canCancel || canReschedule) && (
           <div className="shrink-0 flex flex-col gap-2">
+            {rebookHref && (
+              <Link
+                href={rebookHref}
+                className="text-xs font-medium text-salon-espresso hover:text-salon-gold
+                  border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors text-center"
+              >
+                Rebook
+              </Link>
+            )}
+            {(onAddFavorite || onRemoveFavorite) && (
+              <button
+                type="button"
+                onClick={isFavorite ? onRemoveFavorite : onAddFavorite}
+                className="text-xs font-medium text-salon-espresso hover:text-salon-gold
+                  border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {isFavorite ? "Unfavorite" : "Add favorite"}
+              </button>
+            )}
             {canReschedule && (
               <button
                 type="button"
@@ -406,4 +496,17 @@ function toDatetimeLocal(iso: string): string {
   const hh = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+function buildRebookHref(booking: BookingRow): string {
+  const serviceId = booking.services?.[0]?.service?.id ?? booking.service_id ?? booking.Service?.id ?? "";
+  const branchId = booking.branch?.id ?? booking.branch_id ?? booking.location_id ?? "";
+  const staffId = booking.staff?.id ?? booking.staff_id ?? "";
+  const params = new URLSearchParams();
+  if (booking.tenant_id) params.set("salon_id", String(booking.tenant_id));
+  if (serviceId) params.set("service_id", String(serviceId));
+  if (branchId) params.set("branch_id", String(branchId));
+  if (staffId) params.set("staff_id", String(staffId));
+  const query = params.toString();
+  return query ? `/book?${query}` : "/book";
 }

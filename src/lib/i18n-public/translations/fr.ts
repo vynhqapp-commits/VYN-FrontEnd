@@ -17,7 +17,7 @@ export const publicTranslationsFr = {
   step1Title: "Réserver un salon",
   step1Subtitle: "Choisissez un salon pour voir les services et les disponibilités.",
 
-  searchSalonsPlaceholder: "Rechercher des salons…",
+  searchSalonsPlaceholder: "Rechercher des salons par nom, service, styliste",
   noSalonsMatchSearch: "Aucun salon ne correspond à votre recherche.",
   noSalonsAvailableYet: "Aucun salon disponible pour le moment.",
 

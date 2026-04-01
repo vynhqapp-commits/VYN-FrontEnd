@@ -17,7 +17,7 @@ export const publicTranslationsAr = {
   step1Title: "احجز صالونًا",
   step1Subtitle: "اختر صالونًا لعرض الخدمات والتوفر.",
 
-  searchSalonsPlaceholder: "ابحث عن صالونات…",
+  searchSalonsPlaceholder: "ابحث عن الصالونات بالاسم أو الخدمة أو المصمم",
   noSalonsMatchSearch: "لا توجد صالونات تطابق بحثك.",
   noSalonsAvailableYet: "لا توجد صالونات متاحة حالياً.",
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft } from "lucide-react";
 import {
   publicApi,
@@ -87,6 +88,7 @@ function StepBar({ step, labels }: { step: number; labels: string[] }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BookPage() {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { locale } = useLocale();
   const t = getPublicT(locale);
@@ -133,6 +135,9 @@ export default function BookPage() {
     availability: "",
     genderPreference: "",
   });
+  const [prefillSalonId, setPrefillSalonId] = useState<string>("");
+  const [prefillBranchId, setPrefillBranchId] = useState<string>("");
+  const [prefillServiceId, setPrefillServiceId] = useState<string>("");
 
   // Pre-fill form from auth context when user is logged in
   useEffect(() => {
@@ -203,6 +208,15 @@ export default function BookPage() {
   useEffect(() => {
     fetchSalons(appliedFilters, 1);
   }, []);
+
+  useEffect(() => {
+    const salonId = searchParams.get("salon_id") ?? "";
+    const branchId = searchParams.get("branch_id") ?? "";
+    const serviceId = searchParams.get("service_id") ?? "";
+    setPrefillSalonId(salonId);
+    setPrefillBranchId(branchId);
+    setPrefillServiceId(serviceId);
+  }, [searchParams]);
 
   const currentFilters: FilterState = {
     search,
@@ -298,6 +312,23 @@ export default function BookPage() {
     });
   };
 
+  useEffect(() => {
+    if (step !== 1 || !prefillSalonId || salons.length === 0) return;
+    const target = salons.find((s) => String(s.id) === String(prefillSalonId) && Boolean((s as Tenant & { slug?: string }).slug));
+    if (!target) return;
+    pickSalon((target as Tenant & { slug: string }).slug);
+  }, [step, salons, prefillSalonId]);
+
+  useEffect(() => {
+    if (!detail) return;
+    if (prefillBranchId && detail.branches.some((b) => String(b.id) === String(prefillBranchId))) {
+      setBranchId(String(prefillBranchId));
+    }
+    if (prefillServiceId && detail.services.some((s) => String(s.id) === String(prefillServiceId))) {
+      setServiceId(String(prefillServiceId));
+    }
+  }, [detail, prefillBranchId, prefillServiceId]);
+
   const fetchSlots = (bId: string, sId: string, d: string) => {
     if (!bId || !sId || !d) return;
     setLoadingSlots(true);
@@ -339,8 +370,8 @@ export default function BookPage() {
     if (data?.appointment) { setConfirmed(data.appointment); setStep(5); }
   };
 
-  const selectedBranch = detail?.branches.find((b) => b.id === branchId);
-  const selectedService = detail?.services.find((s) => s.id === serviceId);
+  const selectedBranch = detail?.branches.find((b) => String(b.id) === String(branchId));
+  const selectedService = detail?.services.find((s) => String(s.id) === String(serviceId));
 
   // ── Step 5: Confirmation ─────────────────────────────────────────────────
   if (step === 5 && confirmed) {
@@ -696,8 +727,8 @@ export default function BookPage() {
                       {detail.branches.map((b, i) => (
                         <SelectCard
                           key={b.id}
-                          active={branchId === b.id}
-                          onClick={() => setBranchId(b.id)}
+                          active={String(branchId) === String(b.id)}
+                          onClick={() => setBranchId(String(b.id))}
                           delay={i * 50}
                         >
                           <div className="flex-1">
@@ -721,8 +752,8 @@ export default function BookPage() {
                       {detail.services.map((s, i) => (
                         <SelectCard
                           key={s.id}
-                          active={serviceId === s.id}
-                          onClick={() => setServiceId(s.id)}
+                          active={String(serviceId) === String(s.id)}
+                          onClick={() => setServiceId(String(s.id))}
                           delay={i * 40}
                         >
                           <div className="flex-1 min-w-0">
@@ -734,7 +765,7 @@ export default function BookPage() {
                             </p>
                           </div>
                           <p
-                            className={`text-base font-bold shrink-0 transition-colors ${serviceId === s.id ? "text-salon-gold" : "text-salon-espresso"}`}
+                            className={`text-base font-bold shrink-0 transition-colors ${String(serviceId) === String(s.id) ? "text-salon-gold" : "text-salon-espresso"}`}
                           >
                             {formatPublicCurrency(Number(s.price), detail.salon.currency, locale)}
                           </p>

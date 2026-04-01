@@ -1797,6 +1797,23 @@ export const customerApi = {
           }
         : { error: r.error },
     ),
+  myFavorites: () =>
+    api<{ favorites: FavoriteSalon[] } | FavoriteSalon[]>("/api/customer/favorites").then((r) => {
+      if (!r.data) return { error: r.error };
+      const favorites = Array.isArray((r.data as { favorites?: FavoriteSalon[] }).favorites)
+        ? ((r.data as { favorites: FavoriteSalon[] }).favorites)
+        : listData(r.data as FavoriteSalon[] | { data: FavoriteSalon[] });
+      return { data: { favorites } };
+    }),
+  addFavoriteSalon: (salonId: string) =>
+    api<{ favorite: FavoriteSalon }>("/api/customer/favorites", {
+      method: "POST",
+      body: JSON.stringify({ salon_id: salonId }),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+  removeFavoriteSalon: (salonId: string) =>
+    api<{ deleted: boolean }>(`/api/customer/favorites/${salonId}`, {
+      method: "DELETE",
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
 };
 
 export interface BookingPolicy {
@@ -1804,6 +1821,19 @@ export interface BookingPolicy {
   minutes_to_start: number;
   violated: boolean;
   mode: "soft" | "hard" | string;
+}
+
+export interface FavoriteSalon {
+  id: string;
+  salon_id: string;
+  created_at?: string;
+  salon?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo?: string | null;
+    address?: string | null;
+  } | null;
 }
 
 export interface AuthUser {
