@@ -9,7 +9,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ user: AuthUser } | { error: string }>;
   loginWithOtp: (email: string, code: string) => Promise<{ user: AuthUser } | { error: string }>;
-  sendOtp: (email: string) => Promise<string | null>;
+  sendOtp: (email: string, locale?: string) => Promise<string | null>;
   registerCustomer: (body: { email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser } | { error: string }>;
   registerSalonOwner: (body: { salon_name: string; salon_address?: string; email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser } | { error: string }>;
   logout: () => void;
@@ -60,8 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { user: data.user };
   };
 
-  const sendOtp = async (email: string) => {
-    const { error } = await authApi.otpSend(email);
+  const sendOtp = async (email: string, locale?: string) => {
+    const { error } = await authApi.otpSend(email, undefined, locale);
     return error || null;
   };
 

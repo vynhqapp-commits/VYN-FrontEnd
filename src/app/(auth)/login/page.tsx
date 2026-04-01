@@ -14,20 +14,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { RHFTextField } from "@/components/fields/RHFTextField";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/components/LocaleProvider";
+import { getPublicT } from "@/lib/i18n-public";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, sendOtp } = useAuth();
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
   const [loading, setLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const schema = useMemo(
     () =>
       z.object({
-        email: z.string().email("Enter a valid email"),
-        password: z.string().min(1, "Password is required"),
+        email: z.string().email(t("enterValidEmail")),
+        password: z.string().min(1, t("passwordRequired")),
       }),
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale],
   );
 
   type Values = z.infer<typeof schema>;
@@ -46,7 +51,7 @@ export default function LoginPage() {
       toastError(result.error);
       return;
     }
-    toastSuccess("Welcome back.");
+    toastSuccess(t("welcomeBackToast"));
     router.push(getRedirectForRole(result.user.role));
   };
 
@@ -55,10 +60,10 @@ export default function LoginPage() {
     const email = String(form.getValues("email") ?? "").trim();
     const parsed = z.string().email().safeParse(email);
     if (!parsed.success) {
-      toastError("Email is required");
+      toastError(t("emailRequired"));
       return;
     }
-    const err = await sendOtp(email);
+    const err = await sendOtp(email, locale);
     if (err) {
       toastError(err);
     } else {
@@ -68,7 +73,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-salon-cream">
-      {/* Hero image - left on desktop, top on mobile */}
       <div className="lg:w-1/2 relative min-h-[220px] lg:min-h-screen flex-shrink-0">
         {imgError ? (
           <div className="absolute inset-0 bg-gradient-to-br from-[#d5e8e4] via-salon-cream to-salon-sand flex items-center justify-center p-8">
@@ -89,44 +93,33 @@ export default function LoginPage() {
             />
           </div>
         )}
-        <div
-          className="absolute inset-0 bg-salon-espresso/20 lg:bg-salon-espresso/30 pointer-events-none"
-          aria-hidden
-        />
+        <div className="absolute inset-0 bg-salon-espresso/20 lg:bg-salon-espresso/30 pointer-events-none" aria-hidden />
       </div>
 
-      {/* Form side */}
       <div className="flex-1 flex flex-col bg-salon-cream">
         <header className="border-b border-salon-sand/60 bg-white/80 backdrop-blur-sm flex-shrink-0">
           <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link
-              href="/"
-              className="font-display text-lg font-semibold text-salon-espresso hover:text-salon-bark transition-colors"
-            >
+            <Link href="/" className="font-display text-lg font-semibold text-salon-espresso hover:text-salon-bark transition-colors">
               {APP_NAME}
             </Link>
-            <Link
-              href="/register"
-              className="text-sm text-salon-stone hover:text-salon-espresso"
-            >
-              Don't have an account? Sign up
+            <Link href="/register" className="text-sm text-salon-stone hover:text-salon-espresso">
+              {t("dontHaveAccount")}
             </Link>
           </div>
         </header>
         <main className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md">
             <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-2">
-              Log in
+              {t("loginHeading")}
             </h1>
             <p className="text-salon-stone text-sm mb-6">
-              Sign in with your salon or platform account. You’ll be taken to
-              the right place based on your role.
+              {t("loginSubheading")}
             </p>
             <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-6">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(handleSubmit, (e) => {
-                    toastError(e?.email?.message || e?.password?.message || "Invalid input");
+                    toastError(e?.email?.message || e?.password?.message || t("checkHighlightedFields"));
                   })}
                   className="space-y-4"
                   autoComplete="off"
@@ -134,7 +127,7 @@ export default function LoginPage() {
                   <RHFTextField
                     control={form.control}
                     name="email"
-                    label="Email"
+                    label={t("email")}
                     placeholder="you@example.com"
                     type="email"
                     autoComplete="off"
@@ -143,19 +136,15 @@ export default function LoginPage() {
                   <RHFTextField
                     control={form.control}
                     name="password"
-                    label="Password"
+                    label={t("password")}
                     placeholder="••••••••"
                     type="password"
                     autoComplete="new-password"
                     disabled={loading}
                   />
                   <div className="flex gap-3 pt-1">
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 h-11 rounded-xl font-semibold"
-                    >
-                      {loading ? "Signing in..." : "Log in"}
+                    <Button type="submit" disabled={loading} className="flex-1 h-11 rounded-xl font-semibold">
+                      {loading ? t("signingIn") : t("logIn")}
                     </Button>
                     <Button
                       type="button"
@@ -164,18 +153,15 @@ export default function LoginPage() {
                       className="h-11 rounded-xl"
                       disabled={loading}
                     >
-                      Send OTP
+                      {t("sendOtp")}
                     </Button>
                   </div>
                 </form>
               </Form>
             </div>
             <p className="mt-6 text-center">
-              <Link
-                href="/"
-                className="text-salon-stone text-sm hover:text-salon-espresso transition-colors"
-              >
-                ← Back to home
+              <Link href="/" className="text-salon-stone text-sm hover:text-salon-espresso transition-colors">
+                {t("backToHome")}
               </Link>
             </p>
           </div>

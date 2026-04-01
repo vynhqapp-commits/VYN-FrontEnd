@@ -16,21 +16,26 @@ import { toastError, toastSuccess } from '@/lib/toast';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/components/LocaleProvider';
+import { getPublicT } from '@/lib/i18n-public';
 
 function VerifyOtpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { loginWithOtp } = useAuth();
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
   const [loading, setLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const schema = useMemo(
     () =>
       z.object({
-        email: z.string().email('Enter a valid email'),
-        code: z.string().min(1, 'Code is required'),
+        email: z.string().email(t('enterValidEmail')),
+        code: z.string().min(1, t('otpRequired')),
       }),
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale],
   );
   type Values = z.infer<typeof schema>;
 
@@ -49,11 +54,8 @@ function VerifyOtpForm() {
     setLoading(true);
     const result = await loginWithOtp(values.email, values.code);
     setLoading(false);
-    if ('error' in result) {
-      toastError(result.error);
-      return;
-    }
-    toastSuccess('Welcome back.');
+    if ('error' in result) { toastError(result.error); return; }
+    toastSuccess(t('welcomeBackToast'));
     router.push(getRedirectForRole(result.user.role));
   };
 
@@ -89,47 +91,33 @@ function VerifyOtpForm() {
         </header>
         <main className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md">
-            <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-2">Verify code</h1>
-            <p className="text-salon-stone text-sm mb-6">
-              Enter the code we sent to your email to sign in.
-            </p>
+            <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-2">{t('verifyCodeHeading')}</h1>
+            <p className="text-salon-stone text-sm mb-6">{t('verifyCodeSubheading')}</p>
             <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-6">
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(handleSubmit, () =>
-                    toastError('Please check the highlighted fields.'),
-                  )}
+                  onSubmit={form.handleSubmit(handleSubmit, () => toastError(t('checkHighlightedFields')))}
                   className="space-y-4"
                 >
-                  <RHFTextField
-                    control={form.control}
-                    name="email"
-                    label="Email"
-                    type="email"
-                    disabled={loading}
-                  />
+                  <RHFTextField control={form.control} name="email" label={t('email')} type="email" disabled={loading} />
                   <RHFTextField
                     control={form.control}
                     name="code"
-                    label="Code"
-                    placeholder="Enter 6-digit code"
+                    label={t('code')}
+                    placeholder={t('enterOtpPlaceholder')}
                     autoComplete="one-time-code"
                     inputMode="numeric"
                     disabled={loading}
                   />
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full h-11 rounded-xl font-semibold"
-                  >
-                    {loading ? 'Verifying...' : 'Verify & log in'}
+                  <Button type="submit" disabled={loading} className="w-full h-11 rounded-xl font-semibold">
+                    {loading ? t('verifying') : t('verifyAndLogin')}
                   </Button>
                 </form>
               </Form>
             </div>
             <p className="mt-6 text-center">
               <Link href="/login" className="text-salon-stone text-sm hover:text-salon-espresso transition-colors">
-                ← Back to login
+                {t('backToLogin')}
               </Link>
             </p>
           </div>

@@ -195,10 +195,10 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  otpSend: (email: string, purpose?: string) =>
+  otpSend: (email: string, purpose?: string, locale?: string) =>
     plainRequest<{ message?: string }>("/api/auth/request-otp", {
       method: "POST",
-      body: JSON.stringify({ email, ...(purpose ? { purpose } : {}) }),
+      body: JSON.stringify({ email, ...(purpose ? { purpose } : {}), ...(locale ? { locale } : {}) }),
     }),
   otpVerify: (email: string, code: string, purpose?: string) =>
     plainRequest<{ user: AuthUser; token: string } | { verified: boolean }>("/api/auth/verify-otp", {
@@ -1638,6 +1638,11 @@ export const franchiseApi = {
 export const publicApi = {
   salons: async (params?: {
     search?: string;
+    price_min?: number;
+    price_max?: number;
+    rating_min?: number;
+    availability?: string;
+    gender_preference?: "ladies" | "gents" | "unisex";
     page?: number;
     per_page?: number;
   }): Promise<{
@@ -1647,6 +1652,11 @@ export const publicApi = {
   }> => {
     const q = qs({
       search: params?.search,
+      price_min: params?.price_min,
+      price_max: params?.price_max,
+      rating_min: params?.rating_min,
+      availability: params?.availability,
+      gender_preference: params?.gender_preference,
       page: params?.page,
       per_page: params?.per_page,
     });
@@ -1654,6 +1664,31 @@ export const publicApi = {
     if (r.error) return { error: r.error };
     return {
       data: { salons: listData(r.data as Tenant[] | { data: Tenant[] }) },
+      meta: r.meta,
+    };
+  },
+  nearbySalons: async (params: {
+    lat: number;
+    lng: number;
+    radius_km?: number;
+    page?: number;
+    per_page?: number;
+  }): Promise<{
+    data?: { salons: (Tenant & { distance_km?: number })[] };
+    meta?: PaginationMeta;
+    error?: string;
+  }> => {
+    const q = qs({
+      lat: params.lat,
+      lng: params.lng,
+      radius_km: params.radius_km ?? 10,
+      page: params.page,
+      per_page: params.per_page,
+    });
+    const r = await publicRequest<(Tenant & { distance_km?: number })[]>(`/api/public/salons/nearby${q}`);
+    if (r.error) return { error: r.error };
+    return {
+      data: { salons: listData(r.data as (Tenant & { distance_km?: number })[] | { data: (Tenant & { distance_km?: number })[] }) },
       meta: r.meta,
     };
   },
@@ -1674,6 +1709,7 @@ export const publicApi = {
     client_name: string;
     client_phone?: string;
     client_email?: string;
+    locale?: string;
   }): Promise<{
     data?: { appointment: PublicAppointment };
     error?: string;

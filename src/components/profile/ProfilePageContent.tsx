@@ -8,28 +8,8 @@ import { toast } from "sonner";
 import { Eye, EyeOff, KeyRound, Loader2, Save, UserCircle2 } from "lucide-react";
 import { profileApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-
-// ── Schemas ───────────────────────────────────────────────────────────────────
-
-const detailsSchema = z.object({
-  name:  z.string().min(1, "Name is required").max(100),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().max(30).optional().or(z.literal("")),
-});
-
-const passwordSchema = z
-  .object({
-    current_password:          z.string().min(1, "Current password is required"),
-    new_password:              z.string().min(8, "Minimum 8 characters"),
-    new_password_confirmation: z.string().min(1, "Please confirm your new password"),
-  })
-  .refine((d) => d.new_password === d.new_password_confirmation, {
-    message: "Passwords do not match",
-    path: ["new_password_confirmation"],
-  });
-
-type DetailsForm = z.infer<typeof detailsSchema>;
-type PasswordForm = z.infer<typeof passwordSchema>;
+import { useLocale } from "@/components/LocaleProvider";
+import { getPublicT } from "@/lib/i18n-public";
 
 // ── Small reusable primitives ─────────────────────────────────────────────────
 
@@ -64,14 +44,8 @@ function TextInput({
   );
 }
 
-// ── Section card wrapper ───────────────────────────────────────────────────────
-
 function SectionCard({
-  icon,
-  iconBg,
-  title,
-  subtitle,
-  children,
+  icon, iconBg, title, subtitle, children,
 }: {
   icon: React.ReactNode;
   iconBg: string;
@@ -99,7 +73,16 @@ function SectionCard({
 
 function PersonalDetailsSection() {
   const { user, setUser } = useAuth();
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
   const [saving, setSaving] = useState(false);
+
+  const detailsSchema = z.object({
+    name:  z.string().min(1, t("nameRequired")).max(100),
+    email: z.string().email(t("invalidEmail")),
+    phone: z.string().max(30).optional().or(z.literal("")),
+  });
+  type DetailsForm = z.infer<typeof detailsSchema>;
 
   const {
     register,
@@ -115,8 +98,6 @@ function PersonalDetailsSection() {
     },
   });
 
-  // When user data loads (after a page refresh, auth context re-hydrates from /api/me),
-  // reset the form so phone and other fields reflect the latest server values.
   useEffect(() => {
     if (!user) return;
     reset({
@@ -134,66 +115,39 @@ function PersonalDetailsSection() {
       phone: values.phone || undefined,
     });
     setSaving(false);
-
-    if (error) {
-      toast.error(error);
-      return;
-    }
-
+    if (error) { toast.error(error); return; }
     if (data?.user) {
       setUser(data.user);
-      // Sync form with the freshly-saved values so isDirty resets to false
-      reset({
-        name:  data.user.name  ?? "",
-        email: data.user.email ?? "",
-        phone: data.user.phone ?? "",
-      });
+      reset({ name: data.user.name ?? "", email: data.user.email ?? "", phone: data.user.phone ?? "" });
     }
-    toast.success("Profile updated successfully");
+    toast.success(t("profileUpdated"));
   };
 
   return (
     <SectionCard
       icon={<UserCircle2 className="w-4.5 h-4.5 text-salon-gold" />}
       iconBg="bg-salon-gold/10"
-      title="Personal Details"
-      subtitle="Update your name, email address, and phone number."
+      title={t("personalDetails")}
+      subtitle={t("personalDetailsSubtitle")}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <FieldLabel>Full name</FieldLabel>
-            <TextInput
-              {...register("name")}
-              placeholder="Your full name"
-              error={!!errors.name}
-            />
+            <FieldLabel>{t("fullNameLabel")}</FieldLabel>
+            <TextInput {...register("name")} placeholder={t("yourName")} error={!!errors.name} />
             <FieldError message={errors.name?.message} />
           </div>
-
           <div>
-            <FieldLabel>Phone number <span className="normal-case font-normal">(optional)</span></FieldLabel>
-            <TextInput
-              {...register("phone")}
-              type="tel"
-              placeholder="+1 555 000 0000"
-              error={!!errors.phone}
-            />
+            <FieldLabel>{t("phoneNumberLabel")} <span className="normal-case font-normal">{t("phoneNumberOptional")}</span></FieldLabel>
+            <TextInput {...register("phone")} type="tel" placeholder="+1 555 000 0000" error={!!errors.phone} />
             <FieldError message={errors.phone?.message} />
           </div>
         </div>
-
         <div>
-          <FieldLabel>Email address</FieldLabel>
-          <TextInput
-            {...register("email")}
-            type="email"
-            placeholder="you@example.com"
-            error={!!errors.email}
-          />
+          <FieldLabel>{t("emailAddress")}</FieldLabel>
+          <TextInput {...register("email")} type="email" placeholder="you@example.com" error={!!errors.email} />
           <FieldError message={errors.email?.message} />
         </div>
-
         <div className="pt-2">
           <button
             type="submit"
@@ -203,7 +157,7 @@ function PersonalDetailsSection() {
               shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? t("saving") : t("saveChanges")}
           </button>
         </div>
       </form>
@@ -214,10 +168,24 @@ function PersonalDetailsSection() {
 // ── Change Password ───────────────────────────────────────────────────────────
 
 function ChangePasswordSection() {
-  const [saving, setSaving]         = useState(false);
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
+  const [saving, setSaving]           = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew]         = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const passwordSchema = z
+    .object({
+      current_password:          z.string().min(1, t("currentPasswordRequired")),
+      new_password:              z.string().min(8, t("min8Chars")),
+      new_password_confirmation: z.string().min(1, t("confirmPasswordRequired")),
+    })
+    .refine((d) => d.new_password === d.new_password_confirmation, {
+      message: t("passwordsDoNotMatch"),
+      path: ["new_password_confirmation"],
+    });
+  type PasswordForm = z.infer<typeof passwordSchema>;
 
   const {
     register,
@@ -234,41 +202,22 @@ function ChangePasswordSection() {
       new_password_confirmation: values.new_password_confirmation,
     });
     setSaving(false);
-
     if (error) { toast.error(error); return; }
-
-    toast.success("Password changed successfully");
+    toast.success(t("passwordChanged"));
     reset();
   };
 
   function PasswordField({
-    id,
-    label,
-    show,
-    onToggle,
-    placeholder,
-    error,
-    ...rest
+    id, label, show, onToggle, placeholder, error, ...rest
   }: {
-    id: string;
-    label: string;
-    show: boolean;
-    onToggle: () => void;
-    placeholder: string;
-    error?: boolean;
+    id: string; label: string; show: boolean; onToggle: () => void;
+    placeholder: string; error?: boolean;
   } & ReturnType<typeof register>) {
     return (
       <div>
         <FieldLabel>{label}</FieldLabel>
         <div className="relative">
-          <TextInput
-            {...rest}
-            id={id}
-            type={show ? "text" : "password"}
-            placeholder={placeholder}
-            error={error}
-            className="pr-11"
-          />
+          <TextInput {...rest} id={id} type={show ? "text" : "password"} placeholder={placeholder} error={error} className="pr-11" />
           <button
             type="button"
             onClick={onToggle}
@@ -285,44 +234,43 @@ function ChangePasswordSection() {
     <SectionCard
       icon={<KeyRound className="w-4.5 h-4.5 text-blue-500" />}
       iconBg="bg-blue-50"
-      title="Change Password"
-      subtitle="Choose a strong password of at least 8 characters."
+      title={t("changePassword")}
+      subtitle={t("changePasswordSubtitle")}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <PasswordField
             {...register("current_password")}
             id="current_password"
-            label="Current password"
+            label={t("currentPassword")}
             show={showCurrent}
             onToggle={() => setShowCurrent((v) => !v)}
             placeholder="••••••••"
             error={!!errors.current_password}
           />
-          <div /> {/* spacer */}
+          <div />
 
           <PasswordField
             {...register("new_password")}
             id="new_password"
-            label="New password"
+            label={t("newPassword")}
             show={showNew}
             onToggle={() => setShowNew((v) => !v)}
-            placeholder="Min. 8 characters"
+            placeholder={t("min8Chars")}
             error={!!errors.new_password}
           />
 
           <PasswordField
             {...register("new_password_confirmation")}
             id="new_password_confirmation"
-            label="Confirm new password"
+            label={t("confirmNewPassword")}
             show={showConfirm}
             onToggle={() => setShowConfirm((v) => !v)}
-            placeholder="Repeat new password"
+            placeholder="••••••••"
             error={!!errors.new_password_confirmation}
           />
         </div>
 
-        {/* Inline validation errors */}
         {errors.current_password && <FieldError message={errors.current_password.message} />}
         {errors.new_password && <FieldError message={errors.new_password.message} />}
         {errors.new_password_confirmation && <FieldError message={errors.new_password_confirmation.message} />}
@@ -336,7 +284,7 @@ function ChangePasswordSection() {
               shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-            {saving ? "Updating…" : "Update password"}
+            {saving ? t("updating") : t("updatePassword")}
           </button>
         </div>
       </form>
@@ -348,23 +296,23 @@ function ChangePasswordSection() {
 
 export default function ProfilePageContent() {
   const { user } = useAuth();
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex items-center gap-4 pb-2">
         <div className="w-14 h-14 rounded-full bg-salon-gold/10 flex items-center justify-center shrink-0 border-2 border-salon-gold/20">
           <UserCircle2 className="w-7 h-7 text-salon-gold" />
         </div>
         <div>
           <h1 className="font-display text-2xl font-semibold text-salon-espresso leading-tight">
-            {user?.name ?? user?.fullName ?? "My Profile"}
+            {user?.name ?? user?.fullName ?? t("myProfile")}
           </h1>
           <p className="text-salon-stone text-sm mt-0.5">{user?.email}</p>
         </div>
       </div>
 
-      {/* Two sections stacked, capped at a readable max-width */}
       <div className="max-w-3xl space-y-5">
         <PersonalDetailsSection />
         <ChangePasswordSection />

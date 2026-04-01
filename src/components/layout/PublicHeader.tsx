@@ -6,6 +6,8 @@ import { CalendarCheck, UserCircle, LayoutDashboard, UserRound } from "lucide-re
 import { useAuth } from "@/lib/auth-context";
 import { getRedirectForRole } from "@/lib/role-redirect";
 import { APP_NAME } from "@/lib/app-name";
+import { getPublicT } from "@/lib/i18n-public";
+import { useLocale } from "@/components/LocaleProvider";
 
 /**
  * Shared public-facing header.
@@ -23,6 +25,8 @@ export default function PublicHeader() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
 
   const handleLogout = () => {
     logout();
@@ -50,13 +54,13 @@ export default function PublicHeader() {
           {isCustomer && (
             <nav className="hidden sm:flex items-center gap-5">
               <NavLink href="/my-bookings" active={pathname === "/my-bookings"}>
-                My Bookings
+                {t("myBookings")}
               </NavLink>
               <NavLink href="/book" active={pathname.startsWith("/book")}>
-                Book a visit
+                {t("bookAVisit")}
               </NavLink>
               <NavLink href="/profile" active={pathname === "/profile"}>
-                Profile
+                {t("profile")}
               </NavLink>
             </nav>
           )}
@@ -78,7 +82,7 @@ export default function PublicHeader() {
                   <Link
                     href="/profile"
                     className="flex items-center justify-center size-8 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
-                    title="Profile"
+                    title={t("profile")}
                   >
                     <UserRound className="w-4 h-4" />
                   </Link>
@@ -89,8 +93,8 @@ export default function PublicHeader() {
                       transition-colors shadow-sm"
                   >
                     <CalendarCheck className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">My bookings</span>
-                    <span className="sm:hidden">Bookings</span>
+                    <span className="hidden sm:inline">{t("myBookings")}</span>
+                    <span className="sm:hidden">{t("myBookings")}</span>
                   </Link>
                 </>
               )}
@@ -103,7 +107,7 @@ export default function PublicHeader() {
                     transition-colors shadow-sm"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
-                  Go to Dashboard
+                  {t("goToDashboard")}
                 </Link>
               )}
 
@@ -113,7 +117,7 @@ export default function PublicHeader() {
                 onClick={handleLogout}
                 className="text-sm text-gray-400 hover:text-salon-espresso transition-colors"
               >
-                Log out
+                {t("logOut")}
               </button>
             </>
           ) : (
@@ -122,14 +126,14 @@ export default function PublicHeader() {
                 href="/register"
                 className="hidden sm:block text-sm text-gray-500 hover:text-salon-espresso transition-colors"
               >
-                Register
+                {t("register")}
               </Link>
               <Link
                 href="/login"
                 className="text-sm font-medium text-white bg-salon-espresso
                   hover:bg-salon-bark px-3 py-1.5 rounded-lg transition-colors shadow-sm"
               >
-                Log in
+                {t("logIn")}
               </Link>
             </>
           )}

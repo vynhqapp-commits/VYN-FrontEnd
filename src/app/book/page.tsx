@@ -12,6 +12,8 @@ import {
   type PaginationMeta,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { formatPublicCurrency, getPublicT, type PublicLocale } from "@/lib/i18n-public";
+import { useLocale } from "@/components/LocaleProvider";
 import { Spinner, ErrorBox } from "@/components/ui";
 import PublicHeader from "@/components/layout/PublicHeader";
 
@@ -30,14 +32,20 @@ type Selected = {
   slot: Slot;
 };
 
-const STEPS = ["Choose salon", "Pick service", "Date & time", "Your details"];
+type FilterState = {
+  search: string;
+  priceMin: string;
+  priceMax: string;
+  ratingMin: string;
+  availability: string;
+  genderPreference: string;
+};
 
 // ── Step bar ─────────────────────────────────────────────────────────────────
-
-function StepBar({ step }: { step: number }) {
+function StepBar({ step, labels }: { step: number; labels: string[] }) {
   return (
     <div className="flex items-center mb-10">
-      {STEPS.map((label, i) => {
+      {labels.map((label, i) => {
         const idx = i + 1;
         const done = idx < step;
         const active = idx === step;
@@ -63,7 +71,7 @@ function StepBar({ step }: { step: number }) {
                 {label}
               </span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < labels.length - 1 && (
               <div
                 className={`flex-1 h-px mx-2 mb-5 transition-colors duration-500
                   ${done ? "bg-salon-gold" : "bg-gray-200"}`}
@@ -80,11 +88,18 @@ function StepBar({ step }: { step: number }) {
 
 export default function BookPage() {
   const { user } = useAuth();
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
 
   const [step, setStep] = useState(1);
 
   const [salons, setSalons] = useState<Tenant[]>([]);
   const [search, setSearch] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [ratingMin, setRatingMin] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState("");
+  const [genderPreference, setGenderPreference] = useState("");
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [page, setPage] = useState(1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,6 +115,7 @@ export default function BookPage() {
   const [confirmed, setConfirmed] = useState<PublicAppointment | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [locating, setLocating] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +124,15 @@ export default function BookPage() {
   const [branchId, setBranchId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [date, setDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>({
+    search: "",
+    priceMin: "",
+    priceMax: "",
+    ratingMin: "",
+    availability: "",
+    genderPreference: "",
+  });
 
   // Pre-fill form from auth context when user is logged in
   useEffect(() => {
@@ -120,10 +145,19 @@ export default function BookPage() {
     }
   }, [user]);
 
-  const fetchSalons = (q: string, p: number) => {
+  const fetchSalons = (filters: FilterState, p: number) => {
     setLoading(true);
     publicApi
-      .salons({ search: q || undefined, page: p, per_page: 12 })
+      .salons({
+        search: filters.search || undefined,
+        price_min: filters.priceMin !== "" ? Number(filters.priceMin) : undefined,
+        price_max: filters.priceMax !== "" ? Number(filters.priceMax) : undefined,
+        rating_min: filters.ratingMin !== "" ? Number(filters.ratingMin) : undefined,
+        availability: filters.availability || undefined,
+        gender_preference: (filters.genderPreference || undefined) as "ladies" | "gents" | "unisex" | undefined,
+        page: p,
+        per_page: 12,
+      })
       .then((res) => {
         setLoading(false);
         if ("error" in res) { setError(res.error ?? null); return; }
@@ -132,16 +166,120 @@ export default function BookPage() {
       });
   };
 
-  useEffect(() => { fetchSalons("", 1); }, []);
+  const fetchNearbySalons = async () => {
+    setError(null);
+    if (!("geolocation" in navigator)) {
+      setError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const res = await publicApi.nearbySalons({
+          lat: latitude,
+          lng: longitude,
+          radius_km: 15,
+          page: 1,
+          per_page: 12,
+        });
+        setLocating(false);
+        if ("error" in res) { setError(res.error ?? null); return; }
+        setSearch("");
+        setAppliedFilters((prev) => ({ ...prev, search: "" }));
+        setPage(1);
+        setSalons(res.data?.salons ?? []);
+        setMeta(res.meta ?? null);
+      },
+      (geoErr) => {
+        setLocating(false);
+        setError(geoErr.message || "Could not get your location.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  };
+
+  useEffect(() => {
+    fetchSalons(appliedFilters, 1);
+  }, []);
+
+  const currentFilters: FilterState = {
+    search,
+    priceMin,
+    priceMax,
+    ratingMin,
+    availability: availabilityFilter,
+    genderPreference,
+  };
+
+  const hasPendingChanges =
+    currentFilters.search !== appliedFilters.search ||
+    currentFilters.priceMin !== appliedFilters.priceMin ||
+    currentFilters.priceMax !== appliedFilters.priceMax ||
+    currentFilters.ratingMin !== appliedFilters.ratingMin ||
+    currentFilters.availability !== appliedFilters.availability ||
+    currentFilters.genderPreference !== appliedFilters.genderPreference;
 
   const handleSearch = (val: string) => {
     setSearch(val);
     setPage(1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSalons(val, 1), 400);
+    debounceRef.current = setTimeout(() => {
+      const nextFilters = { ...currentFilters, search: val };
+      setAppliedFilters(nextFilters);
+      fetchSalons(nextFilters, 1);
+    }, 400);
   };
 
-  const goToPage = (p: number) => { setPage(p); fetchSalons(search, p); };
+  const goToPage = (p: number) => { setPage(p); fetchSalons(appliedFilters, p); };
+  const applyFilters = () => {
+    setPage(1);
+    setAppliedFilters(currentFilters);
+    fetchSalons(currentFilters, 1);
+  };
+  const resetFilters = () => {
+    const reset: FilterState = {
+      search: "",
+      priceMin: "",
+      priceMax: "",
+      ratingMin: "",
+      availability: "",
+      genderPreference: "",
+    };
+    setPriceMin("");
+    setPriceMax("");
+    setRatingMin("");
+    setAvailabilityFilter("");
+    setGenderPreference("");
+    setSearch("");
+    setPage(1);
+    setAppliedFilters(reset);
+    fetchSalons(reset, 1);
+  };
+
+  const activeFilterChips = [
+    priceMin || priceMax ? {
+      key: "price",
+      label: `Price: ${priceMin || "0"} - ${priceMax || "Any"}`,
+      clear: () => { setPriceMin(""); setPriceMax(""); },
+    } : null,
+    ratingMin ? {
+      key: "rating",
+      label: `Rating >= ${ratingMin}`,
+      clear: () => setRatingMin(""),
+    } : null,
+    availabilityFilter ? {
+      key: "availability",
+      label: `Availability: ${availabilityFilter}`,
+      clear: () => setAvailabilityFilter(""),
+    } : null,
+    genderPreference ? {
+      key: "gender",
+      label: `Preference: ${genderPreference}`,
+      clear: () => setGenderPreference(""),
+    } : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
 
   const pickSalon = (slug: string) => {
     setError(null);
@@ -194,6 +332,7 @@ export default function BookPage() {
       client_name: form.client_name,
       client_phone: form.client_phone || undefined,
       client_email: form.client_email || undefined,
+      locale,
     });
     setSubmitting(false);
     if (err) { setError(err); return; }
@@ -214,31 +353,41 @@ export default function BookPage() {
               <Check className="w-7 h-7 text-salon-gold" strokeWidth={2.5} />
             </div>
             <h1 className="font-display text-2xl font-semibold text-salon-espresso mb-1">
-              You&apos;re all set!
+              {t("allSet")}
             </h1>
             <p className="text-gray-500 text-sm mb-6">
-              Your appointment is confirmed. See you soon.
+              {t("appointmentConfirmed")}
             </p>
 
-            <div className="bg-[#F9FAFB] rounded-xl p-4 text-left space-y-2.5 mb-6 text-sm">
-              <SummaryRow label="Service" value={confirmed.service.name} />
-              <SummaryRow label="Location" value={confirmed.branch.name} />
+            <div className="bg-[#F9FAFB] rounded-xl p-4 text-start space-y-2.5 mb-6 text-sm">
+              <SummaryRow label={t("summaryService")} value={confirmed.service.name} />
+              <SummaryRow label={t("summaryLocation")} value={confirmed.branch.name} />
               {confirmed.branch.address && (
-                <SummaryRow label="Address" value={confirmed.branch.address} />
+                <SummaryRow label={t("summaryAddress")} value={confirmed.branch.address} />
               )}
-              <SummaryRow label="Staff" value={confirmed.staff.name} />
+              <SummaryRow label={t("summaryStaff")} value={confirmed.staff.name} />
               <SummaryRow
-                label="Date"
-                value={localDate(confirmed.starts_at).toLocaleDateString(undefined, {
+                label={t("summaryDate")}
+                value={localDate(confirmed.starts_at).toLocaleDateString(locale, {
                   weekday: "long", month: "long", day: "numeric", year: "numeric",
                 })}
               />
               <SummaryRow
-                label="Time"
-                value={`${fmt(confirmed.starts_at)} – ${fmt(confirmed.ends_at)}`}
+                label={t("summaryTime")}
+                value={`${fmt(confirmed.starts_at, locale)} – ${fmt(confirmed.ends_at, locale)}`}
               />
-              <SummaryRow label="Duration" value={`${confirmed.service.duration_minutes} min`} />
-              <SummaryRow label="Price" value={`$${Number(confirmed.service.price).toFixed(2)}`} />
+              <SummaryRow
+                label={t("summaryDuration")}
+                value={`${confirmed.service.duration_minutes} ${t("minutes")}`}
+              />
+              <SummaryRow
+                label={t("summaryPrice")}
+                value={formatPublicCurrency(
+                  Number(confirmed.service.price),
+                  detail?.salon.currency ?? "USD",
+                  locale
+                )}
+              />
             </div>
 
             <div className="space-y-3">
@@ -247,7 +396,7 @@ export default function BookPage() {
                   href="/"
                   className="flex-1 py-3 border border-gray-200 text-salon-espresso rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors text-center"
                 >
-                  Home
+                  {t("home")}
                 </Link>
                 <button
                   type="button"
@@ -257,7 +406,7 @@ export default function BookPage() {
                   }}
                   className="flex-1 py-3 bg-salon-gold text-white rounded-xl font-semibold text-sm hover:bg-salon-goldLight transition-colors"
                 >
-                  Book again
+                  {t("bookAgain")}
                 </button>
               </div>
 
@@ -268,7 +417,7 @@ export default function BookPage() {
                   className="flex items-center justify-center gap-2 w-full py-3 bg-salon-espresso text-white rounded-xl font-semibold text-sm hover:bg-salon-bark transition-colors"
                 >
                   <CalendarCheck className="w-4 h-4" />
-                  View my appointments
+                  {t("viewAppointments")}
                 </Link>
               ) : (
                 <Link
@@ -276,7 +425,7 @@ export default function BookPage() {
                   className="flex items-center justify-center gap-2 w-full py-3 border border-salon-gold/60 text-salon-gold rounded-xl font-medium text-sm hover:bg-salon-gold/5 transition-colors"
                 >
                   <UserCircle className="w-4 h-4" />
-                  Create account to track bookings
+                  {t("createAccountToTrackBookings")}
                 </Link>
               )}
             </div>
@@ -290,27 +439,176 @@ export default function BookPage() {
     <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
       <PublicHeader />
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
-        <StepBar step={step} />
+        <StepBar
+          step={step}
+          labels={[t("chooseSalon"), t("pickService"), t("dateTime"), t("yourDetails")]}
+        />
 
         {/* ── Step 1: Choose salon ── */}
         {step === 1 && (
           <section className="animate-fade-in-up">
             <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-1">
-              Book a salon
+              {t("step1Title")}
             </h1>
             <p className="text-gray-500 text-sm mb-6">
-              Choose a salon to see services and availability.
+              {t("step1Subtitle")}
             </p>
 
-            <div className="relative mb-6">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              <input
-                type="search"
-                placeholder="Search salons…"
-                value={search}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-salon-espresso placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold shadow-sm transition-shadow"
-              />
+            <div className="mb-4 flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  id="salon-search"
+                  type="search"
+                  placeholder={t("searchSalonsPlaceholder")}
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-salon-espresso placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold shadow-sm transition-shadow"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={fetchNearbySalons}
+                disabled={locating || loading}
+                className="shrink-0 px-4 py-3 bg-white border border-gray-200 rounded-xl text-salon-espresso text-sm font-medium
+                  hover:border-salon-gold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
+                title="Use my location"
+              >
+                {locating ? (
+                  <span className="flex items-center gap-2"><Spinner size="sm" /> Locating...</span>
+                ) : (
+                  <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Use my location</span>
+                )}
+              </button>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 mb-6">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-salon-espresso hover:text-salon-gold transition-colors"
+                  aria-expanded={showFilters}
+                  aria-controls="booking-filters-panel"
+                >
+                  Filters
+                  <ChevronRight className={`w-4 h-4 transition-transform ${showFilters ? "rotate-90" : ""}`} />
+                </button>
+                <span className="text-xs text-gray-500">{activeFilterChips.length} active</span>
+              </div>
+
+              {showFilters && (
+                <div id="booking-filters-panel" className="mt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="price-min" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Min price
+                      </label>
+                      <input
+                        id="price-min"
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={priceMin}
+                        onChange={(e) => setPriceMin(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="price-max" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Max price
+                      </label>
+                      <input
+                        id="price-max"
+                        type="number"
+                        min={0}
+                        placeholder="Any"
+                        value={priceMax}
+                        onChange={(e) => setPriceMax(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="rating-min" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Minimum rating
+                      </label>
+                      <input
+                        id="rating-min"
+                        type="number"
+                        min={0}
+                        max={5}
+                        step="0.1"
+                        placeholder="0 - 5"
+                        value={ratingMin}
+                        onChange={(e) => setRatingMin(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="availability-date" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Availability date
+                      </label>
+                      <input
+                        id="availability-date"
+                        type="date"
+                        value={availabilityFilter}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setAvailabilityFilter(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="gender-preference" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Gender preference
+                      </label>
+                      <select
+                        id="gender-preference"
+                        value={genderPreference}
+                        onChange={(e) => setGenderPreference(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                      >
+                        <option value="">All</option>
+                        <option value="ladies">Ladies</option>
+                        <option value="gents">Gents</option>
+                        <option value="unisex">Unisex</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {activeFilterChips.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {activeFilterChips.map((chip) => (
+                        <button
+                          key={chip.key}
+                          type="button"
+                          onClick={() => chip.clear()}
+                          className="px-3 py-1.5 text-xs rounded-full border border-salon-gold/40 bg-salon-gold/10 text-salon-espresso hover:bg-salon-gold/20 transition-colors"
+                        >
+                          {chip.label} ×
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="sm:col-span-2 flex gap-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={applyFilters}
+                      disabled={!hasPendingChanges || loading}
+                      className="px-4 py-2.5 bg-salon-gold text-white rounded-xl text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {loading ? "Applying..." : "Apply filters"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="px-4 py-2.5 border border-gray-200 bg-white rounded-xl text-sm font-medium hover:border-salon-gold transition-colors"
+                    >
+                      Reset all
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {error && <ErrorBox message={error} />}
@@ -319,7 +617,7 @@ export default function BookPage() {
               <div className="flex justify-center py-16"><Spinner size="lg" /></div>
             ) : salons.length === 0 ? (
               <p className="text-gray-400 text-center py-12">
-                {search ? "No salons match your search." : "No salons available yet."}
+                {search ? t("noSalonsMatchSearch") : t("noSalonsAvailableYet")}
               </p>
             ) : (
               <>
@@ -333,7 +631,7 @@ export default function BookPage() {
                       <button
                         type="button"
                         onClick={() => pickSalon((s as Tenant & { slug: string }).slug)}
-                        className="w-full text-left p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group"
+                        className="w-full text-start p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div>
@@ -356,14 +654,16 @@ export default function BookPage() {
 
                 {meta && meta.last_page > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
-                    <p className="text-gray-400 text-sm">{meta.from}–{meta.to} of {meta.total}</p>
+                    <p className="text-gray-400 text-sm">
+                      {meta.from}–{meta.to} {t("summaryOf")} {meta.total}
+                    </p>
                     <div className="flex gap-2">
                       <PagerBtn disabled={page <= 1} onClick={() => goToPage(page - 1)}>
-                        <ChevronLeft className="w-4 h-4 inline-block" /> Prev
+                        <ChevronLeft className="w-4 h-4 inline-block" /> {t("prev")}
                       </PagerBtn>
                       <span className="px-3 py-2 text-sm text-gray-500">{page} / {meta.last_page}</span>
                       <PagerBtn disabled={page >= meta.last_page} onClick={() => goToPage(page + 1)}>
-                        Next <ChevronRight className="w-4 h-4 inline-block" />
+                        {t("next")} <ChevronRight className="w-4 h-4 inline-block" />
                       </PagerBtn>
                     </div>
                   </div>
@@ -376,7 +676,7 @@ export default function BookPage() {
         {/* ── Step 2: Branch + Service ── */}
         {step === 2 && (
           <section className="animate-fade-in-up">
-            <BackBtn onClick={() => { setStep(1); setDetail(null); setError(null); }} />
+            <BackBtn onClick={() => { setStep(1); setDetail(null); setError(null); }} label={t("back")} />
 
             {loadingDetail ? (
               <div className="flex justify-center py-16"><Spinner size="lg" /></div>
@@ -385,13 +685,13 @@ export default function BookPage() {
                 <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-1">
                   {detail.salon.name}
                 </h1>
-                <p className="text-gray-500 text-sm mb-6">Choose a location and service.</p>
+                <p className="text-gray-500 text-sm mb-6">{t("chooseLocationServiceTitle")}</p>
                 {error && <div className="mb-4"><ErrorBox message={error} /></div>}
 
                 <div className="space-y-8">
                   {/* Location */}
                   <div>
-                    <SectionLabel>Location</SectionLabel>
+                    <SectionLabel>{t("location")}</SectionLabel>
                     <div className="space-y-3">
                       {detail.branches.map((b, i) => (
                         <SelectCard
@@ -416,7 +716,7 @@ export default function BookPage() {
 
                   {/* Service */}
                   <div>
-                    <SectionLabel>Service</SectionLabel>
+                    <SectionLabel>{t("service")}</SectionLabel>
                     <div className="space-y-3">
                       {detail.services.map((s, i) => (
                         <SelectCard
@@ -429,12 +729,14 @@ export default function BookPage() {
                             <p className="font-semibold text-salon-espresso text-sm truncate">{s.name}</p>
                             <p className="flex items-center gap-1 text-gray-400 text-xs mt-0.5">
                               <Clock className="w-3 h-3 shrink-0" />
-                              {s.duration_minutes} min
+                              {s.duration_minutes} {t("minutes")}
                               {s.description ? ` · ${s.description}` : ""}
                             </p>
                           </div>
-                          <p className={`text-base font-bold shrink-0 transition-colors ${serviceId === s.id ? "text-salon-gold" : "text-salon-espresso"}`}>
-                            ${Number(s.price).toFixed(2)}
+                          <p
+                            className={`text-base font-bold shrink-0 transition-colors ${serviceId === s.id ? "text-salon-gold" : "text-salon-espresso"}`}
+                          >
+                            {formatPublicCurrency(Number(s.price), detail.salon.currency, locale)}
                           </p>
                         </SelectCard>
                       ))}
@@ -443,7 +745,7 @@ export default function BookPage() {
 
                   <PrimaryBtn disabled={!branchId || !serviceId} onClick={() => setStep(3)}>
                     <span className="flex items-center justify-center gap-2">
-                      Choose date &amp; time <ChevronRight className="w-4 h-4" />
+                      {t("chooseDateTimeCta")} <ChevronRight className="w-4 h-4" />
                     </span>
                   </PrimaryBtn>
                 </div>
@@ -455,16 +757,16 @@ export default function BookPage() {
         {/* ── Step 3: Date + Slots ── */}
         {step === 3 && detail && (
           <section className="animate-fade-in-up">
-            <BackBtn onClick={() => setStep(2)} />
+            <BackBtn onClick={() => setStep(2)} label={t("back")} />
             <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-1">
-              Pick a time
+              {t("step3Title")}
             </h1>
             <p className="text-gray-500 text-sm mb-6">
               {selectedService?.name} · {selectedBranch?.name}
             </p>
 
             <div className="mb-6">
-              <SectionLabel>Date</SectionLabel>
+              <SectionLabel>{t("date")}</SectionLabel>
               <input
                 type="date"
                 value={date}
@@ -476,12 +778,12 @@ export default function BookPage() {
 
             {date && (
               <div className="animate-fade-in-up">
-                <SectionLabel>Available times</SectionLabel>
+                <SectionLabel>{t("availableTimes")}</SectionLabel>
                 {loadingSlots ? (
                   <div className="flex justify-center py-8"><Spinner /></div>
                 ) : slots.length === 0 ? (
                   <p className="text-gray-400 text-sm py-4">
-                    No slots available on this date. Try another day.
+                    {t("noSlotsAvailableTryAnotherDay")}
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
@@ -495,7 +797,7 @@ export default function BookPage() {
                           transition-all duration-150 animate-fade-in-up"
                         style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
                       >
-                        {fmt(slot.start)}
+                        {fmt(slot.start, locale)}
                       </button>
                     ))}
                   </div>
@@ -508,31 +810,31 @@ export default function BookPage() {
         {/* ── Step 4: Guest details ── */}
         {step === 4 && selected && detail && (
           <section className="animate-fade-in-up">
-            <BackBtn onClick={() => setStep(3)} />
+            <BackBtn onClick={() => setStep(3)} label={t("back")} />
             <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-1">
-              Your details
+              {t("yourDetails")}
             </h1>
-            <p className="text-gray-500 text-sm mb-6">Almost done — just tell us who you are.</p>
+            <p className="text-gray-500 text-sm mb-6">{t("almostDone")}</p>
 
             {error && <div className="mb-4"><ErrorBox message={error} /></div>}
 
             {/* Summary card */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-2 text-sm">
-              <SummaryRow label="Service" value={selectedService?.name ?? "—"} />
-              <SummaryRow label="Location" value={selectedBranch?.name ?? "—"} />
+              <SummaryRow label={t("summaryService")} value={selectedService?.name ?? "—"} />
+              <SummaryRow label={t("summaryLocation")} value={selectedBranch?.name ?? "—"} />
               <SummaryRow
-                label="Date"
-                value={localDate(selected.slot.start).toLocaleDateString(undefined, {
+                label={t("summaryDate")}
+                value={localDate(selected.slot.start).toLocaleDateString(locale, {
                   weekday: "long", month: "short", day: "numeric",
                 })}
               />
               <SummaryRow
-                label="Time"
-                value={`${fmt(selected.slot.start)} – ${fmt(selected.slot.end)}`}
+                label={t("summaryTime")}
+                value={`${fmt(selected.slot.start, locale)} – ${fmt(selected.slot.end, locale)}`}
               />
               <SummaryRow
-                label="Price"
-                value={`$${Number(selectedService?.price ?? 0).toFixed(2)}`}
+                label={t("summaryPrice")}
+                value={formatPublicCurrency(Number(selectedService?.price ?? 0), detail.salon.currency, locale)}
               />
             </div>
 
@@ -550,13 +852,13 @@ export default function BookPage() {
                     <p className="text-xs text-gray-400 truncate">{user.email}</p>
                   </div>
                   <span className="text-xs bg-salon-gold/15 text-salon-gold px-2 py-0.5 rounded-full font-medium shrink-0">
-                    Logged in
+                    {t("loggedIn")}
                   </span>
                 </div>
                 <Field
-                  label="Phone (optional)"
+                  label={t("phoneOptional")}
                   type="tel"
-                  placeholder="Add a phone number"
+                  placeholder={t("addPhoneNumber")}
                   value={form.client_phone}
                   onChange={(v) => setForm((f) => ({ ...f, client_phone: v }))}
                 />
@@ -565,33 +867,33 @@ export default function BookPage() {
               /* Guest: show full form */
               <div className="space-y-4 mb-6">
                 <Field
-                  label="Full name *"
+                  label={t("fullNameStar")}
                   type="text"
-                  placeholder="Your name"
+                  placeholder={t("yourName")}
                   value={form.client_name}
                   onChange={(v) => setForm((f) => ({ ...f, client_name: v }))}
                   required
                 />
                 <Field
-                  label="Phone"
+                  label={t("phone")}
                   type="tel"
-                  placeholder="Optional"
+                  placeholder={t("optional")}
                   value={form.client_phone}
                   onChange={(v) => setForm((f) => ({ ...f, client_phone: v }))}
                 />
                 <Field
-                  label="Email"
+                  label={t("email")}
                   type="email"
-                  placeholder="Optional — for confirmation"
+                  placeholder={t("optionalForConfirmation")}
                   value={form.client_email}
                   onChange={(v) => setForm((f) => ({ ...f, client_email: v }))}
                 />
                 <p className="text-xs text-gray-400">
-                  Already have an account?{" "}
+                  {t("alreadyHaveAccount")}{" "}
                   <Link href="/login" className="text-salon-gold hover:underline font-medium">
-                    Log in
+                    {t("logIn")}
                   </Link>{" "}
-                  to skip this step next time.
+                  {t("logInToSkipStep")}
                 </p>
               </div>
             )}
@@ -601,8 +903,8 @@ export default function BookPage() {
               onClick={submitBook}
             >
               {submitting
-                ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" /> Confirming…</span>
-                : "Confirm booking"}
+                ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" /> {t("confirming")}</span>
+                : t("confirmBooking")}
             </PrimaryBtn>
           </section>
         )}
@@ -613,7 +915,7 @@ export default function BookPage() {
 
 // ── Reusable components ───────────────────────────────────────────────────────
 
-function BackBtn({ onClick }: { onClick: () => void }) {
+function BackBtn({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       type="button"
@@ -621,7 +923,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
       className="flex items-center gap-1.5 text-gray-400 text-sm font-medium hover:text-salon-espresso mb-6 transition-colors"
     >
       <ChevronLeft className="w-4 h-4" />
-      Back
+      {label}
     </button>
   );
 }
@@ -649,7 +951,7 @@ function SelectCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-4 rounded-2xl border text-left
+      className={`w-full flex items-center gap-3 p-4 rounded-2xl border text-start
         transition-all duration-200 shadow-sm animate-fade-in-up
         ${active
           ? "border-salon-gold bg-salon-gold/5 shadow-sm shadow-salon-gold/20"
@@ -717,7 +1019,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-gray-400">{label}</span>
-      <span className="text-salon-espresso font-medium text-right">{value}</span>
+      <span className="text-salon-espresso font-medium text-end">{value}</span>
     </div>
   );
 }
@@ -754,9 +1056,9 @@ function Field({
  * Strips the UTC "Z" marker so the browser does not apply a timezone offset —
  * the DB times are naive (no TZ), meant to represent the salon's clock.
  */
-function fmt(iso: string) {
+function fmt(iso: string, locale?: PublicLocale) {
   const local = iso.replace(/Z$/, "");
-  return new Date(local).toLocaleTimeString([], {
+  return new Date(local).toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });

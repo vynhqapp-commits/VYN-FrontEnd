@@ -7,8 +7,10 @@ import { customerApi } from "@/lib/api";
 import type { Appointment } from "@/lib/api";
 import { Spinner } from "@/components/ui";
 import { toast } from "sonner";
+import { useLocale } from "@/components/LocaleProvider";
+import { getPublicT } from "@/lib/i18n-public";
+import type { PublicI18nKey } from "@/lib/i18n-public";
 
-// The Appointment interface already covers both old and new field shapes.
 type BookingRow = Appointment;
 
 const STATUS_STYLES: Record<string, string> = {
@@ -23,6 +25,9 @@ const STATUS_STYLES: Record<string, string> = {
 const CANCELLABLE = ["scheduled", "confirmed", "pending"];
 
 export default function MyBookingsPage() {
+  const { locale } = useLocale();
+  const t = getPublicT(locale);
+
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -31,22 +36,23 @@ export default function MyBookingsPage() {
     customerApi.myBookings().then((res) => {
       setLoading(false);
       if ("error" in res) {
-        toast.error(res.error ?? "Failed to load bookings");
+        toast.error(res.error ?? t("failedToLoadBookings"));
       } else if (res.data?.bookings) {
         setBookings(res.data.bookings as BookingRow[]);
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCancel = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    if (!confirm(t("confirmCancelBooking"))) return;
     setCancellingId(id);
     const { error: err } = await customerApi.cancelBooking(id);
     setCancellingId(null);
     if (err) {
       toast.error(err);
     } else {
-      toast.success("Booking cancelled");
+      toast.success(t("bookingCancelled"));
       setBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
       );
@@ -60,16 +66,24 @@ export default function MyBookingsPage() {
     !["scheduled", "confirmed", "pending"].includes(String(b.status))
   );
 
+  const statusLabel: Record<string, string> = {
+    scheduled: t("statusScheduled"),
+    confirmed: t("statusConfirmed"),
+    completed: t("statusCompleted"),
+    cancelled: t("statusCancelled"),
+    pending: t("statusPending"),
+    no_show: t("statusNoShow"),
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Page header */}
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
           <h1 className="font-display text-2xl font-semibold text-salon-espresso">
-            My Appointments
+            {t("myAppointments")}
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            View and manage all your bookings.
+            {t("myAppointmentsSubtitle")}
           </p>
         </div>
         <Link
@@ -78,7 +92,7 @@ export default function MyBookingsPage() {
             rounded-xl hover:bg-salon-goldLight transition-colors shadow-sm shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Book new
+          {t("bookNew")}
         </Link>
       </div>
 
@@ -87,26 +101,37 @@ export default function MyBookingsPage() {
           <Spinner size="lg" />
         </div>
       ) : bookings.length === 0 ? (
-        <EmptyState />
+        <EmptyState t={t} />
       ) : (
         <div className="space-y-8">
           {upcoming.length > 0 && (
-            <Section title="Upcoming" count={upcoming.length}>
+            <Section title={t("upcoming")} count={upcoming.length}>
               {upcoming.map((b) => (
                 <BookingCard
                   key={b.id}
                   booking={b}
                   onCancel={handleCancel}
                   cancelling={cancellingId === b.id}
+                  locale={locale}
+                  statusLabel={statusLabel}
+                  cancelLabel={t("cancelBooking")}
+                  cancellingLabel={t("cancellingBooking")}
                 />
               ))}
             </Section>
           )}
 
           {past.length > 0 && (
-            <Section title="Past" count={past.length}>
+            <Section title={t("past")} count={past.length}>
               {past.map((b) => (
-                <BookingCard key={b.id} booking={b} />
+                <BookingCard
+                  key={b.id}
+                  booking={b}
+                  locale={locale}
+                  statusLabel={statusLabel}
+                  cancelLabel={t("cancelBooking")}
+                  cancellingLabel={t("cancellingBooking")}
+                />
               ))}
             </Section>
           )}
@@ -146,16 +171,22 @@ function BookingCard({
   booking: b,
   onCancel,
   cancelling,
+  locale,
+  statusLabel,
+  cancelLabel,
+  cancellingLabel,
 }: {
   booking: BookingRow;
   onCancel?: (id: string) => void;
   cancelling?: boolean;
+  locale: string;
+  statusLabel: Record<string, string>;
+  cancelLabel: string;
+  cancellingLabel: string;
 }) {
-  // Support new model field names (starts_at/ends_at) and old schema (start_at/end_at)
   const startIso = b.starts_at ?? b.start_at;
   const endIso   = b.ends_at   ?? b.end_at;
 
-  // Support new snake_case relations and old PascalCase relations
   const serviceName = b.services?.[0]?.service?.name ?? b.Service?.name ?? "—";
   const branchName  = b.branch?.name ?? b.Location?.name ?? "—";
   const branchAddress = b.branch?.address ?? null;
@@ -165,7 +196,7 @@ function BookingCard({
   const canCancel = CANCELLABLE.includes(status) && onCancel;
 
   const dateStr = startIso
-    ? localDate(startIso).toLocaleDateString(undefined, {
+    ? localDate(startIso).toLocaleDateString(locale, {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -173,26 +204,24 @@ function BookingCard({
       })
     : "—";
   const timeStr = startIso && endIso
-    ? `${fmt(startIso)} – ${fmt(endIso)}`
+    ? `${fmt(startIso, locale)} – ${fmt(endIso, locale)}`
     : startIso
-      ? fmt(startIso)
+      ? fmt(startIso, locale)
       : "—";
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0 space-y-2">
-          {/* Service name + status */}
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-salon-espresso text-sm">{serviceName}</p>
             <span
-              className={`text-[11px] px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_STYLES[status] ?? "bg-gray-100 text-gray-500"}`}
+              className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[status] ?? "bg-gray-100 text-gray-500"}`}
             >
-              {status.replace("_", " ")}
+              {statusLabel[status] ?? status}
             </span>
           </div>
 
-          {/* Branch */}
           <p className="flex items-center gap-1.5 text-xs text-gray-400">
             <MapPin className="w-3 h-3 shrink-0" />
             <span className="truncate">
@@ -200,7 +229,6 @@ function BookingCard({
             </span>
           </p>
 
-          {/* Date & time */}
           <div className="flex items-center gap-3">
             <p className="flex items-center gap-1.5 text-xs text-gray-500">
               <CalendarDays className="w-3 h-3 shrink-0" />
@@ -212,14 +240,12 @@ function BookingCard({
             </p>
           </div>
 
-          {/* Staff */}
           <p className="flex items-center gap-1.5 text-xs text-gray-400">
             <User className="w-3 h-3 shrink-0" />
             {staffName}
           </p>
         </div>
 
-        {/* Cancel button */}
         {canCancel && (
           <button
             type="button"
@@ -229,7 +255,7 @@ function BookingCard({
               border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg
               disabled:opacity-50 transition-colors"
           >
-            {cancelling ? "Cancelling…" : "Cancel"}
+            {cancelling ? cancellingLabel : cancelLabel}
           </button>
         )}
       </div>
@@ -237,17 +263,17 @@ function BookingCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({ t }: { t: (k: PublicI18nKey) => string }) {
   return (
     <div className="text-center py-16 px-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
       <div className="w-14 h-14 rounded-full bg-salon-gold/10 flex items-center justify-center mx-auto mb-4">
         <AlertCircle className="w-6 h-6 text-salon-gold" />
       </div>
       <h2 className="font-display text-lg font-semibold text-salon-espresso mb-1">
-        No appointments yet
+        {t("noAppointmentsYet")}
       </h2>
       <p className="text-gray-400 text-sm mb-6">
-        Book your first visit and it will appear here.
+        {t("noAppointmentsDesc")}
       </p>
       <Link
         href="/book"
@@ -255,7 +281,7 @@ function EmptyState() {
           rounded-xl hover:bg-salon-goldLight transition-colors shadow-sm"
       >
         <Plus className="w-4 h-4" />
-        Book a visit
+        {t("bookAVisitCta")}
       </Link>
     </div>
   );
@@ -263,9 +289,9 @@ function EmptyState() {
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
 
-function fmt(iso: string) {
+function fmt(iso: string, locale?: string) {
   const local = iso.replace(/Z$/, "");
-  return new Date(local).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(local).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 
 function localDate(iso: string): Date {
