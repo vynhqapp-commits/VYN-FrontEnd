@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getRedirectForRole } from '@/lib/role-redirect';
 import { LoadingWithHero } from '@/components/SalonHeroImage';
+import { LocaleProvider } from '@/components/LocaleProvider';
 import PublicHeader from '@/components/layout/PublicHeader';
 
 export default function CustomerLayout({
@@ -30,11 +31,15 @@ export default function CustomerLayout({
   if (loading || !user || user.role !== 'customer') return <LoadingWithHero />;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
-      <PublicHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 text-salon-espresso">
-        {children}
-      </main>
-    </div>
+    <Suspense>
+      <LocaleProvider>
+        <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
+          <PublicHeader />
+          <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 text-salon-espresso">
+            {children}
+          </main>
+        </div>
+      </LocaleProvider>
+    </Suspense>
   );
 }

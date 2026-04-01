@@ -9,6 +9,7 @@ import { getRedirectForRole } from '@/lib/role-redirect';
 import { LoadingWithHero } from '@/components/SalonHeroImage';
 import { APP_NAME, APP_TAGLINE, BANNER_IMAGE } from '@/lib/app-name';
 import { useLocale } from '@/components/LocaleProvider';
+import { LocaleProvider } from '@/components/LocaleProvider';
 import { getPublicT } from '@/lib/i18n-public';
 
 function HomePageClient() {
@@ -245,7 +246,9 @@ function HomePageClient() {
 export default function HomePage() {
   return (
     <Suspense fallback={<LoadingWithHero />}>
-      <HomePageClient />
+      <LocaleProvider>
+        <HomePageClient />
+      </LocaleProvider>
     </Suspense>
   );
 }

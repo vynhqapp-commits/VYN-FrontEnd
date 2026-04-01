@@ -180,7 +180,7 @@ export default function BookPage() {
   const fetchNearbySalons = async () => {
     setError(null);
     if (!("geolocation" in navigator)) {
-      setError("Geolocation is not supported by this browser.");
+      setError(t("geolocationNotSupported"));
       return;
     }
 
@@ -205,7 +205,7 @@ export default function BookPage() {
       },
       (geoErr) => {
         setLocating(false);
-        setError(geoErr.message || "Could not get your location.");
+        setError(geoErr.message || t("couldNotGetLocation"));
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
@@ -509,12 +509,12 @@ export default function BookPage() {
                 disabled={locating || loading}
                 className="shrink-0 px-4 py-3 bg-white border border-gray-200 rounded-xl text-salon-espresso text-sm font-medium
                   hover:border-salon-gold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
-                title="Use my location"
+                title={t("useMyLocation")}
               >
                 {locating ? (
-                  <span className="flex items-center gap-2"><Spinner size="sm" /> Locating...</span>
+                  <span className="flex items-center gap-2"><Spinner size="sm" /> {t("locating")}</span>
                 ) : (
-                  <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Use my location</span>
+                  <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {t("useMyLocation")}</span>
                 )}
               </button>
             </div>
@@ -528,10 +528,10 @@ export default function BookPage() {
                   aria-expanded={showFilters}
                   aria-controls="booking-filters-panel"
                 >
-                  Filters
+                  {t("filters")}
                   <ChevronRight className={`w-4 h-4 transition-transform ${showFilters ? "rotate-90" : ""}`} />
                 </button>
-                <span className="text-xs text-gray-500">{activeFilterChips.length} active</span>
+                <span className="text-xs text-gray-500">{t("filtersActive").replace("{n}", String(activeFilterChips.length))}</span>
               </div>
 
               {showFilters && (
@@ -539,7 +539,7 @@ export default function BookPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="price-min" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-                        Min price
+                        {t("minPrice")}
                       </label>
                       <input
                         id="price-min"
@@ -553,7 +553,7 @@ export default function BookPage() {
                     </div>
                     <div>
                       <label htmlFor="price-max" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-                        Max price
+                        {t("maxPrice")}
                       </label>
                       <input
                         id="price-max"
@@ -567,7 +567,7 @@ export default function BookPage() {
                     </div>
                     <div>
                       <label htmlFor="rating-min" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-                        Minimum rating
+                        {t("minimumRating")}
                       </label>
                       <input
                         id="rating-min"
@@ -583,7 +583,7 @@ export default function BookPage() {
                     </div>
                     <div>
                       <label htmlFor="availability-date" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-                        Availability date
+                        {t("availabilityDate")}
                       </label>
                       <input
                         id="availability-date"
@@ -596,7 +596,7 @@ export default function BookPage() {
                     </div>
                     <div className="sm:col-span-2">
                       <label htmlFor="gender-preference" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
-                        Gender preference
+                        {t("genderPreference")}
                       </label>
                       <select
                         id="gender-preference"
@@ -604,10 +604,10 @@ export default function BookPage() {
                         onChange={(e) => setGenderPreference(e.target.value)}
                         className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       >
-                        <option value="">All</option>
-                        <option value="ladies">Ladies</option>
-                        <option value="gents">Gents</option>
-                        <option value="unisex">Unisex</option>
+                        <option value="">{t("genderAll")}</option>
+                        <option value="ladies">{t("genderLadies")}</option>
+                        <option value="gents">{t("genderGents")}</option>
+                        <option value="unisex">{t("genderUnisex")}</option>
                       </select>
                     </div>
                   </div>
@@ -634,14 +634,14 @@ export default function BookPage() {
                       disabled={!hasPendingChanges || loading}
                       className="px-4 py-2.5 bg-salon-gold text-white rounded-xl text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {loading ? "Applying..." : "Apply filters"}
+                      {loading ? t("applyingFilters") : t("applyFilters")}
                     </button>
                     <button
                       type="button"
                       onClick={resetFilters}
                       className="px-4 py-2.5 border border-gray-200 bg-white rounded-xl text-sm font-medium hover:border-salon-gold transition-colors"
                     >
-                      Reset all
+                      {t("resetAll")}
                     </button>
                   </div>
                 </div>
