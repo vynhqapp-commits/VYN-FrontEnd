@@ -1763,12 +1763,48 @@ export const customerApi = {
         : { error: r.error },
     ),
   cancelBooking: (id: string) =>
-    api<Appointment>(`/api/customer/bookings/${id}/cancel`, {
+    api<{ booking?: Appointment; policy?: BookingPolicy; warnings?: string[] } | Appointment>(`/api/customer/bookings/${id}/cancel`, {
       method: "PATCH",
     }).then((r) =>
-      r.data ? { data: { booking: r.data } } : { error: r.error },
+      r.data
+        ? {
+            data: {
+              booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
+              policy: (r.data as { policy?: BookingPolicy }).policy,
+              warnings: (r.data as { warnings?: string[] }).warnings ?? [],
+            },
+          }
+        : { error: r.error },
+    ),
+  rescheduleBooking: (
+    id: string,
+    body: { start_at: string; staff_id?: string },
+  ) =>
+    api<{ booking?: Appointment; policy?: BookingPolicy; warnings?: string[] } | Appointment>(
+      `/api/customer/bookings/${id}/reschedule`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+    ).then((r) =>
+      r.data
+        ? {
+            data: {
+              booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
+              policy: (r.data as { policy?: BookingPolicy }).policy,
+              warnings: (r.data as { warnings?: string[] }).warnings ?? [],
+            },
+          }
+        : { error: r.error },
     ),
 };
+
+export interface BookingPolicy {
+  window_hours: number;
+  minutes_to_start: number;
+  violated: boolean;
+  mode: "soft" | "hard" | string;
+}
 
 export interface AuthUser {
   id: string;

@@ -23,6 +23,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const CANCELLABLE = ["scheduled", "confirmed", "pending"];
+const RESCHEDULABLE = ["scheduled", "confirmed", "pending"];
 
 export default function MyBookingsPage() {
   const { locale } = useLocale();
@@ -31,6 +32,9 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [rescheduleId, setRescheduleId] = useState<string | null>(null);
+  const [rescheduleStartAt, setRescheduleStartAt] = useState("");
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
 
   useEffect(() => {
     customerApi.myBookings().then((res) => {
@@ -47,16 +51,48 @@ export default function MyBookingsPage() {
   const handleCancel = async (id: string) => {
     if (!confirm(t("confirmCancelBooking"))) return;
     setCancellingId(id);
-    const { error: err } = await customerApi.cancelBooking(id);
+    const { data, error: err } = await customerApi.cancelBooking(id);
     setCancellingId(null);
     if (err) {
       toast.error(err);
     } else {
       toast.success(t("bookingCancelled"));
+      if (data?.policy?.violated) {
+        toast.warning(`Applied inside ${data.policy.window_hours}h policy window.`);
+      }
       setBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
       );
     }
+  };
+
+  const openReschedule = (booking: BookingRow) => {
+    const startIso = booking.starts_at ?? booking.start_at;
+    setRescheduleId(booking.id);
+    setRescheduleStartAt(startIso ? toDatetimeLocal(startIso) : "");
+  };
+
+  const submitReschedule = async (id: string) => {
+    if (!rescheduleStartAt) {
+      toast.error("Select a new date and time first.");
+      return;
+    }
+    setReschedulingId(id);
+    const iso = new Date(rescheduleStartAt).toISOString();
+    const { data, error } = await customerApi.rescheduleBooking(id, { start_at: iso });
+    setReschedulingId(null);
+    if (error || !data?.booking) {
+      toast.error(error ?? "Failed to reschedule booking.");
+      return;
+    }
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...data.booking } : b)));
+    if (data?.policy?.violated) {
+      toast.warning(`Rescheduled inside ${data.policy.window_hours}h policy window.`);
+    } else {
+      toast.success("Booking rescheduled.");
+    }
+    setRescheduleId(null);
+    setRescheduleStartAt("");
   };
 
   const upcoming = bookings.filter((b) =>
@@ -111,7 +147,14 @@ export default function MyBookingsPage() {
                   key={b.id}
                   booking={b}
                   onCancel={handleCancel}
+                  onStartReschedule={() => openReschedule(b)}
+                  onSubmitReschedule={submitReschedule}
+                  onDismissReschedule={() => { setRescheduleId(null); setRescheduleStartAt(""); }}
+                  rescheduleOpen={rescheduleId === b.id}
+                  rescheduleValue={rescheduleStartAt}
+                  onRescheduleValueChange={setRescheduleStartAt}
                   cancelling={cancellingId === b.id}
+                  rescheduling={reschedulingId === b.id}
                   locale={locale}
                   statusLabel={statusLabel}
                   cancelLabel={t("cancelBooking")}
@@ -170,7 +213,14 @@ function Section({
 function BookingCard({
   booking: b,
   onCancel,
+  onStartReschedule,
+  onSubmitReschedule,
+  onDismissReschedule,
+  rescheduleOpen,
+  rescheduleValue,
+  onRescheduleValueChange,
   cancelling,
+  rescheduling,
   locale,
   statusLabel,
   cancelLabel,
@@ -178,7 +228,14 @@ function BookingCard({
 }: {
   booking: BookingRow;
   onCancel?: (id: string) => void;
+  onStartReschedule?: () => void;
+  onSubmitReschedule?: (id: string) => void;
+  onDismissReschedule?: () => void;
+  rescheduleOpen?: boolean;
+  rescheduleValue?: string;
+  onRescheduleValueChange?: (v: string) => void;
   cancelling?: boolean;
+  rescheduling?: boolean;
   locale: string;
   statusLabel: Record<string, string>;
   cancelLabel: string;
@@ -194,6 +251,7 @@ function BookingCard({
 
   const status = String(b.status);
   const canCancel = CANCELLABLE.includes(status) && onCancel;
+  const canReschedule = RESCHEDULABLE.includes(status) && onStartReschedule;
 
   const dateStr = startIso
     ? localDate(startIso).toLocaleDateString(locale, {
@@ -246,19 +304,61 @@ function BookingCard({
           </p>
         </div>
 
-        {canCancel && (
-          <button
-            type="button"
-            onClick={() => onCancel(b.id)}
-            disabled={!!cancelling}
-            className="shrink-0 text-xs font-medium text-red-500 hover:text-red-700
-              border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg
-              disabled:opacity-50 transition-colors"
-          >
-            {cancelling ? cancellingLabel : cancelLabel}
-          </button>
+        {(canCancel || canReschedule) && (
+          <div className="shrink-0 flex flex-col gap-2">
+            {canReschedule && (
+              <button
+                type="button"
+                onClick={onStartReschedule}
+                className="text-xs font-medium text-salon-espresso hover:text-salon-gold
+                  border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Reschedule
+              </button>
+            )}
+            {canCancel && (
+              <button
+                type="button"
+                onClick={() => onCancel(b.id)}
+                disabled={!!cancelling}
+                className="text-xs font-medium text-red-500 hover:text-red-700
+                  border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg
+                  disabled:opacity-50 transition-colors"
+              >
+                {cancelling ? cancellingLabel : cancelLabel}
+              </button>
+            )}
+          </div>
         )}
       </div>
+      {rescheduleOpen && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col sm:flex-row gap-2 sm:items-center">
+          <input
+            type="datetime-local"
+            value={rescheduleValue ?? ""}
+            min={new Date().toISOString().slice(0, 16)}
+            onChange={(e) => onRescheduleValueChange?.(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onSubmitReschedule?.(b.id)}
+              disabled={!!rescheduling}
+              className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
+            >
+              {rescheduling ? "Saving..." : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={onDismissReschedule}
+              className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -296,4 +396,14 @@ function fmt(iso: string, locale?: string) {
 
 function localDate(iso: string): Date {
   return new Date(iso.replace(/Z$/, ""));
+}
+
+function toDatetimeLocal(iso: string): string {
+  const d = localDate(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
