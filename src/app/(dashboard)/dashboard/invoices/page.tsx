@@ -26,6 +26,21 @@ function fmt(n: number) {
   return Number(n).toFixed(2);
 }
 
+type InvoiceLineItem = {
+  id: string;
+  item_type?: string | null;
+  name?: string | null;
+  description?: string | null;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+};
+
+function lineItemName(item: InvoiceLineItem) {
+  const fallback = item.item_type?.toLowerCase() === 'service' ? 'Service' : item.item_type?.toLowerCase() === 'product' ? 'Product' : 'Item';
+  return item.name?.trim() || fallback;
+}
+
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 
 function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; onClose: () => void; onVoided: () => void }) {
@@ -110,9 +125,14 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-salon-sand/30">
-                      {(invoice.items as { id: string; description?: string; quantity?: number; unit_price?: number; total?: number }[]).map((item, i) => (
+                      {(invoice.items as InvoiceLineItem[]).map((item, i) => (
                         <tr key={item.id ?? i}>
-                          <td className="py-2 px-3 text-salon-espresso">{item.description ?? '—'}</td>
+                          <td className="py-2 px-3 text-salon-espresso">
+                            <div className="font-medium">{lineItemName(item)}</div>
+                            <div className="text-[11px] text-salon-stone">
+                              {item.description?.trim() || '—'}
+                            </div>
+                          </td>
                           <td className="py-2 px-3 text-right">{item.quantity ?? 1}</td>
                           <td className="py-2 px-3 text-right">${fmt(item.unit_price ?? 0)}</td>
                           <td className="py-2 px-3 text-right font-medium">${fmt(item.total ?? 0)}</td>

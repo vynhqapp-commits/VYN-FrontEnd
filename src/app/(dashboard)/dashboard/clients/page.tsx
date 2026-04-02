@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Mail, MessageCircle, Phone, RefreshCw, X } from 'lucide-react';
 import { clientsApi, debtApi, salonProfileApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -238,7 +239,16 @@ export default function ClientsPage() {
     }
   };
 
-  if (loading) return <p className="text-salon-stone">Loading clients...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
+      </div>
+    );
+  }
   if (error) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{error}</div>;
 
   return (
@@ -373,7 +383,10 @@ export default function ClientsPage() {
                   <h3 className="text-sm font-semibold text-salon-espresso mb-3">Notes</h3>
                   <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 max-h-64 overflow-auto">
                     {detailLoading ? (
-                      <p className="text-sm text-salon-stone">Loading notes…</p>
+                      <div className="space-y-2">
+                        <Skeleton className="h-12 w-full rounded-xl" />
+                        <Skeleton className="h-12 w-full rounded-xl" />
+                      </div>
                     ) : notes.length === 0 ? (
                       <p className="text-sm text-salon-stone">No notes yet.</p>
                     ) : (
@@ -414,7 +427,10 @@ export default function ClientsPage() {
                   <h3 className="text-sm font-semibold text-salon-espresso mb-3">Debt</h3>
                   <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
                   {debtLoading ? (
-                    <p className="text-sm text-salon-stone">Loading debt…</p>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                    </div>
                   ) : (
                     <>
                       <p className="text-sm">
@@ -475,7 +491,10 @@ export default function ClientsPage() {
                     <h3 className="text-sm font-semibold text-salon-espresso mb-3">Packages</h3>
                     <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
                     {packagesLoading ? (
-                      <p className="text-sm text-salon-stone">Loading packages…</p>
+                      <div className="space-y-2">
+                        <Skeleton className="h-12 w-full rounded-xl" />
+                        <Skeleton className="h-12 w-full rounded-xl" />
+                      </div>
                     ) : packages.length === 0 ? (
                       <p className="text-sm text-salon-stone">No packages found.</p>
                     ) : (
@@ -513,7 +532,10 @@ export default function ClientsPage() {
                     <h3 className="text-sm font-semibold text-salon-espresso mb-3">Membership</h3>
                     <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
                     {membershipsLoading ? (
-                      <p className="text-sm text-salon-stone">Loading memberships…</p>
+                      <div className="space-y-2">
+                        <Skeleton className="h-12 w-full rounded-xl" />
+                        <Skeleton className="h-12 w-full rounded-xl" />
+                      </div>
                     ) : memberships.length === 0 ? (
                       <p className="text-sm text-salon-stone">No memberships found.</p>
                     ) : (
@@ -565,7 +587,11 @@ export default function ClientsPage() {
                     <h3 className="text-sm font-semibold text-salon-espresso mb-3">Stats</h3>
                     <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
                     {statsLoading ? (
-                      <p className="text-sm text-salon-stone">Loading stats…</p>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
                     ) : stats ? (
                       <div className="space-y-1">
                         <p className="text-sm">

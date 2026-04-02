@@ -15,6 +15,7 @@ import { RHFTextField } from '@/components/fields/RHFTextField';
 import { RHFTextareaField } from '@/components/fields/RHFTextareaField';
 import { Pagination } from '@/components/data/Pagination';
 import { type PaginationMeta } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -147,7 +148,15 @@ export default function ProductsPage() {
     }
   };
 
-  if (loading) return <p className="text-salon-stone">Loading products...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-36" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

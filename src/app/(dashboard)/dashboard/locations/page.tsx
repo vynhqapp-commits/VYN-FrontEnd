@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
 import { RHFTextareaField } from '@/components/fields/RHFTextareaField';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -144,7 +145,15 @@ export default function LocationsPage() {
     }
   };
 
-  if (loading) return <p className="text-salon-stone">Loading locations...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-36" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { debtApi, type DebtAgingRow } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DebtAgingPage() {
   const [aging, setAging] = useState<DebtAgingRow[]>([]);
@@ -52,7 +53,20 @@ export default function DebtAgingPage() {
     loadWriteOffRequests();
   };
 
-  if (loading) return <p className="text-salon-stone">Loading...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-56" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+        <Skeleton className="h-72 w-full rounded-xl" />
+      </div>
+    );
+  }
   if (error) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{error}</div>;
 
   return (

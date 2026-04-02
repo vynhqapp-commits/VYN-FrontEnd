@@ -2045,6 +2045,7 @@ export interface Inventory {
 export interface Appointment {
   id: string;
   tenant_id: string;
+  created_at?: string;
   // Column names differ between old dashboard API (start_at) and new model (starts_at)
   start_at?: string;
   end_at?: string;

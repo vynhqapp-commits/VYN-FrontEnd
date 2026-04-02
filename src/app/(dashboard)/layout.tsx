@@ -11,11 +11,13 @@ import { AppShell, type ShellNavItem } from "@/components/layout/AppShell";
 import { CommandPalette } from "@/components/command/CommandPalette";
 import {
   BarChart3,
+  BookText,
   Boxes,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
   CreditCard,
+  FileText,
   Gift,
   MapPin,
   Package,
@@ -63,6 +65,8 @@ export default function DashboardLayout({
                         ? <Receipt className="size-5" />
                         : i.href === "/dashboard/pos"
                           ? <CreditCard className="size-5" />
+                          : i.href === "/dashboard/invoices"
+                            ? <FileText className="size-5" />
                           : i.href === "/dashboard/cash-drawer"
                             ? <Wallet className="size-5" />
                             : i.href === "/dashboard/debt-aging"
@@ -73,6 +77,8 @@ export default function DashboardLayout({
                                   ? <Gift className="size-5" />
                                   : i.href === "/dashboard/expenses"
                                     ? <Receipt className="size-5" />
+                                    : i.href === "/dashboard/ledger"
+                                      ? <BookText className="size-5" />
                                     : i.href === "/dashboard/reports"
                                       ? <BarChart3 className="size-5" />
                                       : i.href === "/dashboard/franchise"

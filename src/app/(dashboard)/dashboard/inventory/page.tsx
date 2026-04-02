@@ -7,6 +7,7 @@ import { toastError, toastSuccess } from '@/lib/toast';
 import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -98,7 +99,15 @@ export default function InventoryPage() {
     toastSuccess('Stock adjusted.');
   };
 
-  if (loading) return <p className="text-salon-stone">Loading inventory...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-36" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
   if (error) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{error}</div>;
 
   return (

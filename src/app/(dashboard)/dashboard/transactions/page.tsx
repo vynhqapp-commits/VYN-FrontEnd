@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { transactionsApi, type Transaction } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -17,7 +18,14 @@ export default function TransactionsPage() {
     });
   }, []);
 
-  if (loading) return <p className="text-salon-stone">Loading transactions...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
   if (error) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{error}</div>;
 
   return (

@@ -20,6 +20,7 @@ import { toastError, toastSuccess } from '@/lib/toast';
 import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type LineType = 'service' | 'product';
 
@@ -314,7 +315,15 @@ export default function PosPage() {
   };
 
   if (loading) {
-    return <p className="text-salon-stone">Loading POS...</p>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)]">
+          <Skeleton className="h-[520px] w-full rounded-xl" />
+          <Skeleton className="h-[520px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
   return (

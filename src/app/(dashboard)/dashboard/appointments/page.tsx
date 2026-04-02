@@ -6,6 +6,7 @@ import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
 import { appointmentsApi, clientsApi, locationsApi, servicesApi, type Appointment, type Client, type Location, type Service } from '@/lib/api';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -278,7 +279,19 @@ export default function AppointmentsPage() {
     setError(null);
   }, [error]);
 
-  if (loading && appointments.length === 0) return <p className="text-salon-stone">Loading appointments...</p>;
+  if (loading && appointments.length === 0) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="h-10 w-24 rounded-xl" />
+          <Skeleton className="h-10 w-10 rounded-xl" />
+        </div>
+        <Skeleton className="h-[420px] w-full rounded-2xl" />
+      </div>
+    );
+  }
 
   const statuses = ['scheduled', 'checked_in', 'completed', 'cancelled'] as const;
 

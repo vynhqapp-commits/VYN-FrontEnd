@@ -1,63 +1,236 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { CalendarDays, CreditCard, Users, UserCheck } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  appointmentsApi,
+  clientsApi,
+  salonProfileApi,
+  staffApi,
+  transactionsApi,
+  type Appointment,
+  type Transaction,
+} from '@/lib/api';
 
-type ApptStatus = 'confirmed' | 'scheduled' | 'completed' | 'cancelled';
 type ApptRow = {
   id: string;
   client: string;
   service: string;
   time: string;
-  status: ApptStatus;
+  status: string;
 };
 
-const demoAppointments: ApptRow[] = [
-  { id: 'a1', client: 'Ayesha Khan', service: 'Haircut', time: '10:30', status: 'confirmed' },
-  { id: 'a2', client: 'Rohan Patel', service: 'Beard trim', time: '11:15', status: 'scheduled' },
-  { id: 'a3', client: 'Sara Ali', service: 'Color', time: '13:00', status: 'completed' },
-  { id: 'a4', client: 'John Doe', service: 'Facial', time: '15:45', status: 'cancelled' },
-];
+type ActivityRow = {
+  id: string;
+  title: string;
+  text: string;
+  when: string;
+  at: string;
+};
 
-const demoRevenue = [
-  { day: 'Mon', revenue: 420 },
-  { day: 'Tue', revenue: 760 },
-  { day: 'Wed', revenue: 610 },
-  { day: 'Thu', revenue: 980 },
-  { day: 'Fri', revenue: 840 },
-  { day: 'Sat', revenue: 1200 },
-  { day: 'Sun', revenue: 510 },
-];
-
-function statusVariant(status: ApptStatus) {
+function statusVariant(status: string) {
   if (status === 'confirmed') return 'success';
   if (status === 'scheduled') return 'warning';
+  if (status === 'checked_in' || status === 'in_progress') return 'secondary';
   if (status === 'cancelled') return 'destructive';
   return 'muted';
 }
 
+function dayStr(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function sumSales(rows: Transaction[]) {
+  return rows.reduce((acc, s) => acc + Number(s.total ?? 0), 0);
+}
+
+function humanAgo(iso?: string) {
+  if (!iso) return 'now';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.max(1, Math.floor(diff / 60000));
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 export default function DashboardPage() {
-  // UI-first redesign: keep data flow intact later by wiring existing API calls into these blocks.
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [appointments, setAppointments] = useState<ApptRow[]>([]);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [revenueSeries, setRevenueSeries] = useState<{ day: string; revenue: number }[]>([]);
+  const [stats, setStats] = useState({
+    todayRevenue: 0,
+    revenueDeltaPct: 0,
+    totalBookings: 0,
+    upcomingBookings: 0,
+    activeClients: 0,
+    staffOnDuty: 0,
+    availableNow: 0,
+  });
+
+  const money = useMemo(() => {
+    return (n: number) => {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency,
+          maximumFractionDigits: 2,
+        }).format(Number(n || 0));
+      } catch {
+        return `${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currency}`;
+      }
+    };
+  }, [currency]);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setLoading(true);
+
+      const now = new Date();
+      const today = dayStr(now);
+      const yesterdayDate = new Date(now);
+      yesterdayDate.setDate(now.getDate() - 1);
+      const yesterday = dayStr(yesterdayDate);
+      const sevenDaysAgoDate = new Date(now);
+      sevenDaysAgoDate.setDate(now.getDate() - 6);
+      const sevenDaysAgo = dayStr(sevenDaysAgoDate);
+
+      const [
+        todayAppointmentsRes,
+        todaySalesRes,
+        yesterdaySalesRes,
+        clientsRes,
+        staffRes,
+        weekSalesRes,
+        salonRes,
+      ] = await Promise.all([
+        appointmentsApi.list({ from: today, to: today }),
+        transactionsApi.list({ from: today, to: today }),
+        transactionsApi.list({ from: yesterday, to: yesterday }),
+        clientsApi.list(),
+        staffApi.list(),
+        transactionsApi.list({ from: sevenDaysAgo, to: today }),
+        salonProfileApi.get(),
+      ]);
+
+      const firstError =
+        todayAppointmentsRes.error ||
+        todaySalesRes.error ||
+        yesterdaySalesRes.error ||
+        clientsRes.error ||
+        staffRes.error ||
+        weekSalesRes.error;
+
+      if (firstError) {
+        toast.error(firstError);
+      }
+
+      const todayAppointments = todayAppointmentsRes.data?.appointments ?? [];
+      const todaySales = todaySalesRes.data?.transactions ?? [];
+      const yesterdaySales = yesterdaySalesRes.data?.transactions ?? [];
+      const clients = clientsRes.data?.clients ?? [];
+      const staff = Array.isArray(staffRes.data) ? staffRes.data : [];
+      const weekSales = weekSalesRes.data?.transactions ?? [];
+      const salonCurrency = salonRes.data?.salon?.currency;
+      if (salonCurrency && typeof salonCurrency === 'string') {
+        setCurrency(salonCurrency.toUpperCase());
+      }
+
+      const todayRevenue = sumSales(todaySales);
+      const yesterdayRevenue = sumSales(yesterdaySales);
+      const revenueDeltaPct =
+        yesterdayRevenue > 0
+          ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
+          : todayRevenue > 0
+            ? 100
+            : 0;
+
+      const apptRows: ApptRow[] = todayAppointments.map((a: Appointment) => ({
+        id: a.id,
+        client: a.Client?.full_name || 'Walk-in',
+        service: a.Service?.name || a.services?.[0]?.service?.name || 'Service',
+        time: new Date((a.start_at ?? a.starts_at) || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: a.status || 'scheduled',
+      }));
+
+      const upcomingBookings = todayAppointments.filter((a: Appointment) => {
+        const start = new Date((a.start_at ?? a.starts_at) || '');
+        return start.getTime() > Date.now();
+      }).length;
+
+      const byDay = new Map<string, number>();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(sevenDaysAgoDate);
+        d.setDate(sevenDaysAgoDate.getDate() + i);
+        byDay.set(dayStr(d), 0);
+      }
+      weekSales.forEach((s: Transaction) => {
+        const key = dayStr(new Date(s.created_at || ''));
+        byDay.set(key, (byDay.get(key) ?? 0) + Number(s.total ?? 0));
+      });
+      const chart = Array.from(byDay.entries()).map(([date, revenue]) => ({
+        day: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }),
+        revenue: Number(revenue.toFixed(2)),
+      }));
+
+      const activityRows: ActivityRow[] = [
+        ...todayAppointments.slice(0, 4).map((a: Appointment) => ({
+          id: `a-${a.id}`,
+          title: a.status === 'cancelled' ? 'Cancellation' : 'New booking',
+          text: `${a.Client?.full_name || 'Client'} booked ${a.Service?.name || a.services?.[0]?.service?.name || 'service'}`,
+          when: humanAgo(a.created_at || a.start_at || a.starts_at),
+          at: a.start_at ?? a.starts_at ?? '',
+        })),
+        ...todaySales.slice(0, 4).map((s: Transaction) => ({
+          id: `s-${s.id}`,
+          title: 'Payment received',
+          text: `${money(Number(s.total ?? 0))} · ${s.status}`,
+          when: humanAgo(s.created_at),
+          at: s.created_at || '',
+        })),
+      ]
+        .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+        .slice(0, 3);
+
+      setStats({
+        todayRevenue,
+        revenueDeltaPct,
+        totalBookings: todayAppointments.length,
+        upcomingBookings,
+        activeClients: clients.length,
+        staffOnDuty: staff.length,
+        availableNow: staff.length,
+      });
+      setAppointments(apptRows);
+      setRevenueSeries(chart);
+      setActivity(activityRows);
+      setLoading(false);
+    };
+
+    loadDashboard();
+  }, []);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return demoAppointments;
-    return demoAppointments.filter(
+    if (!needle) return appointments;
+    return appointments.filter(
       (r) =>
         r.client.toLowerCase().includes(needle) ||
         r.service.toLowerCase().includes(needle) ||
         r.status.toLowerCase().includes(needle),
     );
-  }, [q]);
+  }, [q, appointments]);
 
   return (
     <div className="space-y-6">
@@ -73,40 +246,43 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Today’s Revenue</CardDescription>
-            <CardTitle className="text-2xl">$1,240</CardTitle>
+            <CardTitle className="text-2xl">{money(stats.todayRevenue)}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">+12% vs yesterday</span>
+            <span className="text-xs text-muted-foreground">
+              {stats.revenueDeltaPct >= 0 ? '+' : ''}
+              {stats.revenueDeltaPct.toFixed(1)}% vs yesterday
+            </span>
             <CreditCard className="text-muted-foreground" />
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Bookings</CardDescription>
-            <CardTitle className="text-2xl">18</CardTitle>
+            <CardTitle className="text-2xl">{stats.totalBookings}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">3 upcoming</span>
+            <span className="text-xs text-muted-foreground">{stats.upcomingBookings} upcoming</span>
             <CalendarDays className="text-muted-foreground" />
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Active Clients</CardDescription>
-            <CardTitle className="text-2xl">246</CardTitle>
+            <CardTitle className="text-2xl">{stats.activeClients}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Last 30 days</span>
+            <span className="text-xs text-muted-foreground">Live customer records</span>
             <Users className="text-muted-foreground" />
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Staff On Duty</CardDescription>
-            <CardTitle className="text-2xl">5</CardTitle>
+            <CardTitle className="text-2xl">{stats.staffOnDuty}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">2 available now</span>
+            <span className="text-xs text-muted-foreground">{stats.availableNow} available now</span>
             <UserCheck className="text-muted-foreground" />
           </CardContent>
         </Card>
@@ -203,27 +379,19 @@ export default function DashboardPage() {
             <CardDescription>Recent events across bookings and payments.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-medium">New booking</div>
-                <div className="text-muted-foreground">Ayesha booked Haircut · 10:30</div>
-              </div>
-              <span className="text-xs text-muted-foreground">2m</span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-medium">Payment received</div>
-                <div className="text-muted-foreground">$45 · Beard trim</div>
-              </div>
-              <span className="text-xs text-muted-foreground">12m</span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-medium">Cancellation</div>
-                <div className="text-muted-foreground">John cancelled Facial · 15:45</div>
-              </div>
-              <span className="text-xs text-muted-foreground">1h</span>
-            </div>
+            {activity.length === 0 && !loading ? (
+              <p className="text-muted-foreground">No recent activity.</p>
+            ) : (
+              activity.map((row) => (
+                <div key={row.id} className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{row.title}</div>
+                    <div className="text-muted-foreground">{row.text}</div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{row.when}</span>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -232,11 +400,11 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Revenue</CardTitle>
-          <CardDescription>Last 7 days (sample chart styling).</CardDescription>
+          <CardDescription>Last 7 days.</CardDescription>
         </CardHeader>
         <CardContent className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={demoRevenue} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+            <AreaChart data={revenueSeries} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
               <defs>
                 <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />

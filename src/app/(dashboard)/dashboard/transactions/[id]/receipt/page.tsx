@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { transactionsApi, paymentsApi } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -87,7 +88,12 @@ export default function ReceiptPage() {
   };
 
   if (!receipt?.receipt) {
-    return <div className="p-6 text-salon-stone">Loading receipt...</div>;
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-[420px] w-full max-w-md rounded-xl" />
+      </div>
+    );
   }
 
   const r = receipt.receipt;

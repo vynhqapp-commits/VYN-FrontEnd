@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { expensesApi, locationsApi, type Expense, type Location } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CATEGORIES = ['rent', 'utilities', 'salaries', 'marketing', 'supplies', 'other'] as const;
 
@@ -120,7 +121,15 @@ export default function ExpensesPage() {
     loadExpenses();
   };
 
-  if (loading) return <p className="text-salon-stone">Loading expenses...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-36" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
   if (listError) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{listError}</div>;
 
   return (

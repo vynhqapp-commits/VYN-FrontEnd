@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { cashDrawerApi, locationsApi, CashDrawerSession, CashMovement, Location } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type StatusFilter = 'all' | 'open' | 'closed' | 'pending_approval' | 'reconciled';
 
@@ -186,7 +187,7 @@ export default function CashDrawerPage() {
             <option value="all">All</option>
           </select>
         </div>
-        {loading && <p className="text-sm text-salon-stone">Loading sessions...</p>}
+        {loading && <Skeleton className="h-5 w-32" />}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
 

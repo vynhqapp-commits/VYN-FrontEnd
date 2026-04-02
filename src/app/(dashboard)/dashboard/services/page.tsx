@@ -18,6 +18,7 @@ import { RHFTextareaField } from '@/components/fields/RHFTextareaField';
 import { Combobox } from '@/components/ui/combobox';
 import { Pagination } from '@/components/data/Pagination';
 import { type PaginationMeta } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -364,7 +365,15 @@ export default function ServicesPage() {
     }
   };
 
-  if (loading) return <p className="text-salon-stone">Loading services...</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -670,7 +679,10 @@ export default function ServicesPage() {
               </div>
 
               {availabilityLoading ? (
-                <p className="text-sm text-salon-stone">Loading availability…</p>
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
               ) : availabilityTab === 'weekly' ? (
                 <div className="space-y-3">
                   <div className="bg-salon-sand/20 rounded-xl border border-salon-sand/40 p-4">

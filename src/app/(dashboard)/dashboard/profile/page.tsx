@@ -9,6 +9,7 @@ import { salonProfileApi, type Tenant } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const TIMEZONES = [
   'UTC', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait', 'Asia/Bahrain',
@@ -83,7 +84,14 @@ export default function SalonProfilePage() {
     toastSuccess('Salon profile updated.');
   };
 
-  if (loading) return <p className="text-salon-stone">Loading salon profile…</p>;
+  if (loading) {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <Skeleton className="h-14 w-80" />
+        <Skeleton className="h-80 w-full rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl space-y-6">
