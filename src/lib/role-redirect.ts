@@ -1,5 +1,5 @@
 // Matches backend spatie/laravel-permission role names (lowercase)
-export type AppRole = 'super_admin' | 'salon_owner' | 'manager' | 'staff' | 'customer';
+export type AppRole = 'super_admin' | 'salon_owner' | 'manager' | 'receptionist' | 'staff' | 'customer';
 
 /** Default path after login for each role */
 export function getRedirectForRole(role: string): string {
@@ -8,6 +8,7 @@ export function getRedirectForRole(role: string): string {
       return '/admin';
     case 'salon_owner':
     case 'manager':
+    case 'receptionist':
     case 'staff':
       return '/dashboard';
     case 'customer':
@@ -17,7 +18,7 @@ export function getRedirectForRole(role: string): string {
   }
 }
 
-export const SALON_ROLES: AppRole[] = ['salon_owner', 'manager', 'staff'];
+export const SALON_ROLES: AppRole[] = ['salon_owner', 'manager', 'receptionist', 'staff'];
 export const ADMIN_ROLE: AppRole = 'super_admin';
 export const CUSTOMER_ROLE: AppRole = 'customer';
 

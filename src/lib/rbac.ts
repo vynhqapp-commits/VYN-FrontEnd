@@ -29,18 +29,21 @@ const managerMenu: NavItem[] = ownerMenu.filter(
   (i) => i.href !== "/dashboard/franchise",
 );
 
-const staffMenu: NavItem[] = [
+const receptionistMenu: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/appointments", label: "Calendar" },
   { href: "/dashboard/clients", label: "Clients" },
   { href: "/dashboard/services", label: "Services" },
   { href: "/dashboard/products", label: "Products" },
-  { href: "/dashboard/inventory", label: "Inventory" },
   { href: "/dashboard/transactions", label: "POS / Sales" },
   { href: "/dashboard/pos", label: "New sale (POS)" },
   { href: "/dashboard/cash-drawer", label: "Cash drawer" },
-  { href: "/dashboard/debt-aging", label: "Debt aging" },
-  { href: "/dashboard/commission", label: "Commission" },
+];
+
+const staffMenu: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/appointments", label: "My Calendar" },
+  { href: "/dashboard/commission", label: "My Earnings" },
 ];
 
 export const menuByRole: Record<AppRole, NavItem[]> = {
@@ -48,6 +51,7 @@ export const menuByRole: Record<AppRole, NavItem[]> = {
   customer: [],
   salon_owner: ownerMenu,
   manager: managerMenu,
+  receptionist: receptionistMenu,
   staff: staffMenu,
 };
 
@@ -57,6 +61,7 @@ export const allowedPrefixesByRole: Record<AppRole, string[]> = {
   customer: ["/my-bookings", "/profile"],
   salon_owner: ownerMenu.map((i) => i.href),
   manager: managerMenu.map((i) => i.href),
+  receptionist: receptionistMenu.map((i) => i.href),
   staff: staffMenu.map((i) => i.href),
 };
 

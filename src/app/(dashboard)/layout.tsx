@@ -45,47 +45,47 @@ export default function DashboardLayout({
       href: i.href,
       label: i.label,
       icon:
-        i.href === "/dashboard"
-          ? <BarChart3 className="size-5" />
-          : i.href === "/dashboard/appointments"
-            ? <CalendarDays className="size-5" />
-            : i.href === "/dashboard/clients"
-              ? <Users className="size-5" />
-              : i.href === "/dashboard/staff"
-                ? <UserCog className="size-5" />
-                : i.href === "/dashboard/locations"
-                  ? <MapPin className="size-5" />
-                : i.href === "/dashboard/services"
-                  ? <Settings2 className="size-5" />
-                  : i.href === "/dashboard/products"
-                    ? <Package className="size-5" />
-                    : i.href === "/dashboard/inventory"
-                      ? <Boxes className="size-5" />
-                      : i.href === "/dashboard/transactions"
-                        ? <Receipt className="size-5" />
-                        : i.href === "/dashboard/pos"
-                          ? <CreditCard className="size-5" />
-                          : i.href === "/dashboard/invoices"
-                            ? <FileText className="size-5" />
-                          : i.href === "/dashboard/cash-drawer"
-                            ? <Wallet className="size-5" />
-                            : i.href === "/dashboard/debt-aging"
-                              ? <BriefcaseBusiness className="size-5" />
-                              : i.href === "/dashboard/commission"
-                                ? <BarChart3 className="size-5" />
-                                : i.href === "/dashboard/gift-cards"
-                                  ? <Gift className="size-5" />
-                                  : i.href === "/dashboard/expenses"
-                                    ? <Receipt className="size-5" />
-                                    : i.href === "/dashboard/ledger"
-                                      ? <BookText className="size-5" />
-                                    : i.href === "/dashboard/reports"
-                                      ? <BarChart3 className="size-5" />
-                                      : i.href === "/dashboard/franchise"
-                                        ? <BriefcaseBusiness className="size-5" />
-                                        : i.href === "/dashboard/profile"
-                                          ? <Building2 className="size-5" />
-                                          : null,
+        i.href === "/dashboard" ? (
+          <BarChart3 className="size-5" />
+        ) : i.href === "/dashboard/appointments" ? (
+          <CalendarDays className="size-5" />
+        ) : i.href === "/dashboard/clients" ? (
+          <Users className="size-5" />
+        ) : i.href === "/dashboard/staff" ? (
+          <UserCog className="size-5" />
+        ) : i.href === "/dashboard/locations" ? (
+          <MapPin className="size-5" />
+        ) : i.href === "/dashboard/services" ? (
+          <Settings2 className="size-5" />
+        ) : i.href === "/dashboard/products" ? (
+          <Package className="size-5" />
+        ) : i.href === "/dashboard/inventory" ? (
+          <Boxes className="size-5" />
+        ) : i.href === "/dashboard/transactions" ? (
+          <Receipt className="size-5" />
+        ) : i.href === "/dashboard/pos" ? (
+          <CreditCard className="size-5" />
+        ) : i.href === "/dashboard/invoices" ? (
+          <FileText className="size-5" />
+        ) : i.href === "/dashboard/cash-drawer" ? (
+          <Wallet className="size-5" />
+        ) : i.href === "/dashboard/debt-aging" ? (
+          <BriefcaseBusiness className="size-5" />
+        ) : i.href === "/dashboard/commission" ? (
+          <BarChart3 className="size-5" />
+        ) : i.href === "/dashboard/gift-cards" ? (
+          <Gift className="size-5" />
+        ) : i.href === "/dashboard/expenses" ? (
+          <Receipt className="size-5" />
+        ) : i.href === "/dashboard/ledger" ? (
+          <BookText className="size-5" />
+        ) : i.href === "/dashboard/reports" ? (
+          <BarChart3 className="size-5" />
+        ) : i.href === "/dashboard/franchise" ? (
+          <BriefcaseBusiness className="size-5" />
+        ) : i.href === "/dashboard/profile" ? (
+          <Building2 className="size-5" />
+        ) : null,
     }));
   }, [roleCandidate]);
   const cmdItems = useMemo(
@@ -117,7 +117,7 @@ export default function DashboardLayout({
     }
   }, [user, loading, router, pathname]);
 
-  const salonRoles = ["salon_owner", "manager", "staff"];
+  const salonRoles = ["salon_owner", "manager", "receptionist", "staff"];
   if (loading || !user || !salonRoles.includes(user.role))
     return <LoadingWithHero />;
 
