@@ -13,10 +13,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   appointmentsApi,
   clientsApi,
+  locationsApi,
   salonProfileApi,
   staffApi,
   transactionsApi,
   type Appointment,
+  type Location,
+  type StaffMember,
   type Transaction,
 } from '@/lib/api';
 
@@ -44,8 +47,12 @@ function statusVariant(status: string) {
   return 'muted';
 }
 
-function dayStr(d: Date) {
-  return d.toISOString().slice(0, 10);
+/** Local calendar Y-m-d (avoids UTC drift from toISOString). */
+function localCalendarDay(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function sumSales(rows: Transaction[]) {
@@ -62,22 +69,157 @@ function humanAgo(iso?: string) {
   return `${Math.floor(h / 24)}d`;
 }
 
+function formatMoney(amount: number, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currencyCode}`;
+  }
+}
+
+function appointmentCalendarDay(a: Appointment) {
+  const iso = a.start_at ?? a.starts_at;
+  if (!iso) return '';
+  return localCalendarDay(new Date(iso));
+}
+
+/** Prefer booking creation time for “recent activity”; fall back to last update or start time. */
+function appointmentActivityInstant(a: Appointment): string {
+  return (
+    (a.created_at && String(a.created_at)) ||
+    (a.updated_at && String(a.updated_at)) ||
+    (a.start_at && String(a.start_at)) ||
+    (a.starts_at && String(a.starts_at)) ||
+    ''
+  );
+}
+
+function appointmentActivityTitle(status: string) {
+  if (status === 'cancelled') return 'Cancellation';
+  if (status === 'completed') return 'Completed';
+  if (status === 'no_show') return 'No-show';
+  if (status === 'in_progress') return 'In progress';
+  if (status === 'checked_in') return 'Checked in';
+  return 'New booking';
+}
+
+function clientDisplayName(a: Appointment) {
+  const n = a.Client?.full_name?.trim();
+  return n || 'Walk-in';
+}
+
+function serviceDisplayName(a: Appointment) {
+  return a.Service?.name || a.services?.[0]?.service?.name || 'Service';
+}
+
+function activitySortMs(iso: string) {
+  const t = new Date(iso).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+function staffBranchId(s: StaffMember) {
+  return s.branch_id ?? s.branch?.id ?? '';
+}
+
+/** API ids may be number; `<select>` values are always strings — strict `===` breaks label + filters. */
+function sameRecordId(a: unknown, b: unknown) {
+  return String(a ?? '') === String(b ?? '');
+}
+
+/** JS getDay(): 0=Sun … 6=Sat — matches `staff_schedules.day_of_week` on the API. */
+function parseScheduleTimeToMinutes(t: string): number | null {
+  const m = String(t).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+function isScheduledToWorkToday(s: StaffMember, now: Date): boolean {
+  const dow = now.getDay();
+  const row = (s.schedules ?? []).find((r) => r.day_of_week === dow);
+  if (!row) return false;
+  if (row.is_day_off) return false;
+  return true;
+}
+
+function isWithinShiftNow(s: StaffMember, now: Date): boolean {
+  if (!isScheduledToWorkToday(s, now)) return false;
+  const dow = now.getDay();
+  const row = (s.schedules ?? []).find((r) => r.day_of_week === dow);
+  if (!row) return false;
+  const start = parseScheduleTimeToMinutes(String(row.start_time ?? ''));
+  const end = parseScheduleTimeToMinutes(String(row.end_time ?? ''));
+  if (start == null || end == null) return false;
+  const cur = now.getHours() * 60 + now.getMinutes();
+  if (end >= start) {
+    return cur >= start && cur <= end;
+  }
+  return cur >= start || cur <= end;
+}
+
+function computeStaffKpi(staffForKpi: StaffMember[], now: Date) {
+  const team = staffForKpi.length;
+  const hasSchedules = staffForKpi.some((s) => (s.schedules?.length ?? 0) > 0);
+  const scheduledToday = staffForKpi.filter((s) => isScheduledToWorkToday(s, now)).length;
+  const inShiftNow = staffForKpi.filter((s) => isWithinShiftNow(s, now)).length;
+  if (hasSchedules) {
+    return {
+      staffCardMode: 'schedule' as const,
+      staffMain: inShiftNow,
+      staffSub: `${scheduledToday} scheduled today · ${team} in team`,
+    };
+  }
+  return {
+    staffCardMode: 'team' as const,
+    staffMain: team,
+    staffSub:
+      team === 1
+        ? '1 active — set weekly hours under Staff for on-duty counts'
+        : `${team} active — set weekly hours under Staff for on-duty counts`,
+  };
+}
+
+type StaffCardMode = 'schedule' | 'team';
+
+type DashboardStats = {
+  todayRevenue: number;
+  revenueDeltaPct: number;
+  totalBookings: number;
+  upcomingBookings: number;
+  activeClients: number;
+  staffCardMode: StaffCardMode;
+  staffMain: number;
+  staffSub: string;
+};
+
+const EMPTY_STATS: DashboardStats = {
+  todayRevenue: 0,
+  revenueDeltaPct: 0,
+  totalBookings: 0,
+  upcomingBookings: 0,
+  activeClients: 0,
+  staffCardMode: 'team',
+  staffMain: 0,
+  staffSub: '',
+};
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState<Location[]>([]);
+  /** `null` while resolving locations; `''` if none exist; otherwise selected branch id (dashboard is always branch-scoped). */
+  const [branchFilter, setBranchFilter] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [appointments, setAppointments] = useState<ApptRow[]>([]);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [revenueSeries, setRevenueSeries] = useState<{ day: string; revenue: number }[]>([]);
-  const [stats, setStats] = useState({
-    todayRevenue: 0,
-    revenueDeltaPct: 0,
-    totalBookings: 0,
-    upcomingBookings: 0,
-    activeClients: 0,
-    staffOnDuty: 0,
-    availableNow: 0,
-  });
+  const [stats, setStats] = useState<DashboardStats>({ ...EMPTY_STATS });
 
   const money = useMemo(() => {
     return (n: number) => {
@@ -94,132 +236,196 @@ export default function DashboardPage() {
   }, [currency]);
 
   useEffect(() => {
+    locationsApi.list().then((res) => {
+      if ('error' in res && res.error) {
+        toast.error(res.error);
+        setLocations([]);
+        setBranchFilter('');
+        return;
+      }
+      const locs = res.data?.locations ?? [];
+      setLocations(locs);
+      setBranchFilter((prev) => {
+        if (locs.length === 0) return '';
+        const validPrev =
+          prev && prev !== '' && locs.some((l) => sameRecordId(l.id, prev)) ? prev : null;
+        return validPrev != null ? String(validPrev) : String(locs[0]!.id);
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (branchFilter === null) return;
+
+    if (branchFilter === '') {
+      setLoading(false);
+      setAppointments([]);
+      setActivity([]);
+      setRevenueSeries([]);
+      setStats({ ...EMPTY_STATS });
+      return;
+    }
+
+    let cancelled = false;
+
     const loadDashboard = async () => {
       setLoading(true);
+      setAppointments([]);
+      setActivity([]);
+      setRevenueSeries([]);
+      setStats({ ...EMPTY_STATS });
 
       const now = new Date();
-      const today = dayStr(now);
+      const today = localCalendarDay(now);
       const yesterdayDate = new Date(now);
       yesterdayDate.setDate(now.getDate() - 1);
-      const yesterday = dayStr(yesterdayDate);
+      const yesterday = localCalendarDay(yesterdayDate);
       const sevenDaysAgoDate = new Date(now);
       sevenDaysAgoDate.setDate(now.getDate() - 6);
-      const sevenDaysAgo = dayStr(sevenDaysAgoDate);
+      const sevenDaysAgo = localCalendarDay(sevenDaysAgoDate);
 
-      const [
-        todayAppointmentsRes,
-        todaySalesRes,
-        yesterdaySalesRes,
-        clientsRes,
-        staffRes,
-        weekSalesRes,
-        salonRes,
-      ] = await Promise.all([
-        appointmentsApi.list({ from: today, to: today }),
-        transactionsApi.list({ from: today, to: today }),
-        transactionsApi.list({ from: yesterday, to: yesterday }),
-        clientsApi.list(),
-        staffApi.list(),
-        transactionsApi.list({ from: sevenDaysAgo, to: today }),
-        salonProfileApi.get(),
-      ]);
+      const locParam = branchFilter;
 
-      const firstError =
-        todayAppointmentsRes.error ||
-        todaySalesRes.error ||
-        yesterdaySalesRes.error ||
-        clientsRes.error ||
-        staffRes.error ||
-        weekSalesRes.error;
+      try {
+        const [
+          weekAppointmentsRes,
+          todaySalesRes,
+          yesterdaySalesRes,
+          clientsRes,
+          staffRes,
+          weekSalesRes,
+          salonRes,
+        ] = await Promise.all([
+          appointmentsApi.listAll({ from: sevenDaysAgo, to: today, location_id: locParam }),
+          transactionsApi.listAll({ from: today, to: today, location_id: locParam }),
+          transactionsApi.listAll({ from: yesterday, to: yesterday, location_id: locParam }),
+          clientsApi.list(),
+          staffApi.list(),
+          transactionsApi.listAll({ from: sevenDaysAgo, to: today, location_id: locParam }),
+          salonProfileApi.get(),
+        ]);
 
-      if (firstError) {
-        toast.error(firstError);
+        if (cancelled) return;
+
+        const firstError =
+          weekAppointmentsRes.error ||
+          todaySalesRes.error ||
+          yesterdaySalesRes.error ||
+          clientsRes.error ||
+          staffRes.error ||
+          weekSalesRes.error ||
+          salonRes.error;
+
+        if (firstError) {
+          toast.error(firstError);
+        }
+
+        const weekAppointments = weekAppointmentsRes.data?.appointments ?? [];
+        const todayAppointments = weekAppointments.filter((a) => appointmentCalendarDay(a) === today);
+        const todaySales = todaySalesRes.data?.transactions ?? [];
+        const yesterdaySales = yesterdaySalesRes.data?.transactions ?? [];
+        const clients = clientsRes.data?.clients ?? [];
+        const staffRaw = Array.isArray(staffRes.data) ? staffRes.data : [];
+        const staffForKpi = staffRaw.filter((s) => sameRecordId(staffBranchId(s), branchFilter));
+        const weekSales = weekSalesRes.data?.transactions ?? [];
+
+        const salonCurrency = salonRes.data?.salon?.currency;
+        const resolvedCurrency =
+          salonCurrency && typeof salonCurrency === 'string'
+            ? salonCurrency.toUpperCase()
+            : 'USD';
+        setCurrency(resolvedCurrency);
+
+        const todayRevenue = sumSales(todaySales);
+        const yesterdayRevenue = sumSales(yesterdaySales);
+        const revenueDeltaPct =
+          yesterdayRevenue > 0
+            ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
+            : todayRevenue > 0
+              ? 100
+              : 0;
+
+        const apptRows: ApptRow[] = todayAppointments.map((a: Appointment) => ({
+          id: a.id,
+          client: clientDisplayName(a),
+          service: serviceDisplayName(a),
+          time: new Date((a.start_at ?? a.starts_at) || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: a.status || 'scheduled',
+        }));
+
+        const upcomingBookings = todayAppointments.filter((a: Appointment) => {
+          const start = new Date((a.start_at ?? a.starts_at) || '');
+          return start.getTime() > Date.now();
+        }).length;
+
+        const byDay = new Map<string, number>();
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(sevenDaysAgoDate);
+          d.setDate(sevenDaysAgoDate.getDate() + i);
+          byDay.set(localCalendarDay(d), 0);
+        }
+        weekSales.forEach((s: Transaction) => {
+          const key = localCalendarDay(new Date(s.created_at || ''));
+          if (byDay.has(key)) {
+            byDay.set(key, (byDay.get(key) ?? 0) + Number(s.total ?? 0));
+          }
+        });
+        const chart = Array.from(byDay.entries()).map(([date, revenue]) => ({
+          day: new Date(date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' }),
+          revenue: Number(revenue.toFixed(2)),
+        }));
+
+        const activityRows: ActivityRow[] = [
+          ...weekAppointments.map((a: Appointment) => {
+            const at = appointmentActivityInstant(a);
+            return {
+              id: `a-${a.id}`,
+              title: appointmentActivityTitle(a.status || 'scheduled'),
+              text: `${clientDisplayName(a)} booked ${serviceDisplayName(a)}`,
+              when: humanAgo(at || undefined),
+              at: at || (a.start_at ?? a.starts_at ?? ''),
+            };
+          }),
+          ...weekSales.map((s: Transaction) => {
+            const at = s.created_at || '';
+            return {
+              id: `s-${s.id}`,
+              title: 'Payment received',
+              text: `${formatMoney(Number(s.total ?? 0), resolvedCurrency)} · ${s.status}`,
+              when: humanAgo(at || undefined),
+              at,
+            };
+          }),
+        ]
+          .filter((row) => row.at)
+          .sort((a, b) => activitySortMs(b.at) - activitySortMs(a.at))
+          .slice(0, 12);
+
+        setStats({
+          todayRevenue,
+          revenueDeltaPct,
+          totalBookings: todayAppointments.length,
+          upcomingBookings,
+          activeClients: clients.length,
+          ...computeStaffKpi(staffForKpi, now),
+        });
+        setAppointments(apptRows);
+        setRevenueSeries(chart);
+        setActivity(activityRows);
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e instanceof Error ? e.message : 'Failed to load dashboard');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const todayAppointments = todayAppointmentsRes.data?.appointments ?? [];
-      const todaySales = todaySalesRes.data?.transactions ?? [];
-      const yesterdaySales = yesterdaySalesRes.data?.transactions ?? [];
-      const clients = clientsRes.data?.clients ?? [];
-      const staff = Array.isArray(staffRes.data) ? staffRes.data : [];
-      const weekSales = weekSalesRes.data?.transactions ?? [];
-      const salonCurrency = salonRes.data?.salon?.currency;
-      if (salonCurrency && typeof salonCurrency === 'string') {
-        setCurrency(salonCurrency.toUpperCase());
-      }
-
-      const todayRevenue = sumSales(todaySales);
-      const yesterdayRevenue = sumSales(yesterdaySales);
-      const revenueDeltaPct =
-        yesterdayRevenue > 0
-          ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
-          : todayRevenue > 0
-            ? 100
-            : 0;
-
-      const apptRows: ApptRow[] = todayAppointments.map((a: Appointment) => ({
-        id: a.id,
-        client: a.Client?.full_name || 'Walk-in',
-        service: a.Service?.name || a.services?.[0]?.service?.name || 'Service',
-        time: new Date((a.start_at ?? a.starts_at) || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: a.status || 'scheduled',
-      }));
-
-      const upcomingBookings = todayAppointments.filter((a: Appointment) => {
-        const start = new Date((a.start_at ?? a.starts_at) || '');
-        return start.getTime() > Date.now();
-      }).length;
-
-      const byDay = new Map<string, number>();
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(sevenDaysAgoDate);
-        d.setDate(sevenDaysAgoDate.getDate() + i);
-        byDay.set(dayStr(d), 0);
-      }
-      weekSales.forEach((s: Transaction) => {
-        const key = dayStr(new Date(s.created_at || ''));
-        byDay.set(key, (byDay.get(key) ?? 0) + Number(s.total ?? 0));
-      });
-      const chart = Array.from(byDay.entries()).map(([date, revenue]) => ({
-        day: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }),
-        revenue: Number(revenue.toFixed(2)),
-      }));
-
-      const activityRows: ActivityRow[] = [
-        ...todayAppointments.slice(0, 4).map((a: Appointment) => ({
-          id: `a-${a.id}`,
-          title: a.status === 'cancelled' ? 'Cancellation' : 'New booking',
-          text: `${a.Client?.full_name || 'Client'} booked ${a.Service?.name || a.services?.[0]?.service?.name || 'service'}`,
-          when: humanAgo(a.created_at || a.start_at || a.starts_at),
-          at: a.start_at ?? a.starts_at ?? '',
-        })),
-        ...todaySales.slice(0, 4).map((s: Transaction) => ({
-          id: `s-${s.id}`,
-          title: 'Payment received',
-          text: `${money(Number(s.total ?? 0))} · ${s.status}`,
-          when: humanAgo(s.created_at),
-          at: s.created_at || '',
-        })),
-      ]
-        .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-        .slice(0, 3);
-
-      setStats({
-        todayRevenue,
-        revenueDeltaPct,
-        totalBookings: todayAppointments.length,
-        upcomingBookings,
-        activeClients: clients.length,
-        staffOnDuty: staff.length,
-        availableNow: staff.length,
-      });
-      setAppointments(apptRows);
-      setRevenueSeries(chart);
-      setActivity(activityRows);
-      setLoading(false);
     };
 
     loadDashboard();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [branchFilter]);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -232,13 +438,68 @@ export default function DashboardPage() {
     );
   }, [q, appointments]);
 
+  const branchLoading = branchFilter === null;
+  const noBranches = branchFilter === '';
+  const dataPending = loading || branchLoading;
+
+  const locationScopeLabel =
+    branchFilter === null || branchFilter === ''
+      ? ''
+      : locations.find((l) => sameRecordId(l.id, branchFilter))?.name?.trim() || '';
+
+  if (!branchLoading && noBranches) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Metrics and activity are shown per location. Add a branch under Locations to get started.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No locations found for this salon.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Today’s overview of bookings, clients, staff, and revenue.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Today’s overview for this branch — bookings, clients, staff, and revenue.
+            {branchFilter && branchFilter !== '' ? (
+              <>
+                {' '}
+                <span className="text-foreground/80" key={String(branchFilter)}>
+                  Location: {locationScopeLabel || '…'}.
+                </span>
+              </>
+            ) : null}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 sm:items-end">
+          <label htmlFor="dashboard-branch" className="text-xs text-muted-foreground">
+            Branch
+          </label>
+          <select
+            id="dashboard-branch"
+            value={branchFilter != null && branchFilter !== '' ? String(branchFilter) : ''}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            disabled={branchLoading || locations.length === 0}
+            className="h-9 w-full min-w-[12rem] rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-auto"
+          >
+            {locations.map((loc) => (
+              <option key={String(loc.id)} value={String(loc.id)}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* KPI row */}
@@ -246,30 +507,44 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Today’s Revenue</CardDescription>
-            <CardTitle className="text-2xl">{money(stats.todayRevenue)}</CardTitle>
+            <CardTitle className="text-2xl">
+              {dataPending ? <Skeleton className="h-8 w-28" /> : money(stats.todayRevenue)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              {stats.revenueDeltaPct >= 0 ? '+' : ''}
-              {stats.revenueDeltaPct.toFixed(1)}% vs yesterday
-            </span>
+            {dataPending ? (
+              <Skeleton className="h-3 w-24" />
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {stats.revenueDeltaPct >= 0 ? '+' : ''}
+                {stats.revenueDeltaPct.toFixed(1)}% vs yesterday
+              </span>
+            )}
             <CreditCard className="text-muted-foreground" />
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Bookings</CardDescription>
-            <CardTitle className="text-2xl">{stats.totalBookings}</CardTitle>
+            <CardTitle className="text-2xl">
+              {dataPending ? <Skeleton className="h-8 w-14" /> : stats.totalBookings}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{stats.upcomingBookings} upcoming</span>
+            {dataPending ? (
+              <Skeleton className="h-3 w-20" />
+            ) : (
+              <span className="text-xs text-muted-foreground">{stats.upcomingBookings} upcoming</span>
+            )}
             <CalendarDays className="text-muted-foreground" />
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Active Clients</CardDescription>
-            <CardTitle className="text-2xl">{stats.activeClients}</CardTitle>
+            <CardTitle className="text-2xl">
+              {dataPending ? <Skeleton className="h-8 w-14" /> : stats.activeClients}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Live customer records</span>
@@ -278,12 +553,20 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Staff On Duty</CardDescription>
-            <CardTitle className="text-2xl">{stats.staffOnDuty}</CardTitle>
+            <CardDescription>
+              {dataPending ? 'Staff' : stats.staffCardMode === 'schedule' ? 'On duty now' : 'Active staff'}
+            </CardDescription>
+            <CardTitle className="text-2xl">
+              {dataPending ? <Skeleton className="h-8 w-14" /> : stats.staffMain}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{stats.availableNow} available now</span>
-            <UserCheck className="text-muted-foreground" />
+          <CardContent className="flex items-center justify-between gap-2">
+            {dataPending ? (
+              <Skeleton className="h-3 w-28" />
+            ) : (
+              <span className="text-xs text-muted-foreground leading-snug">{stats.staffSub}</span>
+            )}
+            <UserCheck className="shrink-0 text-muted-foreground" />
           </CardContent>
         </Card>
       </div>
@@ -309,7 +592,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {dataPending ? (
               <div className="space-y-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
@@ -376,10 +659,18 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Activity</CardTitle>
-            <CardDescription>Recent events across bookings and payments.</CardDescription>
+            <CardDescription>
+              This branch only — bookings and payments from the last 7 days, newest first.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {activity.length === 0 && !loading ? (
+          <CardContent className="max-h-80 space-y-3 overflow-y-auto text-sm pr-1">
+            {dataPending ? (
+              <div className="space-y-3">
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+              </div>
+            ) : activity.length === 0 ? (
               <p className="text-muted-foreground">No recent activity.</p>
             ) : (
               activity.map((row) => (
@@ -403,27 +694,31 @@ export default function DashboardPage() {
           <CardDescription>Last 7 days.</CardDescription>
         </CardHeader>
         <CardContent className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={revenueSeries} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
-              <defs>
-                <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} fontSize={12} />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="hsl(var(--primary))"
-                fill="url(#revFill)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {dataPending ? (
+            <Skeleton className="h-full w-full rounded-md" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueSeries} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis tickLine={false} axisLine={false} fontSize={12} />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="hsl(var(--primary))"
+                  fill="url(#revFill)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>

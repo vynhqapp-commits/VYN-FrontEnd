@@ -905,6 +905,7 @@ export const appointmentsApi = {
     from?: string;
     to?: string;
     status?: string;
+    page?: number;
   }) => {
     const q = {
       branch_id: params?.location_id,
@@ -912,13 +913,46 @@ export const appointmentsApi = {
       from: params?.from,
       to: params?.to,
       status: params?.status,
+      page: params?.page,
     };
     const res = await api<unknown>(
-      "/api/appointments" + qs(q as Record<string, string>),
+      "/api/appointments" + qs(q as Record<string, string | number>),
     );
     const list = listData(res.data as unknown as Array<Record<string, unknown>> | { data: Array<Record<string, unknown>> });
     const appointments = list.map(normalizeAppointment);
-    return res.error ? { error: res.error } : { data: { appointments } };
+    return res.error ? { error: res.error } : { data: { appointments }, meta: res.meta };
+  },
+  /** Fetches every page for the given filters (dashboard / reports). */
+  listAll: async (params?: {
+    location_id?: string;
+    staff_id?: string;
+    from?: string;
+    to?: string;
+    status?: string;
+  }) => {
+    const base: Record<string, string | number | undefined> = {
+      branch_id: params?.location_id,
+      staff_id: params?.staff_id,
+      from: params?.from,
+      to: params?.to,
+      status: params?.status,
+    };
+    const appointments: Appointment[] = [];
+    let page = 1;
+    let lastPage = 1;
+    do {
+      const res = await api<unknown>(
+        "/api/appointments" + qs({ ...base, page } as Record<string, string | number>),
+      );
+      if (res.error) return { error: res.error };
+      const list = listData(
+        res.data as unknown as Array<Record<string, unknown>> | { data: Array<Record<string, unknown>> },
+      );
+      appointments.push(...list.map(normalizeAppointment));
+      lastPage = res.meta?.last_page ?? 1;
+      page++;
+    } while (page <= lastPage);
+    return { data: { appointments } };
   },
   getAvailability: (locationId: string, serviceId: string, date: string) =>
     api<{ slots: { start: string; end: string }[] }>(
@@ -1064,6 +1098,10 @@ function normalizeAppointment(raw: Record<string, unknown>): Appointment {
           created_at: (reviewRaw.created_at as string | undefined) ?? undefined,
         }
       : undefined,
+    created_at: (raw.created_at as string | undefined) ?? undefined,
+    updated_at: (raw.updated_at as string | undefined) ?? undefined,
+    starts_at: (raw.starts_at as string | undefined) ?? (start || undefined),
+    ends_at: (raw.ends_at as string | undefined) ?? (end || undefined),
   };
 }
 
@@ -1072,17 +1110,41 @@ export const transactionsApi = {
     location_id?: string;
     from?: string;
     to?: string;
+    page?: number;
   }) => {
     const q = {
       branch_id: params?.location_id,
       from: params?.from,
       to: params?.to,
+      page: params?.page,
     };
     const res = await api<Transaction[] | { data: Transaction[] }>(
-      "/api/sales" + qs(q as Record<string, string>),
+      "/api/sales" + qs(q as Record<string, string | number>),
     );
     const list = listData(res.data);
-    return res.error ? { error: res.error } : { data: { transactions: list } };
+    return res.error ? { error: res.error } : { data: { transactions: list }, meta: res.meta };
+  },
+  /** Fetches every page for the given filters (dashboard / reports). */
+  listAll: async (params?: { location_id?: string; from?: string; to?: string }) => {
+    const base: Record<string, string | number | undefined> = {
+      branch_id: params?.location_id,
+      from: params?.from,
+      to: params?.to,
+    };
+    const transactions: Transaction[] = [];
+    let page = 1;
+    let lastPage = 1;
+    do {
+      const res = await api<Transaction[] | { data: Transaction[] }>(
+        "/api/sales" + qs({ ...base, page } as Record<string, string | number>),
+      );
+      if (res.error) return { error: res.error };
+      const list = listData(res.data);
+      transactions.push(...list);
+      lastPage = res.meta?.last_page ?? 1;
+      page++;
+    } while (page <= lastPage);
+    return { data: { transactions } };
   },
   get: (id: string) =>
     api<Transaction>(`/api/sales/${id}`).then((r) =>
@@ -2046,6 +2108,7 @@ export interface Appointment {
   id: string;
   tenant_id: string;
   created_at?: string;
+  updated_at?: string;
   // Column names differ between old dashboard API (start_at) and new model (starts_at)
   start_at?: string;
   end_at?: string;
