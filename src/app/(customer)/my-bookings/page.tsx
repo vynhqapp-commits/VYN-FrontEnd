@@ -29,6 +29,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 const CANCELLABLE = ["scheduled", "confirmed", "pending"];
 const RESCHEDULABLE = ["scheduled", "confirmed", "pending"];
+const QUICK_REBOOK_STATUSES = ["completed", "cancelled", "no_show"];
 
 export default function MyBookingsPage() {
   const { locale } = useLocale();
@@ -44,6 +45,9 @@ export default function MyBookingsPage() {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReviewId, setSubmittingReviewId] = useState<string | null>(null);
+  const [quickRebookId, setQuickRebookId] = useState<string | null>(null);
+  const [quickRebookStartAt, setQuickRebookStartAt] = useState("");
+  const [quickRebookingId, setQuickRebookingId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<FavoriteSalon[]>([]);
   const [favoriteSalonIds, setFavoriteSalonIds] = useState<Set<string>>(new Set());
 
@@ -74,7 +78,9 @@ export default function MyBookingsPage() {
     } else {
       toast.success(t("bookingCancelled"));
       if (data?.policy?.violated) {
-        toast.warning(`Applied inside ${data.policy.window_hours}h policy window.`);
+        toast.warning(
+          t("cancelPolicyInsideWindow").replace("{hours}", String(data.policy.window_hours)),
+        );
       }
       setBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
@@ -90,7 +96,7 @@ export default function MyBookingsPage() {
 
   const submitReschedule = async (id: string) => {
     if (!rescheduleStartAt) {
-      toast.error("Select a new date and time first.");
+      toast.error(t("selectDateTimeFirst"));
       return;
     }
     setReschedulingId(id);
@@ -98,14 +104,16 @@ export default function MyBookingsPage() {
     const { data, error } = await customerApi.rescheduleBooking(id, { start_at: iso });
     setReschedulingId(null);
     if (error || !data?.booking) {
-      toast.error(error ?? "Failed to reschedule booking.");
+      toast.error(error ?? t("failedToReschedule"));
       return;
     }
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...data.booking } : b)));
     if (data?.policy?.violated) {
-      toast.warning(`Rescheduled inside ${data.policy.window_hours}h policy window.`);
+      toast.warning(
+        t("reschedulePolicyInsideWindow").replace("{hours}", String(data.policy.window_hours)),
+      );
     } else {
-      toast.success("Booking rescheduled.");
+      toast.success(t("bookingRescheduled"));
     }
     setRescheduleId(null);
     setRescheduleStartAt("");
@@ -114,7 +122,7 @@ export default function MyBookingsPage() {
   const addFavorite = async (salonId: string) => {
     const { data, error } = await customerApi.addFavoriteSalon(salonId);
     if (error || !data?.favorite) {
-      toast.error(error ?? "Failed to add favorite.");
+      toast.error(error ?? t("failedAddFavorite"));
       return;
     }
     setFavoriteSalonIds((prev) => new Set([...prev, String(salonId)]));
@@ -122,7 +130,7 @@ export default function MyBookingsPage() {
       const exists = prev.some((f) => String(f.salon_id) === String(salonId));
       return exists ? prev : [data.favorite, ...prev];
     });
-    toast.success("Added to favorites.");
+    toast.success(t("addedToFavorites"));
   };
 
   const removeFavorite = async (salonId: string) => {
@@ -137,13 +145,44 @@ export default function MyBookingsPage() {
       return next;
     });
     setFavorites((prev) => prev.filter((f) => String(f.salon_id) !== String(salonId)));
-    toast.success("Removed from favorites.");
+    toast.success(t("removedFromFavorites"));
   };
 
   const openReview = (booking: BookingRow) => {
     setReviewBookingId(booking.id);
     setReviewRating(5);
     setReviewComment("");
+  };
+
+  const openQuickRebook = (booking: BookingRow) => {
+    setQuickRebookId(booking.id);
+    setQuickRebookStartAt("");
+  };
+
+  const submitQuickRebook = async (id: string) => {
+    if (!quickRebookStartAt) {
+      toast.error(t("selectDateTimeFirst"));
+      return;
+    }
+    setQuickRebookingId(id);
+    const iso = new Date(quickRebookStartAt).toISOString();
+    const { data, error } = await customerApi.rebookBooking(id, { start_at: iso });
+    setQuickRebookingId(null);
+    if (error || !data?.booking) {
+      toast.error(error ?? t("failedQuickRebook"));
+      return;
+    }
+    setBookings((prev) => {
+      const next = [data.booking as BookingRow, ...prev];
+      return next.sort((a, b) => {
+        const ta = String(a.starts_at ?? a.start_at ?? "");
+        const tb = String(b.starts_at ?? b.start_at ?? "");
+        return tb.localeCompare(ta);
+      });
+    });
+    toast.success(t("quickRebookSuccess"));
+    setQuickRebookId(null);
+    setQuickRebookStartAt("");
   };
 
   const submitReview = async (bookingId: string) => {
@@ -154,7 +193,7 @@ export default function MyBookingsPage() {
     });
     setSubmittingReviewId(null);
     if (error || !data?.review) {
-      toast.error(error ?? "Failed to submit review.");
+      toast.error(error ?? t("failedSubmitReview"));
       return;
     }
 
@@ -164,7 +203,7 @@ export default function MyBookingsPage() {
     setReviewBookingId(null);
     setReviewComment("");
     setReviewRating(5);
-    toast.success("Review submitted and pending approval.");
+    toast.success(t("reviewSubmittedPending"));
   };
 
   const upcoming = bookings.filter((b) =>
@@ -206,18 +245,20 @@ export default function MyBookingsPage() {
 
       {favorites.length > 0 && (
         <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Favorites</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            {t("favoritesSectionTitle")}
+          </p>
           <div className="flex flex-wrap gap-2">
             {favorites.map((fav) => (
               <div key={fav.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs">
                 <Link href={`/book?salon_id=${fav.salon?.id ?? fav.salon_id}`} className="text-salon-espresso hover:text-salon-gold">
-                  {fav.salon?.name ?? "Salon"}
+                  {fav.salon?.name ?? t("salonFallbackName")}
                 </Link>
                 <button
                   type="button"
                   onClick={() => removeFavorite(String(fav.salon?.id ?? fav.salon_id))}
                   className="text-red-500 hover:text-red-700"
-                  title="Remove favorite"
+                  title={t("removeFavoriteTitle")}
                 >
                   ×
                 </button>
@@ -242,9 +283,9 @@ export default function MyBookingsPage() {
                   key={b.id}
                   booking={b}
                   rebookHref={buildRebookHref(b)}
-                  isFavorite={favoriteSalonIds.has(String(b.tenant_id))}
-                  onAddFavorite={() => addFavorite(String(b.tenant_id))}
-                  onRemoveFavorite={() => removeFavorite(String(b.tenant_id))}
+                  isFavorite={!!b.tenant_id && favoriteSalonIds.has(String(b.tenant_id))}
+                  onAddFavorite={b.tenant_id ? () => addFavorite(String(b.tenant_id)) : undefined}
+                  onRemoveFavorite={b.tenant_id ? () => removeFavorite(String(b.tenant_id)) : undefined}
                   onCancel={handleCancel}
                   onStartReschedule={() => openReschedule(b)}
                   onSubmitReschedule={submitReschedule}
@@ -267,6 +308,7 @@ export default function MyBookingsPage() {
                   statusLabel={statusLabel}
                   cancelLabel={t("cancelBooking")}
                   cancellingLabel={t("cancellingBooking")}
+                  t={t}
                 />
               ))}
             </Section>
@@ -278,6 +320,10 @@ export default function MyBookingsPage() {
                 <BookingCard
                   key={b.id}
                   booking={b}
+                  rebookHref={buildRebookHref(b)}
+                  isFavorite={!!b.tenant_id && favoriteSalonIds.has(String(b.tenant_id))}
+                  onAddFavorite={b.tenant_id ? () => addFavorite(String(b.tenant_id)) : undefined}
+                  onRemoveFavorite={b.tenant_id ? () => removeFavorite(String(b.tenant_id)) : undefined}
                   onOpenReview={() => openReview(b)}
                   onSubmitReview={submitReview}
                   onDismissReview={() => { setReviewBookingId(null); setReviewComment(""); setReviewRating(5); }}
@@ -287,10 +333,22 @@ export default function MyBookingsPage() {
                   onReviewRatingChange={setReviewRating}
                   onReviewCommentChange={setReviewComment}
                   submittingReview={submittingReviewId === b.id}
+                  onStartQuickRebook={
+                    QUICK_REBOOK_STATUSES.includes(String(b.status)) && (b.services?.length ?? 0) > 0
+                      ? () => openQuickRebook(b)
+                      : undefined
+                  }
+                  onSubmitQuickRebook={submitQuickRebook}
+                  onDismissQuickRebook={() => { setQuickRebookId(null); setQuickRebookStartAt(""); }}
+                  quickRebookOpen={quickRebookId === b.id}
+                  quickRebookValue={quickRebookStartAt}
+                  onQuickRebookValueChange={setQuickRebookStartAt}
+                  quickRebooking={quickRebookingId === b.id}
                   locale={locale}
                   statusLabel={statusLabel}
                   cancelLabel={t("cancelBooking")}
                   cancellingLabel={t("cancellingBooking")}
+                  t={t}
                 />
               ))}
             </Section>
@@ -340,6 +398,13 @@ function BookingCard({
   onOpenReview,
   onSubmitReview,
   onDismissReview,
+  onStartQuickRebook,
+  onSubmitQuickRebook,
+  onDismissQuickRebook,
+  quickRebookOpen,
+  quickRebookValue,
+  onQuickRebookValueChange,
+  quickRebooking,
   rescheduleOpen,
   rescheduleValue,
   onRescheduleValueChange,
@@ -355,6 +420,7 @@ function BookingCard({
   statusLabel,
   cancelLabel,
   cancellingLabel,
+  t,
 }: {
   booking: BookingRow;
   rebookHref?: string;
@@ -368,6 +434,13 @@ function BookingCard({
   onOpenReview?: () => void;
   onSubmitReview?: (id: string) => void;
   onDismissReview?: () => void;
+  onStartQuickRebook?: () => void;
+  onSubmitQuickRebook?: (id: string) => void;
+  onDismissQuickRebook?: () => void;
+  quickRebookOpen?: boolean;
+  quickRebookValue?: string;
+  onQuickRebookValueChange?: (v: string) => void;
+  quickRebooking?: boolean;
   rescheduleOpen?: boolean;
   rescheduleValue?: string;
   onRescheduleValueChange?: (v: string) => void;
@@ -383,6 +456,7 @@ function BookingCard({
   statusLabel: Record<string, string>;
   cancelLabel: string;
   cancellingLabel: string;
+  t: (key: PublicI18nKey) => string;
 }) {
   const startIso = b.starts_at ?? b.start_at;
   const endIso   = b.ends_at   ?? b.end_at;
@@ -396,6 +470,17 @@ function BookingCard({
   const canCancel = CANCELLABLE.includes(status) && onCancel;
   const canReschedule = RESCHEDULABLE.includes(status) && onStartReschedule;
   const canReview = status === "completed" && !b.review && onOpenReview;
+  const canQuickRebook = Boolean(onStartQuickRebook);
+  const showActionsColumn = Boolean(
+    rebookHref ||
+      onAddFavorite ||
+      onRemoveFavorite ||
+      canCancel ||
+      canReschedule ||
+      canReview ||
+      canQuickRebook ||
+      b.review,
+  );
 
   const dateStr = startIso
     ? localDate(startIso).toLocaleDateString(LOCALE_BCP47[locale], {
@@ -448,7 +533,7 @@ function BookingCard({
           </p>
         </div>
 
-        {(canCancel || canReschedule || canReview || b.review) && (
+        {showActionsColumn && (
           <div className="shrink-0 flex flex-col gap-2">
             {rebookHref && (
               <Link
@@ -456,8 +541,18 @@ function BookingCard({
                 className="text-xs font-medium text-salon-espresso hover:text-salon-gold
                   border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors text-center"
               >
-                Rebook
+                {t("rebook")}
               </Link>
+            )}
+            {canQuickRebook && (
+              <button
+                type="button"
+                onClick={onStartQuickRebook}
+                className="text-xs font-medium text-salon-espresso hover:text-salon-gold
+                  border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {t("pickNewTime")}
+              </button>
             )}
             {(onAddFavorite || onRemoveFavorite) && (
               <button
@@ -466,7 +561,7 @@ function BookingCard({
                 className="text-xs font-medium text-salon-espresso hover:text-salon-gold
                   border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
               >
-                {isFavorite ? "Unfavorite" : "Add favorite"}
+                {isFavorite ? t("unfavorite") : t("addFavorite")}
               </button>
             )}
             {canReschedule && (
@@ -476,7 +571,7 @@ function BookingCard({
                 className="text-xs font-medium text-salon-espresso hover:text-salon-gold
                   border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
               >
-                Reschedule
+                {t("rescheduleBooking")}
               </button>
             )}
             {canCancel && (
@@ -498,12 +593,12 @@ function BookingCard({
                 className="text-xs font-medium text-salon-espresso hover:text-salon-gold
                   border border-gray-200 hover:border-salon-gold px-3 py-1.5 rounded-lg transition-colors"
               >
-                Rate &amp; Review
+                {t("rateAndReview")}
               </button>
             )}
             {b.review && (
               <span className="text-[11px] px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 text-center">
-                Review: {String(b.review.status ?? "pending")}
+                {t("reviewStatusPrefix")} {String(b.review.status ?? "pending")}
               </span>
             )}
           </div>
@@ -525,14 +620,43 @@ function BookingCard({
               disabled={!!rescheduling}
               className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
             >
-              {rescheduling ? "Saving..." : "Save"}
+              {rescheduling ? t("savingReschedule") : t("save")}
             </button>
             <button
               type="button"
               onClick={onDismissReschedule}
               className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
             >
-              Cancel
+              {t("cancelAction")}
+            </button>
+          </div>
+        </div>
+      )}
+      {quickRebookOpen && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-2">
+          <p className="text-xs text-gray-500">{t("quickRebookHint")}</p>
+          <input
+            type="datetime-local"
+            value={quickRebookValue ?? ""}
+            min={new Date().toISOString().slice(0, 16)}
+            onChange={(e) => onQuickRebookValueChange?.(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onSubmitQuickRebook?.(b.id)}
+              disabled={!!quickRebooking}
+              className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
+            >
+              {quickRebooking ? t("quickRebooking") : t("saveQuickRebook")}
+            </button>
+            <button
+              type="button"
+              onClick={onDismissQuickRebook}
+              className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
+            >
+              {t("cancelAction")}
             </button>
           </div>
         </div>
@@ -540,25 +664,27 @@ function BookingCard({
       {reviewOpen && (
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Rating</label>
+            <label className="block text-xs text-gray-500 mb-1">{t("ratingLabel")}</label>
             <select
               value={reviewRating ?? 5}
               onChange={(e) => onReviewRatingChange?.(Number(e.target.value))}
               className="w-full sm:w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm"
             >
               {[5, 4, 3, 2, 1].map((r) => (
-                <option key={r} value={r}>{r} star{r > 1 ? "s" : ""}</option>
+                <option key={r} value={r}>
+                  {r} {r > 1 ? t("stars") : t("star")}
+                </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Comment (optional)</label>
+            <label className="block text-xs text-gray-500 mb-1">{t("commentOptional")}</label>
             <textarea
               value={reviewComment ?? ""}
               onChange={(e) => onReviewCommentChange?.(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-              placeholder="Share your experience..."
+              placeholder={t("reviewCommentPlaceholder")}
             />
           </div>
           <div className="flex gap-2">
@@ -568,14 +694,14 @@ function BookingCard({
               disabled={!!submittingReview}
               className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
             >
-              {submittingReview ? "Submitting..." : "Submit review"}
+              {submittingReview ? t("submittingReview") : t("submitReview")}
             </button>
             <button
               type="button"
               onClick={onDismissReview}
               className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
             >
-              Cancel
+              {t("cancelAction")}
             </button>
           </div>
         </div>

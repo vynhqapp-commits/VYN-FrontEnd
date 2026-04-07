@@ -41,7 +41,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   const setLocale = (next: PublicLocale) => {
     setLocaleState(next);
-    if (typeof window !== "undefined") window.localStorage.setItem("lang", next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("lang", next);
+      document.cookie = `lang=${next};path=/;max-age=31536000;SameSite=Lax`;
+    }
     applyHtmlDir(next);
   };
 

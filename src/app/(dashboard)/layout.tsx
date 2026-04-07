@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { getRedirectForRole, type AppRole } from "@/lib/role-redirect";
@@ -9,6 +9,8 @@ import { LoadingWithHero } from "@/components/SalonHeroImage";
 import { APP_NAME } from "@/lib/app-name";
 import { AppShell, type ShellNavItem } from "@/components/layout/AppShell";
 import { CommandPalette } from "@/components/command/CommandPalette";
+import { LocaleProvider, useLocale } from "@/components/LocaleProvider";
+import { dashboardNavLabel, getDashboardT } from "@/lib/i18n-dashboard";
 import {
   BarChart3,
   BookText,
@@ -28,22 +30,20 @@ import {
   Wallet,
 } from "lucide-react";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
   const [cmdOpen, setCmdOpen] = useState(false);
+  const { locale } = useLocale();
+  const td = getDashboardT(locale);
 
   const roleCandidate = (user?.role as AppRole | undefined) ?? undefined;
   const nav: ShellNavItem[] = useMemo(() => {
     if (!roleCandidate) return [];
     return menuByRole[roleCandidate].map((i) => ({
       href: i.href,
-      label: i.label,
+      label: dashboardNavLabel(i.href, roleCandidate, td, i.label),
       icon:
         i.href === "/dashboard" ? (
           <BarChart3 className="size-5" />
@@ -87,7 +87,7 @@ export default function DashboardLayout({
           <Building2 className="size-5" />
         ) : null,
     }));
-  }, [roleCandidate]);
+  }, [roleCandidate, locale]);
   const cmdItems = useMemo(
     () =>
       nav.map((i) => ({
@@ -140,5 +140,15 @@ export default function DashboardLayout({
       />
       {children}
     </AppShell>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<LoadingWithHero />}>
+      <LocaleProvider>
+        <DashboardLayoutInner>{children}</DashboardLayoutInner>
+      </LocaleProvider>
+    </Suspense>
   );
 }

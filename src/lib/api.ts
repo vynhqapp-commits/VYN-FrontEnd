@@ -1926,6 +1926,19 @@ export const customerApi = {
       method: "POST",
       body: JSON.stringify(body),
     }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+  rebookBooking: (id: string, body: { start_at: string; staff_id?: string }) =>
+    api<{ booking?: Appointment } | Appointment>(`/api/customer/bookings/${id}/rebook`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.data
+        ? {
+            data: {
+              booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
+            },
+          }
+        : { error: r.error },
+    ),
 };
 
 export interface BookingPolicy {

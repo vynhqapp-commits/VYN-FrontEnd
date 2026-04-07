@@ -3,15 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft } from "lucide-react";
+import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart } from "lucide-react";
 import {
   publicApi,
+  customerApi,
   type Tenant,
   type Location,
   type Service,
   type PublicAppointment,
   type PaginationMeta,
 } from "@/lib/api";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { formatPublicCurrency, getPublicT, type PublicLocale } from "@/lib/i18n-public";
 import { useLocale } from "@/components/LocaleProvider";
@@ -144,6 +146,8 @@ export default function BookPage() {
   const [prefillSalonId, setPrefillSalonId] = useState<string>("");
   const [prefillBranchId, setPrefillBranchId] = useState<string>("");
   const [prefillServiceId, setPrefillServiceId] = useState<string>("");
+  const [favoriteSalonIds, setFavoriteSalonIds] = useState<Set<string>>(() => new Set());
+  const [favoriteToggleBusy, setFavoriteToggleBusy] = useState(false);
 
   // Pre-fill form from auth context when user is logged in
   useEffect(() => {
@@ -155,6 +159,17 @@ export default function BookPage() {
       }));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role !== "customer") {
+      setFavoriteSalonIds(new Set());
+      return;
+    }
+    customerApi.myFavorites().then((res) => {
+      if ("error" in res || !res.data?.favorites) return;
+      setFavoriteSalonIds(new Set(res.data.favorites.map((f) => String(f.salon_id))));
+    });
+  }, [user?.role, user?.id]);
 
   const fetchSalons = (filters: FilterState, p: number) => {
     setLoading(true);
@@ -719,9 +734,60 @@ export default function BookPage() {
               <div className="flex justify-center py-16"><Spinner size="lg" /></div>
             ) : detail ? (
               <>
-                <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-1">
-                  {detail.salon.name}
-                </h1>
+                <div className="flex items-start justify-between gap-3 mb-1">
+                  <h1 className="font-display text-3xl font-semibold text-salon-espresso">
+                    {detail.salon.name}
+                  </h1>
+                  {user?.role === "customer" && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const sid = String(detail.salon.id);
+                        setFavoriteToggleBusy(true);
+                        if (favoriteSalonIds.has(sid)) {
+                          const { error } = await customerApi.removeFavoriteSalon(sid);
+                          setFavoriteToggleBusy(false);
+                          if (error) {
+                            toast.error(error);
+                            return;
+                          }
+                          setFavoriteSalonIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(sid);
+                            return next;
+                          });
+                          toast.success(t("removedFromFavorites"));
+                        } else {
+                          const { data, error } = await customerApi.addFavoriteSalon(sid);
+                          setFavoriteToggleBusy(false);
+                          if (error || !data?.favorite) {
+                            toast.error(error ?? t("failedAddFavorite"));
+                            return;
+                          }
+                          setFavoriteSalonIds((prev) => new Set([...prev, sid]));
+                          toast.success(t("addedToFavorites"));
+                        }
+                      }}
+                      disabled={favoriteToggleBusy}
+                      aria-pressed={favoriteSalonIds.has(String(detail.salon.id))}
+                      title={
+                        favoriteSalonIds.has(String(detail.salon.id))
+                          ? t("favoriteSalonToggleRemove")
+                          : t("favoriteSalonToggleAdd")
+                      }
+                      className="shrink-0 p-2.5 rounded-xl border border-gray-200 hover:border-salon-gold/50
+                        text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                    >
+                      <Heart
+                        className={`w-5 h-5 ${
+                          favoriteSalonIds.has(String(detail.salon.id))
+                            ? "fill-red-500 text-red-500"
+                            : ""
+                        }`}
+                      />
+                    </button>
+                  )}
+                </div>
                 <p className="text-gray-500 text-sm mb-6">{t("chooseLocationServiceTitle")}</p>
                 {error && <div className="mb-4"><ErrorBox message={error} /></div>}
 

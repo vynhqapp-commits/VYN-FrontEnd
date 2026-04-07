@@ -1,20 +1,40 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
 import { appointmentsApi, clientsApi, locationsApi, servicesApi, type Appointment, type Client, type Location, type Service } from '@/lib/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLocale } from '@/components/LocaleProvider';
+import { getDashboardT } from '@/lib/i18n-dashboard';
+import type { PublicLocale } from '@/lib/i18n-public';
+
+const LOCALE_BCP47: Record<PublicLocale, string> = {
+  en: 'en-US',
+  ar: 'ar-u-nu-latn',
+  fr: 'fr-FR',
+};
 
 export default function AppointmentsPage() {
+  const { locale } = useLocale();
+  const td = getDashboardT(locale);
+
+  const calendarDowLabels = useMemo(() => {
+    const base = new Date(2024, 0, 1);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      return d.toLocaleDateString(LOCALE_BCP47[locale], { weekday: 'short' });
+    });
+  }, [locale]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'day' | 'week' | 'month'>('week');
+  const [viewMode, setViewMode] = useState<'list' | 'day' | 'week' | 'month'>('day');
   // When `viewMode === 'list'`, we still respect a date window based on the last selected range.
-  const [rangeMode, setRangeMode] = useState<'day' | 'week' | 'month'>('week');
+  const [rangeMode, setRangeMode] = useState<'day' | 'week' | 'month'>('day');
   const [focusDate, setFocusDate] = useState(() => {
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -336,26 +356,26 @@ export default function AppointmentsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-salon-espresso mb-4">Calendar / Appointments</h1>
-      <div className="flex gap-2 mb-4 flex-wrap items-center">
+      <h1 className="font-display text-2xl font-semibold text-salon-espresso mb-4">{td('calPageTitle')}</h1>
+      <div className="flex gap-2 mb-2 flex-wrap items-center">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label="Previous">
+          <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label={td('calNavPrevious')}>
             <ChevronLeft className="size-4" />
           </button>
-          <button type="button" onClick={() => moveFocus('today')} className="px-3 py-2 rounded-xl text-sm font-semibold border border-salon-sand/60 bg-white hover:bg-salon-cream/50 transition-colors text-salon-stone" aria-label="Today">
-            Today
+          <button type="button" onClick={() => moveFocus('today')} className="px-3 py-2 rounded-xl text-sm font-semibold border border-salon-sand/60 bg-white hover:bg-salon-cream/50 transition-colors text-salon-stone" aria-label={td('calNavToday')}>
+            {td('calNavToday')}
           </button>
-          <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label="Next">
+          <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label={td('calNavNext')}>
             <ChevronRight className="size-4" />
           </button>
           <span className="ml-2 text-sm font-medium text-salon-stone">{navLabel()}</span>
         </div>
 
         <div className="flex gap-2 ml-auto">
-          <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>List</button>
-          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Day</button>
-          <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Week</button>
-          <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'month' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>Month</button>
+          <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewList')}</button>
+          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewDay')}</button>
+          <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewWeek')}</button>
+          <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'month' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewMonth')}</button>
         </div>
 
         <button
@@ -363,14 +383,17 @@ export default function AppointmentsPage() {
           onClick={() => setShowWalkIn(true)}
           className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold bg-salon-espresso text-white hover:bg-salon-bark transition-colors"
         >
-          + Walk-in booking
+          {td('calWalkIn')}
         </button>
       </div>
+      {viewMode !== 'list' && (viewMode === 'week' || viewMode === 'month') && (
+        <p className="text-xs text-salon-stone mb-4">{td('calStaffColumnsHint')}</p>
+      )}
 
       {viewMode !== 'list' &&
         ((viewMode === 'day' || viewMode === 'week') && appointments.length === 0 ? (
           <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-8 text-center text-salon-stone">
-            No appointments found for the selected time range.
+            {td('calEmptyListRange')}
           </div>
         ) : (
           <CalendarGrid
@@ -386,6 +409,23 @@ export default function AppointmentsPage() {
               setRangeMode('day');
               setViewMode('day');
               setFocusDate(formatDateKey(d));
+            }}
+            calendarCopy={{
+              weekSubtitle: td('calWeekSubtitle'),
+              dayStaffSubtitle: td('calDayStaffSubtitle'),
+              emptyRange: td('calEmptyRange'),
+              monthTitle: td('calMonthTitle'),
+              monthHelp: td('calMonthHelp'),
+              monthNoAppointments: td('calMonthNoAppointments'),
+              unassigned: td('calUnassigned'),
+              placeholderDash: td('calPlaceholderDash'),
+              moreAppointments: td('calMoreAppointments'),
+              statusScheduled: td('calStatusScheduled'),
+              statusCheckedIn: td('calStatusCheckedIn'),
+              statusCompleted: td('calStatusCompleted'),
+              statusCancelled: td('calStatusCancelled'),
+              ariaAppointment: td('calAriaAppointment'),
+              dowLabels: calendarDowLabels,
             }}
           />
         ))}
@@ -447,7 +487,7 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             ))}
-            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">No appointments found for the selected time range.</p>}
+            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">{td('calEmptyListRange')}</p>}
           </div>
 
           {/* Desktop/tablet: table */}
@@ -511,7 +551,7 @@ export default function AppointmentsPage() {
                 ))}
               </tbody>
             </table>
-            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">No appointments found for the selected time range.</p>}
+            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">{td('calEmptyListRange')}</p>}
           </div>
         </>
       )}
@@ -523,6 +563,19 @@ export default function AppointmentsPage() {
           onStatusChange={updateStatus}
           changingId={changingId ?? reschedulingId}
           statuses={statuses}
+          labels={{
+            title: td('apptPanelTitle'),
+            statusPrefix: td('apptPanelStatusPrefix'),
+            close: td('apptPanelClose'),
+            client: td('apptPanelClient'),
+            service: td('apptPanelService'),
+            staff: td('apptPanelStaff'),
+            location: td('apptPanelLocation'),
+            time: td('apptPanelTime'),
+            updateStatus: td('apptPanelUpdateStatus'),
+            updating: td('apptPanelUpdating'),
+            tip: td('apptPanelTip'),
+          }}
         />
       )}
 

@@ -12,6 +12,11 @@ export function isSupportedPublicLocale(value: unknown): value is PublicLocale {
   return typeof value === "string" && (supportedPublicLocales as readonly string[]).includes(value);
 }
 
+/** For server components / middleware: coerce cookie or header value to a supported locale. */
+export function parsePublicLocale(value: string | undefined | null): PublicLocale {
+  return isSupportedPublicLocale(value) ? value : DEFAULT_PUBLIC_LOCALE;
+}
+
 export function getDirForLocale(locale: PublicLocale): "ltr" | "rtl" {
   return locale === "ar" ? "rtl" : "ltr";
 }
