@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   appointmentsApi,
+  cashDrawerApi,
   clientsApi,
   productsApi,
   staffApi,
@@ -18,6 +19,7 @@ import { toastError, toastSuccess } from "@/lib/toast";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type LineType = "service" | "product";
 type TipMode = "single" | "equal_split" | "custom";
@@ -71,6 +73,7 @@ export default function SaleCheckoutForm({
     appointmentsProp ?? [],
   );
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [hasOpenDrawer, setHasOpenDrawer] = useState<boolean>(false);
 
   const [clientId, setClientId] = useState("");
   const [appointmentId, setAppointmentId] = useState(
@@ -129,6 +132,13 @@ export default function SaleCheckoutForm({
             setAppointments(res.data.appointments);
         });
     }
+    cashDrawerApi.list(locationId, "open").then((res) => {
+      if (!("error" in res) && res.data?.sessions) {
+        setHasOpenDrawer(res.data.sessions.some((s) => s.status === "open"));
+      } else {
+        setHasOpenDrawer(false);
+      }
+    });
   }, [locationId, appointmentsProp]);
 
   useEffect(() => {
@@ -240,6 +250,10 @@ export default function SaleCheckoutForm({
     () => Math.max(0, cashTendered - cashDue),
     [cashTendered, cashDue],
   );
+  const cashToDrawer = useMemo(
+    () => Math.max(0, Math.min(cashTendered, cashDue)),
+    [cashTendered, cashDue],
+  );
 
   const addLine = (type: LineType, sourceId: string) => {
     if (!sourceId) return;
@@ -332,8 +346,16 @@ export default function SaleCheckoutForm({
 
     const apiPayments = buildApiPayments();
     const normalizedPaid = apiPayments.reduce((sum, p) => sum + p.amount, 0);
+    const normalizedCash = apiPayments
+      .filter((p) => p.method === "cash")
+      .reduce((sum, p) => sum + p.amount, 0);
     if (normalizedPaid > grandTotal + 0.01)
       return toastError("Payment total cannot exceed the order total.");
+    if (normalizedCash > 0 && !hasOpenDrawer) {
+      return toastError(
+        "Cash drawer is not open for this location. Open a drawer session before taking cash payments.",
+      );
+    }
 
     setSubmitting(true);
     const body = {
@@ -526,6 +548,7 @@ export default function SaleCheckoutForm({
             Summary
           </h2>
           <div className="space-y-2 rounded-lg border border-salon-sand/60 bg-salon-cream/30 p-2">
+            <p className="text-[11px] font-medium text-salon-stone">Discount code</p>
             <Input
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value)}
@@ -552,6 +575,7 @@ export default function SaleCheckoutForm({
                 }
               />
             </div>
+            <p className="text-[11px] font-medium text-salon-stone">Tip amount</p>
             <Input
               type="number"
               min={0}
@@ -560,8 +584,9 @@ export default function SaleCheckoutForm({
               onChange={(e) =>
                 setTipsAmount(Math.max(0, Number(e.target.value) || 0))
               }
-              placeholder="Tip amount"
+              placeholder="Enter tip amount"
             />
+            <p className="text-[11px] font-medium text-salon-stone">Tip allocation</p>
             <select
               value={tipMode}
               onChange={(e) => setTipMode(e.target.value as TipMode)}
@@ -691,6 +716,23 @@ export default function SaleCheckoutForm({
             </div>
           ))}
           <div className="text-xs text-salon-stone space-y-1">
+            <div className="rounded-lg border border-salon-sand/50 bg-salon-cream/30 px-2 py-1.5">
+              <div className="flex justify-between">
+                <span>Cash drawer session</span>
+                <span className={hasOpenDrawer ? "text-emerald-700 font-medium" : "text-amber-700 font-medium"}>
+                  {hasOpenDrawer ? "Open" : "Closed"}
+                </span>
+              </div>
+              {!hasOpenDrawer && (
+                <p className="mt-1">
+                  Open session from{" "}
+                  <Link href="/dashboard/cash-drawer" className="text-salon-gold font-medium hover:text-salon-goldLight">
+                    Cash drawer
+                  </Link>{" "}
+                  to accept cash in checkout.
+                </p>
+              )}
+            </div>
             <div className="flex justify-between">
               <span>Paid</span>
               <span>{paid.toFixed(2)}</span>
@@ -703,6 +745,11 @@ export default function SaleCheckoutForm({
               <p className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
                 Change due: {changeDue.toFixed(2)} (cash sent to API is capped
                 to amount due).
+              </p>
+            )}
+            {cashToDrawer > 0 && (
+              <p className="text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
+                Auto-post to cash drawer from this sale: {cashToDrawer.toFixed(2)}.
               </p>
             )}
             {remaining > 0 && (

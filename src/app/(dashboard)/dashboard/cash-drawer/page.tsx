@@ -51,6 +51,15 @@ export default function CashDrawerPage() {
     () => sessions.find((s) => s.status === 'open'),
     [sessions],
   );
+  const runningExpected = useMemo(() => {
+    if (!currentOpen) return null;
+    const opening = Number(currentOpen.opening_balance ?? 0);
+    const movementDelta = (currentOpen.CashMovements ?? []).reduce((sum, m) => {
+      const amt = Number(m.amount ?? 0);
+      return sum + (m.type === 'in' ? amt : -amt);
+    }, 0);
+    return opening + movementDelta;
+  }, [currentOpen]);
 
   const handleOpen = async () => {
     if (!locationId) return;
@@ -133,15 +142,18 @@ export default function CashDrawerPage() {
 
   const renderMovements = (movements?: CashMovement[]) => {
     if (!movements || !movements.length) {
-      return <p className="text-xs text-salon-stone/70">No manual movements recorded.</p>;
+      return <p className="text-xs text-salon-stone/70">No movements recorded yet.</p>;
     }
     return (
       <ul className="space-y-1 max-h-32 overflow-y-auto text-xs">
         {movements.map((m) => (
-          <li key={m.id} className="flex justify-between">
-            <span className={m.type === 'in' ? 'text-emerald-600' : 'text-red-600'}>
-              {m.type === 'in' ? 'Cash in' : 'Cash out'}
-            </span>
+          <li key={m.id} className="flex items-start justify-between gap-2">
+            <div>
+              <p className={m.type === 'in' ? 'text-emerald-600' : 'text-red-600'}>
+                {m.type === 'in' ? 'Cash in' : 'Cash out'}
+              </p>
+              {m.reason && <p className="text-salon-stone/70">{m.reason}</p>}
+            </div>
             <span className="text-salon-espresso font-medium">{Number(m.amount).toFixed(2)}</span>
           </li>
         ))}
@@ -214,8 +226,14 @@ export default function CashDrawerPage() {
                   {Number(currentOpen.opening_balance).toFixed(2)}
                 </span>
               </p>
+              <p className="text-salon-stone">
+                Running expected:{' '}
+                <span className="font-medium text-salon-espresso">
+                  {runningExpected != null ? runningExpected.toFixed(2) : '-'}
+                </span>
+              </p>
               <div className="mt-3">
-                <p className="text-xs font-medium text-salon-stone mb-1">Manual movements</p>
+                <p className="text-xs font-medium text-salon-stone mb-1">Session movements (manual + sales)</p>
                 {renderMovements(currentOpen.CashMovements)}
               </div>
             </div>
@@ -308,7 +326,7 @@ export default function CashDrawerPage() {
               type="number"
               value={expectedBalance}
               onChange={(e) => setExpectedBalance(e.target.value)}
-              placeholder="System-calculated"
+              placeholder={runningExpected != null ? runningExpected.toFixed(2) : "System-calculated"}
               className="mt-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
             />
           </label>
