@@ -272,7 +272,25 @@ export default function ClientsPage() {
                     {c.full_name}
                   </p>
                   <p className="text-xs text-salon-stone mt-1 truncate">
-                    {c.phone ?? '—'} · {c.email ?? '—'}
+                    <a
+                      href={c.phone ? `tel:${c.phone}` : '#'}
+                      onClick={(e) => {
+                        if (!c.phone) e.preventDefault();
+                      }}
+                      className={c.phone ? 'hover:underline' : 'cursor-default'}
+                    >
+                      {c.phone ?? '—'}
+                    </a>{' '}
+                    ·{' '}
+                    <a
+                      href={c.email ? `mailto:${c.email}` : '#'}
+                      onClick={(e) => {
+                        if (!c.email) e.preventDefault();
+                      }}
+                      className={c.email ? 'hover:underline' : 'cursor-default'}
+                    >
+                      {c.email ?? '—'}
+                    </a>
                   </p>
                   <p className="text-xs text-salon-stone mt-1 truncate">
                     Tags: {c.tags ?? '—'}
@@ -308,7 +326,24 @@ export default function ClientsPage() {
               <tr key={c.id}>
                 <td className="px-4 py-3 text-sm text-salon-espresso">{c.full_name}</td>
                 <td className="px-4 py-3 text-sm text-salon-stone">{c.phone ?? '—'}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{c.email ?? '—'}</td>
+                <td className="px-4 py-3 text-sm text-salon-stone">
+                  {c.phone ? (
+                    <a className="hover:underline" href={`tel:${c.phone}`}>
+                      {c.phone}
+                    </a>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm text-salon-stone">
+                  {c.email ? (
+                    <a className="hover:underline" href={`mailto:${c.email}`}>
+                      {c.email}
+                    </a>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-salon-stone">{c.tags ?? '—'}</td>
                 <td className="px-4 py-3 text-sm">
                   <button
