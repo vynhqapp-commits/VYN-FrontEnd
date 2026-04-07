@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
+import SaleCheckoutForm from '@/components/pos/SaleCheckoutForm';
 import { appointmentsApi, clientsApi, locationsApi, servicesApi, type Appointment, type Client, type Location, type Service } from '@/lib/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,6 +46,7 @@ export default function AppointmentsPage() {
   const pollInFlightRef = useRef(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showWalkIn, setShowWalkIn] = useState(false);
+  const [checkoutAppointmentId, setCheckoutAppointmentId] = useState<string | null>(null);
 
   // Walk-in modal state
   const [walkInLoading, setWalkInLoading] = useState(false);
@@ -317,6 +319,11 @@ export default function AppointmentsPage() {
 
   const focus = parseDateKey(focusDate);
   const selectedAppointment = selectedAppointmentId ? appointments.find((a) => a.id === selectedAppointmentId) ?? null : null;
+  const checkoutAppointment = checkoutAppointmentId ? appointments.find((a) => a.id === checkoutAppointmentId) ?? null : null;
+
+  const openCheckout = (id: string) => {
+    setCheckoutAppointmentId(id);
+  };
 
   const moveFocus = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') {
@@ -403,6 +410,7 @@ export default function AppointmentsPage() {
             changingId={changingId ?? reschedulingId}
             onStatusChange={updateStatus}
             onAppointmentClick={(id) => setSelectedAppointmentId(id)}
+            onAppointmentCheckout={openCheckout}
             onReschedule={rescheduleAppointment}
             onDayClick={(d) => {
               setSelectedAppointmentId(null);
@@ -425,6 +433,7 @@ export default function AppointmentsPage() {
               statusCompleted: td('calStatusCompleted'),
               statusCancelled: td('calStatusCancelled'),
               ariaAppointment: td('calAriaAppointment'),
+              checkout: td('calCheckout'),
               dowLabels: calendarDowLabels,
             }}
           />
@@ -468,22 +477,35 @@ export default function AppointmentsPage() {
                     {a.status}
                   </span>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {statuses.map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      disabled={changingId === a.id || a.status === st}
-                      onClick={() => updateStatus(a.id, st)}
-                      className={`px-2 py-1 rounded-full text-[11px] border ${
-                        a.status === st
-                          ? 'bg-salon-gold text-white border-salon-gold'
-                          : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
-                      } disabled:opacity-40 disabled:cursor-not-allowed`}
-                    >
-                      {st.replace('_', ' ')}
-                    </button>
-                  ))}
+                <div className="mt-3 space-y-2">
+                  {(a.status === 'scheduled' || a.status === 'checked_in') && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => openCheckout(a.id)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+                      >
+                        {td('calCheckout')}
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {statuses.map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        disabled={changingId === a.id || a.status === st}
+                        onClick={() => updateStatus(a.id, st)}
+                        className={`px-2 py-1 rounded-full text-[11px] border ${
+                          a.status === st
+                            ? 'bg-salon-gold text-white border-salon-gold'
+                            : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {st.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
@@ -500,6 +522,7 @@ export default function AppointmentsPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Service</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Staff</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">{td('calCheckout')}</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -528,6 +551,17 @@ export default function AppointmentsPage() {
                       })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-salon-stone">{a.status}</td>
+                    <td className="px-4 py-3 text-sm text-salon-stone">
+                      {(a.status === 'scheduled' || a.status === 'checked_in') && (
+                        <button
+                          type="button"
+                          onClick={() => openCheckout(a.id)}
+                              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+                        >
+                          {td('calCheckout')}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-salon-stone">
                       <div className="flex flex-wrap gap-1">
                         {statuses.map((st) => (
@@ -575,8 +609,34 @@ export default function AppointmentsPage() {
             updateStatus: td('apptPanelUpdateStatus'),
             updating: td('apptPanelUpdating'),
             tip: td('apptPanelTip'),
+            checkout: td('calCheckout'),
           }}
+          onCheckout={openCheckout}
         />
+      )}
+
+      {checkoutAppointment && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setCheckoutAppointmentId(null)} />
+          <div className="relative ml-auto h-full w-full max-w-5xl overflow-y-auto border-l border-salon-sand/40 bg-white p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold text-salon-espresso">{td('calCheckout')}</h2>
+              <button type="button" onClick={() => setCheckoutAppointmentId(null)} className="rounded-lg p-1.5 text-salon-stone hover:bg-salon-sand/40">
+                <X className="size-4" />
+              </button>
+            </div>
+            <SaleCheckoutForm
+              locationId={String((checkoutAppointment as { branch_id?: string; location_id?: string }).branch_id ?? (checkoutAppointment as { location_id?: string }).location_id ?? '')}
+              initialAppointmentId={checkoutAppointment.id}
+              appointments={[checkoutAppointment]}
+              hideAppointmentPicker
+              onSuccess={() => {
+                setCheckoutAppointmentId(null);
+                loadAppointments();
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {showWalkIn && (

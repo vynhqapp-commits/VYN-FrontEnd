@@ -12,7 +12,6 @@ const ownerMenu: NavItem[] = [
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/inventory", label: "Inventory" },
   { href: "/dashboard/transactions", label: "POS / Sales" },
-  { href: "/dashboard/pos", label: "New sale (POS)" },
   { href: "/dashboard/invoices", label: "Invoices" },
   { href: "/dashboard/cash-drawer", label: "Cash drawer" },
   { href: "/dashboard/debt-aging", label: "Debt aging" },
@@ -36,7 +35,6 @@ const receptionistMenu: NavItem[] = [
   { href: "/dashboard/services", label: "Services" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/transactions", label: "POS / Sales" },
-  { href: "/dashboard/pos", label: "New sale (POS)" },
   { href: "/dashboard/cash-drawer", label: "Cash drawer" },
 ];
 
@@ -59,9 +57,9 @@ export const menuByRole: Record<AppRole, NavItem[]> = {
 export const allowedPrefixesByRole: Record<AppRole, string[]> = {
   super_admin: ["/admin"],
   customer: ["/my-bookings", "/profile"],
-  salon_owner: ownerMenu.map((i) => i.href),
-  manager: managerMenu.map((i) => i.href),
-  receptionist: receptionistMenu.map((i) => i.href),
+  salon_owner: [...ownerMenu.map((i) => i.href), "/dashboard/pos"],
+  manager: [...managerMenu.map((i) => i.href), "/dashboard/pos"],
+  receptionist: [...receptionistMenu.map((i) => i.href), "/dashboard/pos"],
   staff: staffMenu.map((i) => i.href),
 };
 

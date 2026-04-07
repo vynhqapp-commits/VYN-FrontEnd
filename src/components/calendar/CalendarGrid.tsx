@@ -32,6 +32,7 @@ export type CalendarGridStrings = {
   statusCompleted: string;
   statusCancelled: string;
   ariaAppointment: string;
+  checkout: string;
 };
 
 const defaultCalendarCopy: CalendarGridStrings = {
@@ -50,6 +51,7 @@ const defaultCalendarCopy: CalendarGridStrings = {
   statusCompleted: 'completed',
   statusCancelled: 'cancelled',
   ariaAppointment: 'Appointment {id}',
+  checkout: 'Checkout',
 };
 
 export type CalendarGridCopy = Partial<CalendarGridStrings> & {
@@ -197,22 +199,25 @@ function TimeDraggableBlock({
     zIndex: isDragging ? 40 : undefined,
   };
   return (
-    <button
+    <div
       ref={setNodeRef}
-      type="button"
       style={merged}
       {...listeners}
       {...attributes}
+      role="button"
+      tabIndex={0}
       className={className}
       title={title}
       aria-label={ariaLabel}
-      disabled={disabled}
       onClick={() => {
         if (!isDragging) onOpen();
       }}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !isDragging) onOpen();
+      }}
     >
       {children}
-    </button>
+    </div>
   );
 }
 
@@ -225,6 +230,7 @@ export default function CalendarGrid({
   onAppointmentClick,
   changingId,
   onReschedule,
+  onAppointmentCheckout,
   calendarCopy,
 }: {
   view: CalendarView;
@@ -235,6 +241,7 @@ export default function CalendarGrid({
   onAppointmentClick?: (id: string) => void;
   changingId: string | null;
   onReschedule?: (id: string, start: Date, end: Date) => Promise<void>;
+  onAppointmentCheckout?: (id: string) => void;
   calendarCopy?: CalendarGridCopy;
 }) {
   const copy = { ...defaultCalendarCopy, ...calendarCopy };
@@ -652,6 +659,20 @@ export default function CalendarGrid({
         <div className="mt-1 flex items-center justify-between gap-2">
           <span className="text-[10px] font-medium">{statusMetaForBlock.label}</span>
         </div>
+        {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && (
+          <div className="mt-1 pt-1 border-t border-black/10">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAppointmentCheckout(a.id);
+              }}
+              className="text-[10px] px-2 py-0.5 rounded border bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+            >
+              {copy.checkout}
+            </button>
+          </div>
+        )}
       </TimeDraggableBlock>
     );
   };

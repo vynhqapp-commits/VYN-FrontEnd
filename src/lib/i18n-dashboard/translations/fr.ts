@@ -37,6 +37,7 @@ export const dashboardTranslationsFr = {
   calViewWeek: "Semaine",
   calViewMonth: "Mois",
   calWalkIn: "+ Client sans RDV",
+  calCheckout: "Encaisser",
   calMonthTitle: "Mois",
   calMonthHelp: "Cliquez un jour pour ouvrir l’agenda",
   calMonthNoAppointments: "Aucun rendez-vous ce mois-ci.",

@@ -37,6 +37,7 @@ export const dashboardTranslationsEn = {
   calViewWeek: "Week",
   calViewMonth: "Month",
   calWalkIn: "+ Walk-in booking",
+  calCheckout: "Checkout",
   calMonthTitle: "Month",
   calMonthHelp: "Click a day to open the agenda view",
   calMonthNoAppointments: "No appointments in this month.",

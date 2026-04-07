@@ -37,6 +37,7 @@ export const dashboardTranslationsAr = {
   calViewWeek: "أسبوع",
   calViewMonth: "شهر",
   calWalkIn: "+ حجز زائر",
+  calCheckout: "تحصيل",
   calMonthTitle: "شهر",
   calMonthHelp: "انقر يومًا لفتح عرض الأجندة",
   calMonthNoAppointments: "لا توجد مواعيد في هذا الشهر.",

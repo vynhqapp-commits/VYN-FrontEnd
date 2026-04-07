@@ -16,6 +16,7 @@ export type AppointmentDetailLabels = {
   updateStatus: string;
   updating: string;
   tip: string;
+  checkout: string;
 };
 
 export default function AppointmentDetailPanel({
@@ -25,6 +26,7 @@ export default function AppointmentDetailPanel({
   changingId,
   statuses,
   labels,
+  onCheckout,
 }: {
   appointment: Appointment | null;
   onClose: () => void;
@@ -32,6 +34,7 @@ export default function AppointmentDetailPanel({
   changingId: string | null;
   statuses: readonly string[];
   labels: AppointmentDetailLabels;
+  onCheckout?: (id: string) => void;
 }) {
   if (!appointment) return null;
 
@@ -114,28 +117,41 @@ export default function AppointmentDetailPanel({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-salon-sand/40 bg-salon-cream/30 p-4 space-y-3">
+          {onCheckout && (appointment.status === 'scheduled' || appointment.status === 'checked_in') && (
+            <div className="rounded-2xl border border-salon-sand/40 bg-salon-cream/30 p-4">
+              <button
+                type="button"
+                onClick={() => onCheckout(appointment.id)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold border transition-colors bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+              >
+                {labels.checkout}
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-salon-espresso">{labels.updateStatus}</p>
               <p className="text-xs text-salon-stone">{changingId === appointment.id ? labels.updating : ''}</p>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              {statuses.map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  disabled={changingId === appointment.id || appointment.status === st}
-                  onClick={() => onStatusChange(appointment.id, st)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                    appointment.status === st
-                      ? 'bg-salon-gold text-white border-salon-gold'
-                      : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
-                  }`}
-                >
-                  {st.replace('_', ' ')}
-                </button>
-              ))}
+            <div className="rounded-2xl border border-salon-sand/40 bg-salon-cream/30 p-4">
+              <div className="flex flex-wrap gap-2">
+                {statuses.map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    disabled={changingId === appointment.id || appointment.status === st}
+                    onClick={() => onStatusChange(appointment.id, st)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      appointment.status === st
+                        ? 'bg-salon-gold text-white border-salon-gold'
+                        : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
+                    }`}
+                  >
+                    {st.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
