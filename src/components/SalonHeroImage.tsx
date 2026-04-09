@@ -16,8 +16,8 @@ export function SalonHeroImage({ className = '', priority, fill, sizes = '(max-w
 
   if (error) {
     return (
-      <div className={`rounded-2xl bg-gradient-to-br from-[#d5e8e4] via-salon-cream to-salon-sand flex items-center justify-center min-h-[200px] ${className}`}>
-        <span className="font-display text-salon-espresso text-lg font-semibold text-center px-4">{APP_FULL_NAME}</span>
+      <div className={`rounded-2xl bg-gradient-to-br from-[#d5e8e4] via-salon-cream to-salon-sand dark:from-slate-800 dark:via-slate-900 dark:to-black flex items-center justify-center min-h-[200px] ${className}`}>
+        <span className="font-display text-salon-espresso dark:text-white text-lg font-semibold text-center px-4">{APP_FULL_NAME}</span>
       </div>
     );
   }
@@ -57,14 +57,14 @@ export function SalonHeroImage({ className = '', priority, fill, sizes = '(max-w
 /** Full-screen loader (no banner). Used on refresh and while auth/layout is loading. */
 export function LoadingWithHero() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-salon-cream p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-salon-cream dark:bg-background p-6">
       <div className="flex flex-col items-center gap-8">
         <div className="relative w-16 h-16">
           <div className="absolute inset-0 rounded-full border-2 border-border" />
           <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-salon-gold border-r-salon-gold/60 animate-spin" style={{ animationDuration: '0.8s' }} />
         </div>
         <div className="text-center">
-          <p className="text-salon-stone text-sm font-medium">Loading...</p>
+          <p className="text-salon-stone dark:text-muted-foreground text-sm font-medium">Loading...</p>
         </div>
       </div>
     </div>

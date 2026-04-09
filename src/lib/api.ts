@@ -456,15 +456,15 @@ export const locationsApi = {
   list: async (params?: { include_inactive?: boolean; q?: string }) => {
     const res = await api<Location[] | { data: Location[] }>(
       "/api/branches" +
-        qs({
-          include_inactive:
-            params?.include_inactive == null
-              ? undefined
-              : params.include_inactive
-                ? 1
-                : 0,
-          q: params?.q,
-        }),
+      qs({
+        include_inactive:
+          params?.include_inactive == null
+            ? undefined
+            : params.include_inactive
+              ? 1
+              : 0,
+        q: params?.q,
+      }),
     );
     const list = listData(res.data);
     return res.error ? { error: res.error } : { data: { locations: list } };
@@ -800,14 +800,14 @@ export const productsApi = {
   }) => {
     const res = await api<Product[] | { data: Product[] }>(
       "/api/products" +
-        qs({
-          search: params?.search,
-          is_active:
-            params?.is_active == null ? undefined : params.is_active ? 1 : 0,
-          category: params?.category,
-          page: params?.page,
-          per_page: params?.per_page,
-        }),
+      qs({
+        search: params?.search,
+        is_active:
+          params?.is_active == null ? undefined : params.is_active ? 1 : 0,
+        category: params?.category,
+        page: params?.page,
+        per_page: params?.per_page,
+      }),
     );
     const list = listData(res.data);
     return res.error
@@ -872,12 +872,12 @@ export const inventoryApi = {
     api<{ items: Inventory[] }>("/api/reports/low-stock").then((r) =>
       r.data
         ? {
-            data: {
-              items: listData(
-                r.data as unknown as Inventory[] | { data: Inventory[] },
-              ),
-            },
-          }
+          data: {
+            items: listData(
+              r.data as unknown as Inventory[] | { data: Inventory[] },
+            ),
+          },
+        }
         : { error: r.error },
     ),
   update: (
@@ -1050,55 +1050,55 @@ function normalizeAppointment(raw: Record<string, unknown>): Appointment {
     notes: (raw.notes as string | null | undefined) ?? null,
     Client: clientRaw
       ? {
-          id: String(clientRaw.id ?? ''),
-          tenant_id: String(clientRaw.tenant_id ?? ''),
-          full_name: String((clientRaw.full_name ?? clientRaw.name ?? '') as string),
-          phone: (clientRaw.phone as string | null | undefined) ?? null,
-          email: (clientRaw.email as string | null | undefined) ?? null,
-          notes: (clientRaw.notes as string | null | undefined) ?? null,
-          tags: (clientRaw.tags as string | null | undefined) ?? null,
-          created_at: (clientRaw.created_at as string | undefined) ?? undefined,
-          updated_at: (clientRaw.updated_at as string | undefined) ?? undefined,
-        }
+        id: String(clientRaw.id ?? ''),
+        tenant_id: String(clientRaw.tenant_id ?? ''),
+        full_name: String((clientRaw.full_name ?? clientRaw.name ?? '') as string),
+        phone: (clientRaw.phone as string | null | undefined) ?? null,
+        email: (clientRaw.email as string | null | undefined) ?? null,
+        notes: (clientRaw.notes as string | null | undefined) ?? null,
+        tags: (clientRaw.tags as string | null | undefined) ?? null,
+        created_at: (clientRaw.created_at as string | undefined) ?? undefined,
+        updated_at: (clientRaw.updated_at as string | undefined) ?? undefined,
+      }
       : undefined,
     Service: serviceRaw
       ? ({
-          id: String(serviceRaw.id ?? ''),
-          tenant_id: String(serviceRaw.tenant_id ?? ''),
-          name: String(serviceRaw.name ?? ''),
-          description: (serviceRaw.description as string | null | undefined) ?? null,
-          duration_minutes: Number(serviceRaw.duration_minutes ?? 0),
-          price: (serviceRaw.price as string | number | undefined) ?? 0,
-          cost: (serviceRaw.cost as string | number | null | undefined) ?? null,
-          category: (serviceRaw.category as string | null | undefined) ?? null,
-          is_active: Boolean(serviceRaw.is_active ?? true),
-          created_at: (serviceRaw.created_at as string | undefined) ?? undefined,
-          updated_at: (serviceRaw.updated_at as string | undefined) ?? undefined,
-        } as Service)
+        id: String(serviceRaw.id ?? ''),
+        tenant_id: String(serviceRaw.tenant_id ?? ''),
+        name: String(serviceRaw.name ?? ''),
+        description: (serviceRaw.description as string | null | undefined) ?? null,
+        duration_minutes: Number(serviceRaw.duration_minutes ?? 0),
+        price: (serviceRaw.price as string | number | undefined) ?? 0,
+        cost: (serviceRaw.cost as string | number | null | undefined) ?? null,
+        category: (serviceRaw.category as string | null | undefined) ?? null,
+        is_active: Boolean(serviceRaw.is_active ?? true),
+        created_at: (serviceRaw.created_at as string | undefined) ?? undefined,
+        updated_at: (serviceRaw.updated_at as string | undefined) ?? undefined,
+      } as Service)
       : undefined,
     Staff: staffRaw
       ? ({
-          id: String(staffRaw.id ?? ''),
-          email: String(staffRaw.email ?? ''),
-          name: (staffRaw.name as string | null | undefined) ?? null,
-          role: String(staffRaw.role ?? ''),
-          tenantId: (staffRaw.tenantId as string | null | undefined) ?? null,
-          fullName: (staffRaw.fullName as string | null | undefined) ?? null,
-        } as AuthUser)
+        id: String(staffRaw.id ?? ''),
+        email: String(staffRaw.email ?? ''),
+        name: (staffRaw.name as string | null | undefined) ?? null,
+        role: String(staffRaw.role ?? ''),
+        tenantId: (staffRaw.tenantId as string | null | undefined) ?? null,
+        fullName: (staffRaw.fullName as string | null | undefined) ?? null,
+      } as AuthUser)
       : undefined,
     review: reviewRaw
       ? {
-          id: String(reviewRaw.id ?? ''),
-          salon_id: String(reviewRaw.salon_id ?? ''),
-          customer_id: (reviewRaw.customer_id as string | null | undefined) ?? null,
-          appointment_id: (reviewRaw.appointment_id as string | null | undefined) ?? null,
-          rating: Number(reviewRaw.rating ?? 0),
-          comment: (reviewRaw.comment as string | null | undefined) ?? null,
-          status: String(reviewRaw.status ?? 'pending'),
-          approved_at: (reviewRaw.approved_at as string | null | undefined) ?? null,
-          approved_by: (reviewRaw.approved_by as string | null | undefined) ?? null,
-          created_at: (reviewRaw.created_at as string | undefined) ?? undefined,
-        }
+        id: String(reviewRaw.id ?? ''),
+        salon_id: String(reviewRaw.salon_id ?? ''),
+        customer_id: (reviewRaw.customer_id as string | null | undefined) ?? null,
+        appointment_id: (reviewRaw.appointment_id as string | null | undefined) ?? null,
+        rating: Number(reviewRaw.rating ?? 0),
+        comment: (reviewRaw.comment as string | null | undefined) ?? null,
+        status: String(reviewRaw.status ?? 'pending'),
+        approved_at: (reviewRaw.approved_at as string | null | undefined) ?? null,
+        approved_by: (reviewRaw.approved_by as string | null | undefined) ?? null,
+        created_at: (reviewRaw.created_at as string | undefined) ?? undefined,
+      }
       : undefined,
     created_at: (raw.created_at as string | undefined) ?? undefined,
     updated_at: (raw.updated_at as string | undefined) ?? undefined,
@@ -1220,7 +1220,7 @@ export const transactionsApi = {
                   ? "whish"
                   : paymentMethod === "omt"
                     ? "omt"
-                : "cash",
+                    : "cash",
       }),
     }).then((r) =>
       r.data ? { data: { transaction: r.data } } : { error: r.error },
@@ -1249,15 +1249,15 @@ export const paymentsApi = {
     }).then((r) =>
       r.data
         ? {
-            data: {
-              refund: {
-                id: "",
-                transaction_id: body.transaction_id,
-                amount: body.amount,
-                reason: body.reason,
-              },
+          data: {
+            refund: {
+              id: "",
+              transaction_id: body.transaction_id,
+              amount: body.amount,
+              reason: body.reason,
             },
-          }
+          },
+        }
         : { error: r.error },
     ),
 };
@@ -1266,7 +1266,7 @@ export const cashDrawerApi = {
   list: (locationId: string, status?: string) =>
     api<CashDrawerSession[] | { data: CashDrawerSession[] }>(
       `/api/cash-drawers?branch_id=${locationId}` +
-        (status ? `&status=${status}` : ""),
+      (status ? `&status=${status}` : ""),
     ).then((r) =>
       r.data ? { data: { sessions: listData(r.data) } } : { error: r.error },
     ),
@@ -1325,14 +1325,14 @@ export const debtApi = {
     api<unknown>(`/api/debts?customer_id=${clientId}`).then((r) =>
       r.data
         ? {
-            data: {
-              entries: listData(
-                (r.data as any)?.entries ??
-                  (r.data as DebtLedgerEntry[] | { data: DebtLedgerEntry[] }),
-              ),
-              balance: typeof r.data === "object" && r.data && "balance" in (r.data as any) ? Number((r.data as any).balance) : 0,
-            },
-          }
+          data: {
+            entries: listData(
+              (r.data as any)?.entries ??
+              (r.data as DebtLedgerEntry[] | { data: DebtLedgerEntry[] }),
+            ),
+            balance: typeof r.data === "object" && r.data && "balance" in (r.data as any) ? Number((r.data as any).balance) : 0,
+          },
+        }
         : { error: r.error },
     ),
   aging: () =>
@@ -1341,14 +1341,14 @@ export const debtApi = {
     ).then((r) =>
       r.data
         ? {
-            data:
-              typeof r.data === "object" && "aging" in r.data
-                ? r.data
-                : {
-                    aging: listData(r.data as unknown as DebtAgingRow[]),
-                    summary: {},
-                  },
-          }
+          data:
+            typeof r.data === "object" && "aging" in r.data
+              ? r.data
+              : {
+                aging: listData(r.data as unknown as DebtAgingRow[]),
+                summary: {},
+              },
+        }
         : { error: r.error },
     ),
   addPayment: (body: {
@@ -1490,19 +1490,19 @@ export const commissionApi = {
   earnings: (params?: { staff_id?: string; from?: string; to?: string }) =>
     api<unknown>(
       `/api/commissions/staff/${params?.staff_id ?? 0}/earnings` +
-        qs(params || {}),
+      qs(params || {}),
     ).then((r) =>
       r.data
         ? {
-            data: {
-              records: listData(
-                r.data as CommissionRecord[] | { data: CommissionRecord[] },
-              ),
-              total: listData(
-                r.data as CommissionRecord[] | { data: CommissionRecord[] },
-              ).reduce((sum, x: any) => sum + Number(x.amount ?? 0), 0),
-            },
-          }
+          data: {
+            records: listData(
+              r.data as CommissionRecord[] | { data: CommissionRecord[] },
+            ),
+            total: listData(
+              r.data as CommissionRecord[] | { data: CommissionRecord[] },
+            ).reduce((sum, x: any) => sum + Number(x.amount ?? 0), 0),
+          },
+        }
         : { error: r.error },
     ),
 };
@@ -1618,7 +1618,7 @@ export const reportsApi = {
       };
     }>(
       `/api/reports/profit-loss?period=${period}` +
-        (locationId ? `&branch_id=${locationId}` : ""),
+      (locationId ? `&branch_id=${locationId}` : ""),
     ),
   pnlExportUrl: (period: string, locationId?: string) =>
     `${API_BASE}/api/reports/profit-loss/export?period=${period}` +
@@ -1638,7 +1638,7 @@ export const reportsApi = {
       vat_report: unknown[];
     }>(
       `/api/reports/vat?period=${period}` +
-        (locationId ? `&branch_id=${locationId}` : ""),
+      (locationId ? `&branch_id=${locationId}` : ""),
     ),
   paymentBreakdown: (from: string, to: string, locationId?: string) =>
     api<{
@@ -1648,7 +1648,7 @@ export const reportsApi = {
       transactions: number;
     }>(
       `/api/reports/payment-breakdown?from=${from}&to=${to}` +
-        (locationId ? `&branch_id=${locationId}` : ""),
+      (locationId ? `&branch_id=${locationId}` : ""),
     ),
   inventoryMovement: (params?: {
     from: string;
@@ -1663,12 +1663,12 @@ export const reportsApi = {
       rows: InventoryMovementRow[];
     }>(
       "/api/reports/inventory-movement" +
-        qs({
-          from: params?.from,
-          to: params?.to,
-          branch_id: params?.location_id,
-          product_id: params?.product_id,
-        }),
+      qs({
+        from: params?.from,
+        to: params?.to,
+        branch_id: params?.location_id,
+        product_id: params?.product_id,
+      }),
     ).then((r) => (r.data ? { data: r.data } : { error: r.error })),
   monthlyClose: (period: string, notes?: string) => {
     const [y, m] = period.split("-").map(Number);
@@ -1703,7 +1703,7 @@ export const reportsApi = {
       }[];
     }>(
       `/api/reports/margins?from=${from}&to=${to}` +
-        (locationId ? `&branch_id=${locationId}` : ''),
+      (locationId ? `&branch_id=${locationId}` : ''),
     ),
 };
 
@@ -1717,18 +1717,18 @@ export const franchiseApi = {
     }>("/api/analytics/franchise" + qs(params || {})).then((r) =>
       r.data
         ? {
-            data:
-              typeof r.data === "object" && "summary" in r.data
-                ? r.data
-                : {
-                    from: "",
-                    to: "",
-                    locations: listData(
-                      r.data as unknown as FranchiseLocationKpi[],
-                    ),
-                    summary: {} as FranchiseSummary,
-                  },
-          }
+          data:
+            typeof r.data === "object" && "summary" in r.data
+              ? r.data
+              : {
+                from: "",
+                to: "",
+                locations: listData(
+                  r.data as unknown as FranchiseLocationKpi[],
+                ),
+                summary: {} as FranchiseSummary,
+              },
+        }
         : { error: r.error },
     ),
 };
@@ -1854,10 +1854,10 @@ export const customerApi = {
     api<Appointment>(`/api/customer/bookings/${id}`).then((r) =>
       r.data
         ? {
-            data: {
-              booking: (r.data as { booking?: Appointment }).booking ?? r.data,
-            },
-          }
+          data: {
+            booking: (r.data as { booking?: Appointment }).booking ?? r.data,
+          },
+        }
         : { error: r.error },
     ),
   cancelBooking: (id: string) =>
@@ -1866,12 +1866,12 @@ export const customerApi = {
     }).then((r) =>
       r.data
         ? {
-            data: {
-              booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
-              policy: (r.data as { policy?: BookingPolicy }).policy,
-              warnings: (r.data as { warnings?: string[] }).warnings ?? [],
-            },
-          }
+          data: {
+            booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
+            policy: (r.data as { policy?: BookingPolicy }).policy,
+            warnings: (r.data as { warnings?: string[] }).warnings ?? [],
+          },
+        }
         : { error: r.error },
     ),
   rescheduleBooking: (
@@ -1887,12 +1887,12 @@ export const customerApi = {
     ).then((r) =>
       r.data
         ? {
-            data: {
-              booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
-              policy: (r.data as { policy?: BookingPolicy }).policy,
-              warnings: (r.data as { warnings?: string[] }).warnings ?? [],
-            },
-          }
+          data: {
+            booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
+            policy: (r.data as { policy?: BookingPolicy }).policy,
+            warnings: (r.data as { warnings?: string[] }).warnings ?? [],
+          },
+        }
         : { error: r.error },
     ),
   myFavorites: () =>
@@ -1935,10 +1935,10 @@ export const customerApi = {
     }).then((r) =>
       r.data
         ? {
-            data: {
-              booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
-            },
-          }
+          data: {
+            booking: ((r.data as { booking?: Appointment }).booking ?? r.data) as Appointment,
+          },
+        }
         : { error: r.error },
     ),
 };

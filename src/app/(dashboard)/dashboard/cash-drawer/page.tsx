@@ -12,7 +12,7 @@ export default function CashDrawerPage() {
   const [locationId, setLocationId] = useState<string>('');
   const [status, setStatus] = useState<StatusFilter>('open');
   const [sessions, setSessions] = useState<CashDrawerSession[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [openingBalance, setOpeningBalance] = useState<string>('');
@@ -172,13 +172,13 @@ export default function CashDrawerPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3 items-center">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+        <div className="w-full">
           <label className="block text-xs font-medium elite-subtle mb-1">Location</label>
           <select
             value={locationId}
             onChange={(e) => setLocationId(e.target.value)}
-            className="elite-input rounded-xl px-3 py-2 text-sm"
+            className="elite-input w-full rounded-xl px-3 py-2 text-sm"
           >
             {locations.map((loc) => (
               <option key={loc.id} value={loc.id}>
@@ -187,12 +187,12 @@ export default function CashDrawerPage() {
             ))}
           </select>
         </div>
-        <div>
+        <div className="w-full">
           <label className="block text-xs font-medium elite-subtle mb-1">Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className="elite-input rounded-xl px-3 py-2 text-sm"
+            className="elite-input w-full rounded-xl px-3 py-2 text-sm"
           >
             <option value="open">Open only</option>
             <option value="closed">Closed</option>
@@ -201,12 +201,22 @@ export default function CashDrawerPage() {
             <option value="all">All</option>
           </select>
         </div>
-        {loading && <Skeleton className="h-5 w-32" />}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {loading && <Skeleton className="h-10 w-full rounded-xl" />}
+        {error && <p className="text-sm text-red-600 sm:col-span-2 lg:col-span-4">{error}</p>}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="elite-panel p-4 md:col-span-1">
+      {loading && sessions.length === 0 ? (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Skeleton className="h-[260px] w-full rounded-xl" />
+            <Skeleton className="h-[260px] w-full rounded-xl" />
+            <Skeleton className="h-[260px] w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-[220px] w-full rounded-xl" />
+        </div>
+      ) : (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="elite-panel p-4">
           <h2 className="font-display text-lg font-semibold elite-title mb-2">Today&apos;s session</h2>
           {currentOpen ? (
             <div className="space-y-2 text-sm">
@@ -246,7 +256,7 @@ export default function CashDrawerPage() {
           )}
         </div>
 
-        <div className="elite-panel p-4 space-y-3 md:col-span-1">
+        <div className="elite-panel p-4 space-y-3">
           <h2 className="font-display text-lg font-semibold elite-title">Open / adjust</h2>
           <div className="space-y-2 text-sm">
             <label className="block">
@@ -306,7 +316,7 @@ export default function CashDrawerPage() {
           </div>
         </div>
 
-        <div className="elite-panel p-4 space-y-3 md:col-span-1">
+        <div className="elite-panel p-4 space-y-3 md:col-span-2 xl:col-span-1">
           <h2 className="font-display text-lg font-semibold elite-title">Close &amp; reconcile</h2>
           <p className="text-xs text-muted-foreground">
             Count the cash at end of day and record the actual amount. Compare with the expected balance to identify
@@ -386,6 +396,7 @@ export default function CashDrawerPage() {
           </div>
         </div>
       </div>
+      )}
 
       {sessions.length > 0 && (
         <div className="elite-panel p-4">

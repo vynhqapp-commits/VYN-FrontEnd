@@ -16,23 +16,23 @@ import { Input } from '@/components/ui/input';
 import { Loader2, UserPlus, Users, X } from 'lucide-react';
 
 const statusClass: Record<string, string> = {
-  active: 'bg-green-50 text-emerald-700 border-emerald-200',
-  suspended: 'bg-red-50 text-red-700 border-red-200',
-  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  active: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  suspended: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30',
+  pending: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
 };
 
 // ── Role badge colours ────────────────────────────────────────────────────────
 
 const roleBadge: Record<string, string> = {
-  super_admin:  'bg-purple-50 text-purple-700 border border-purple-200',
-  salon_owner:  'bg-amber-50  text-amber-700  border border-amber-200',
-  manager:      'bg-blue-50   text-blue-700   border border-blue-200',
-  staff:        'bg-teal-50   text-teal-700   border border-teal-200',
-  customer:     'bg-gray-50   text-gray-600   border border-gray-200',
+  super_admin:  'bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+  salon_owner:  'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+  manager:      'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30',
+  staff:        'bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/30',
+  customer:     'bg-muted text-muted-foreground border border-border',
 };
 
 function RoleBadge({ role }: { role?: string | null }) {
-  const cls = roleBadge[(role ?? '').toLowerCase()] ?? 'bg-gray-50 text-gray-500 border border-gray-200';
+  const cls = roleBadge[(role ?? '').toLowerCase()] ?? 'bg-muted text-muted-foreground border border-border';
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${cls}`}>
       {role ?? '—'}
@@ -112,22 +112,22 @@ function TenantUsersPanel({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Drawer — wider to avoid email truncation */}
-      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-2xl bg-card shadow-2xl border-l border-gray-100">
+      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-2xl bg-card shadow-2xl border-l border-border">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gray-50/60 shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-muted/40 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-salon-gold/10 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5 text-salon-gold" />
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-display text-base font-semibold text-salon-espresso leading-tight truncate">
+              <h2 className="font-display text-base font-semibold text-foreground leading-tight truncate">
                 {tenant.name}
               </h2>
-              <p className="text-xs text-salon-stone mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {loading ? 'Loading…' : `${rows.length} user${rows.length !== 1 ? 's' : ''}`}
               </p>
             </div>
@@ -138,7 +138,7 @@ function TenantUsersPanel({
               type="button"
               onClick={() => setShowInvite(true)}
               disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-salon-gold text-white text-xs font-semibold hover:opacity-90 transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-colors shadow-sm disabled:opacity-50"
             >
               <UserPlus className="w-3.5 h-3.5" />
               Invite user
@@ -146,7 +146,7 @@ function TenantUsersPanel({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-salon-stone hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-xl text-muted-foreground hover:bg-muted transition-colors"
               aria-label="Close"
             >
               <X className="w-4.5 h-4.5" />
@@ -158,37 +158,37 @@ function TenantUsersPanel({
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-salon-stone" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-8">
               <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
-                <Users className="w-7 h-7 text-salon-stone/40" />
+                <Users className="w-7 h-7 text-muted-foreground/60" />
               </div>
-              <p className="font-medium text-salon-espresso text-sm">No users yet</p>
-              <p className="text-salon-stone text-xs mt-1 mb-4">This salon doesn't have any users assigned.</p>
+              <p className="font-medium text-foreground text-sm">No users yet</p>
+              <p className="text-muted-foreground text-xs mt-1 mb-4">This salon doesn't have any users assigned.</p>
               <button
                 type="button"
                 onClick={() => setShowInvite(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-salon-gold text-white text-xs font-semibold hover:opacity-90 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-colors"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 Invite first user
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-border">
               {rows.map((u) => (
-                <div key={u.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50/60 transition-colors group">
+                <div key={u.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 transition-colors group">
                   {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-salon-gold/10 flex items-center justify-center shrink-0 text-xs font-bold text-salon-gold uppercase">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary uppercase">
                     {(u.name ?? u.email ?? '?')[0]}
                   </div>
 
                   {/* Email + name */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-salon-espresso truncate">{u.email}</p>
-                    {u.name && <p className="text-xs text-salon-stone mt-0.5 truncate">{u.name}</p>}
+                    <p className="text-sm font-medium text-foreground truncate">{u.email}</p>
+                    {u.name && <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.name}</p>}
                   </div>
 
                   {/* Role badge */}
@@ -199,7 +199,7 @@ function TenantUsersPanel({
                     type="button"
                     onClick={() => remove(u.id)}
                     disabled={actionLoading}
-                    className="opacity-0 group-hover:opacity-100 px-2.5 py-1 rounded-lg border border-red-100 bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100 disabled:opacity-50 transition-all"
+                    className="opacity-0 group-hover:opacity-100 px-2.5 py-1 rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300 text-xs font-medium hover:bg-red-500/20 disabled:opacity-50 transition-all"
                   >
                     Delete
                   </button>
@@ -211,8 +211,8 @@ function TenantUsersPanel({
 
         {/* ── Footer count ── */}
         {!loading && rows.length > 0 && (
-          <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/50 shrink-0">
-            <p className="text-xs text-salon-stone">{rows.length} user{rows.length !== 1 ? 's' : ''} in <span className="font-medium text-salon-espresso">{tenant.name}</span></p>
+          <div className="px-6 py-3 border-t border-border bg-muted/30 shrink-0">
+            <p className="text-xs text-muted-foreground">{rows.length} user{rows.length !== 1 ? 's' : ''} in <span className="font-medium text-foreground">{tenant.name}</span></p>
           </div>
         )}
       </div>
@@ -224,26 +224,26 @@ function TenantUsersPanel({
           onClick={() => setShowInvite(false)}
         >
           <div
-            className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 overflow-hidden"
+            className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-border overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
-            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-salon-gold/10 flex items-center justify-center shrink-0">
-                  <UserPlus className="w-4.5 h-4.5 text-salon-gold" />
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <UserPlus className="w-4.5 h-4.5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-display text-base font-semibold text-salon-espresso">Invite user</h3>
-                  <p className="text-xs text-salon-stone mt-0.5">
-                    Adding to <span className="font-medium text-salon-espresso">{tenant.name}</span>
+                  <h3 className="font-display text-base font-semibold text-foreground">Invite user</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Adding to <span className="font-medium text-foreground">{tenant.name}</span>
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowInvite(false)}
-                className="p-1.5 rounded-lg text-salon-stone hover:bg-gray-100 transition-colors mt-0.5"
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors mt-0.5"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -272,12 +272,12 @@ function TenantUsersPanel({
                     disabled={actionLoading}
                   />
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-salon-stone uppercase tracking-wide">Role</label>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</label>
                     <select
                       value={inviteForm.watch('role')}
                       onChange={(e) => inviteForm.setValue('role', e.target.value as InviteValues['role'])}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-card text-sm text-salon-espresso
-                        focus:outline-none focus:ring-2 focus:ring-salon-gold/30 focus:border-salon-gold/60 transition-colors"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground
+                        focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors"
                       disabled={actionLoading}
                     >
                       <option value="salon_owner">Salon owner</option>
@@ -300,7 +300,7 @@ function TenantUsersPanel({
                     <Button
                       type="submit"
                       disabled={actionLoading}
-                      className="rounded-xl bg-salon-gold hover:opacity-90"
+                      className="rounded-xl"
                     >
                       {actionLoading
                         ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Inviting…</>
@@ -396,7 +396,7 @@ export default function AdminTenantsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <p className="text-salon-stone text-sm">Loading tenants...</p>
+        <p className="text-muted-foreground text-sm">Loading tenants...</p>
       </div>
     );
   }
@@ -461,32 +461,32 @@ export default function AdminTenantsPage() {
       {/* Header + summary cards */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Salons</h1>
-          <p className="text-salon-stone text-sm mt-1">All salon tenants onboarded to the platform.</p>
+          <h1 className="font-display text-2xl font-semibold text-foreground">Salons</h1>
+          <p className="text-muted-foreground text-sm mt-1">All salon tenants onboarded to the platform.</p>
         </div>
         <div className="flex gap-3">
-          <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm">
-            <p className="text-salon-stone">Total salons</p>
-            <p className="font-display text-lg font-semibold text-salon-espresso">{total}</p>
+          <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-3 text-sm">
+            <p className="text-muted-foreground">Total salons</p>
+            <p className="font-display text-lg font-semibold text-foreground">{total}</p>
           </div>
-          <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm hidden sm:block">
-            <p className="text-salon-stone">Active</p>
-            <p className="font-display text-lg font-semibold text-salon-espresso">
-              {activeCount} <span className="text-xs text-salon-stone">/ {total}</span>
+          <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-3 text-sm hidden sm:block">
+            <p className="text-muted-foreground">Active</p>
+            <p className="font-display text-lg font-semibold text-foreground">
+              {activeCount} <span className="text-xs text-muted-foreground">/ {total}</span>
             </p>
           </div>
-          <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm hidden sm:block">
-            <p className="text-salon-stone">Suspended</p>
-            <p className="font-display text-lg font-semibold text-salon-espresso">{suspendedCount}</p>
+          <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-3 text-sm hidden sm:block">
+            <p className="text-muted-foreground">Suspended</p>
+            <p className="font-display text-lg font-semibold text-foreground">{suspendedCount}</p>
           </div>
         </div>
       </div>
 
       {/* Search + actions bar */}
-      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
-            <label className="block text-xs font-semibold text-salon-stone mb-1">Search salons</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Search salons</label>
             <Input
               type="text"
               value={search}
@@ -495,11 +495,11 @@ export default function AdminTenantsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-salon-stone mb-1">Status</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="w-full sm:w-40 bg-muted/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-sm text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+              className="w-full sm:w-40 bg-background border border-input rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
             >
               <option value="all">All</option>
               <option value="active">Active</option>
@@ -511,13 +511,13 @@ export default function AdminTenantsPage() {
         <div className="flex gap-2">
           <button
             type="button"
-            className="px-3 py-2 rounded-lg border border-salon-sand/60 text-sm text-salon-espresso hover:bg-salon-sand/40 transition-colors"
+            className="px-3 py-2 rounded-lg border border-border text-sm text-foreground hover:bg-muted transition-colors"
           >
             Export
           </button>
           <button
             type="button"
-            className="px-3 py-2 rounded-lg bg-salon-gold text-white text-sm font-medium hover:opacity-90 transition-colors"
+            className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-colors"
             onClick={() => setShowCreate(true)}
           >
             New salon
@@ -526,35 +526,35 @@ export default function AdminTenantsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {filtered.length === 0 ? (
-          <p className="p-6 text-salon-stone text-center text-sm">No tenants match your search.</p>
+          <p className="p-6 text-muted-foreground text-center text-sm">No tenants match your search.</p>
         ) : (
           <table className="min-w-full divide-y divide-border hidden md:table">
             <thead className="bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Slug</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Created</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Slug</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((t) => (
                 <tr key={t.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-salon-espresso">{t.name}</td>
-                  <td className="px-4 py-3 text-sm text-salon-stone">{t.slug ?? '—'}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-foreground">{t.name}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{t.slug ?? '—'}</td>
                   <td className="px-4 py-3 text-sm">
                     <span
                       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                        statusClass[(t.status ?? '').toLowerCase()] ?? 'bg-salon-sand/40 text-salon-espresso border-salon-sand/60'
+                        statusClass[(t.status ?? '').toLowerCase()] ?? 'bg-muted text-foreground border-border'
                       }`}
                     >
                       {t.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-salon-stone">
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
                     {t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-right">
@@ -563,7 +563,7 @@ export default function AdminTenantsPage() {
                       <button
                         type="button"
                         onClick={() => setUsersTenant(t)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-salon-sand/60 bg-card text-salon-espresso text-xs font-medium hover:bg-muted/40 transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted/40 transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" />
                         Users
@@ -575,7 +575,7 @@ export default function AdminTenantsPage() {
                           type="button"
                           onClick={() => toggleStatus(t)}
                           disabled={statusActionTenantId === String(t.id)}
-                          className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100 disabled:opacity-50"
+                          className="px-2.5 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300 text-xs font-medium hover:bg-red-500/20 disabled:opacity-50"
                         >
                           {statusActionTenantId === String(t.id) ? 'Working…' : 'Suspend'}
                         </button>
@@ -584,7 +584,7 @@ export default function AdminTenantsPage() {
                           type="button"
                           onClick={() => toggleStatus(t)}
                           disabled={statusActionTenantId === String(t.id)}
-                          className="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 disabled:opacity-50"
+                          className="px-2.5 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-medium hover:bg-emerald-500/20 disabled:opacity-50"
                         >
                           {statusActionTenantId === String(t.id) ? 'Working…' : 'Activate'}
                         </button>
@@ -604,12 +604,12 @@ export default function AdminTenantsPage() {
               <div key={t.id} className="p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-display text-sm font-semibold text-salon-espresso">{t.name}</p>
-                    <p className="text-xs text-salon-stone">{t.slug ?? '—'}</p>
+                    <p className="font-display text-sm font-semibold text-foreground">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.slug ?? '—'}</p>
                   </div>
                   <span
                     className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                      statusClass[(t.status ?? '').toLowerCase()] ?? 'bg-salon-sand/40 text-salon-espresso border-salon-sand/60'
+                      statusClass[(t.status ?? '').toLowerCase()] ?? 'bg-muted text-foreground border-border'
                     }`}
                   >
                     {t.status}
@@ -619,7 +619,7 @@ export default function AdminTenantsPage() {
                   <button
                     type="button"
                     onClick={() => setUsersTenant(t)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-salon-sand/60 bg-card text-salon-espresso text-xs font-medium hover:bg-muted/40 transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted/40 transition-colors"
                   >
                     <Users className="w-3.5 h-3.5" />
                     Users
@@ -629,7 +629,7 @@ export default function AdminTenantsPage() {
                       type="button"
                       onClick={() => toggleStatus(t)}
                       disabled={statusActionTenantId === String(t.id)}
-                      className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100 disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300 text-xs font-medium hover:bg-red-500/20 disabled:opacity-50"
                     >
                       {statusActionTenantId === String(t.id) ? 'Working…' : 'Suspend'}
                     </button>
@@ -638,7 +638,7 @@ export default function AdminTenantsPage() {
                       type="button"
                       onClick={() => toggleStatus(t)}
                       disabled={statusActionTenantId === String(t.id)}
-                      className="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-medium hover:bg-emerald-500/20 disabled:opacity-50"
                     >
                       {statusActionTenantId === String(t.id) ? 'Working…' : 'Activate'}
                     </button>
@@ -656,18 +656,18 @@ export default function AdminTenantsPage() {
 
     {/* Create tenant modal — outside space-y-6 so fixed overlay gets no margin from parent */}
     {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-card rounded-2xl shadow-xl w-full max-w-2xl border border-salon-sand/40">
-            <div className="p-5 border-b border-salon-sand/40 flex items-start justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-[1px] p-2 sm:p-4">
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-2xl border border-border">
+            <div className="p-5 border-b border-border flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="font-display text-xl font-semibold text-salon-espresso">Create tenant</h2>
-                <p className="text-xs text-salon-stone mt-1">Add a new salon to the platform.</p>
+                <h2 className="font-display text-xl font-semibold text-foreground">Create tenant</h2>
+                <p className="text-xs text-muted-foreground mt-1">Add a new salon to the platform.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
                 disabled={actionLoading}
-                className="p-2 rounded-lg text-salon-stone hover:bg-salon-sand/40 disabled:opacity-50"
+                className="p-2 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />

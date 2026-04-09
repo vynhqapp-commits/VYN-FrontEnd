@@ -396,7 +396,7 @@ export default function StaffPage() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm"
             onClick={() => setScheduleOpen(false)}
           />
 

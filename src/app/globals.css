@@ -278,4 +278,58 @@
   .focus\:ring-salon-gold\/40:focus {
     --tw-ring-color: color-mix(in srgb, var(--elite-orange) 30%, transparent) !important;
   }
+
+  /* Dark-mode compatibility for legacy utility-heavy pages */
+  .dark .bg-\[\#F9FAFB\] {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  .dark .text-salon-espresso {
+    color: var(--elite-text-strong) !important;
+  }
+
+  .dark .hover\:text-salon-espresso:hover {
+    color: var(--elite-text-strong) !important;
+  }
+
+  .dark .text-gray-500 {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .text-gray-400 {
+    color: color-mix(in srgb, hsl(var(--muted-foreground)) 85%, white) !important;
+  }
+
+  .dark .text-gray-300 {
+    color: color-mix(in srgb, hsl(var(--muted-foreground)) 70%, white) !important;
+  }
+
+  .dark .border-gray-100,
+  .dark .border-gray-200 {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .hover\:border-gray-200:hover {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .bg-gray-50 {
+    background-color: color-mix(in srgb, hsl(var(--card)) 88%, white 12%) !important;
+  }
+
+  .dark .hover\:bg-gray-50:hover {
+    background-color: color-mix(in srgb, hsl(var(--card)) 88%, white 12%) !important;
+  }
+
+  /* Mobile table safety: prevent horizontal layout breakage */
+  @media (max-width: 768px) {
+    .elite-shell table,
+    main table {
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+    }
+  }
 }

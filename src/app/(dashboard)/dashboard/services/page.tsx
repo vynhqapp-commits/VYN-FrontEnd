@@ -490,7 +490,7 @@ export default function ServicesPage() {
       <Pagination meta={meta} onPageChange={(p) => load(p)} />
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
           <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-2xl border border-[var(--elite-border)]">
             <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -609,7 +609,7 @@ export default function ServicesPage() {
       ) : null}
 
       {availabilityOpen && availabilityService ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
           <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-4xl border border-[var(--elite-border)] overflow-hidden">
             <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
               <div className="min-w-0">

@@ -35,7 +35,7 @@ export default function AdminRolesPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">{error}</div>
+        <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 rounded-xl text-sm">{error}</div>
       )}
 
       <div className="grid gap-4 md:grid-cols-3">

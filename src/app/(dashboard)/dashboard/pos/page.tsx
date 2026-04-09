@@ -37,7 +37,8 @@ export default function PosPage() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
+        <Skeleton className="h-14 w-full rounded-xl" />
         <Skeleton className="h-8 w-40" />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)]">
           <Skeleton className="h-[520px] w-full rounded-xl" />

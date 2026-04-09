@@ -1,7 +1,7 @@
 /* eslint-disable react/no-array-index-key */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -159,12 +159,15 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isActive = (href: string) => {
-    if (!pathname) return false;
-    // Keep dashboard root exact so it doesn't stay active on every sub-route.
-    if (href === "/dashboard") return pathname === "/dashboard";
-    return pathname === href || pathname.startsWith(href + "/");
-  };
+  const activeHref = useMemo(() => {
+    if (!pathname) return "";
+    const matches = nav
+      .filter((i) => pathname === i.href || pathname.startsWith(i.href + "/"))
+      .sort((a, b) => b.href.length - a.href.length);
+    return matches[0]?.href ?? "";
+  }, [nav, pathname]);
+
+  const isActive = (href: string) => href === activeHref;
 
   useEffect(() => {
     setMobileOpen(false);
@@ -301,7 +304,7 @@ export function AppShell({
       </aside>
 
       {/* Main column */}
-      <div className={cn("min-h-screen flex flex-col", "lg:pl-64", collapsed ? "lg:pl-[72px]" : "")}>
+      <div className={cn("min-h-screen flex flex-col overflow-x-hidden", "lg:pl-64", collapsed ? "lg:pl-[72px]" : "")}>
         {/* Topbar */}
         <header className="sticky top-0 z-30 h-14 border-b bg-background">
           <div className="h-full px-4 sm:px-6 flex items-center gap-3">
@@ -357,7 +360,7 @@ export function AppShell({
         </header>
 
         <main className="flex-1 bg-[var(--elite-bg)]">
-          <div className="mx-auto w-full max-w-[96rem] px-4 sm:px-6 py-6">
+          <div className="mx-auto w-full max-w-[96rem] px-3 sm:px-6 py-4 sm:py-6">
             {children}
           </div>
         </main>

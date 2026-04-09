@@ -247,8 +247,8 @@ export default function ExpensesPage() {
       </div>
 
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAdd(false)}>
-          <div className="bg-card rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4" onClick={() => setShowAdd(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <h2 className="font-display text-xl font-semibold text-foreground">
                 {editing ? 'Edit expense' : 'Add expense'}

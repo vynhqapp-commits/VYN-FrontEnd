@@ -71,35 +71,35 @@ export default function AdminSubscriptionsPage() {
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Subscriptions &amp; plans</h1>
-          <p className="text-salon-stone text-sm mt-1">
+          <h1 className="font-display text-2xl font-semibold text-foreground">Subscriptions &amp; plans</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             Define the SaaS packages your salons can subscribe to.
           </p>
         </div>
-        <div className="text-xs text-salon-stone">
-          Logged in as <span className="font-medium text-salon-espresso">{user?.email}</span> (Admin)
+        <div className="text-xs text-muted-foreground">
+          Logged in as <span className="font-medium text-foreground">{user?.email}</span> (Admin)
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">{error}</div>
+        <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 rounded-xl text-sm">{error}</div>
       )}
       {savedMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-sm">{savedMsg}</div>
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-xl text-sm">{savedMsg}</div>
       )}
 
-      <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-5 space-y-4">
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-5 space-y-4">
         {loading ? (
-          <p className="text-sm text-salon-stone">Loading subscriptions...</p>
+          <p className="text-sm text-muted-foreground">Loading subscriptions...</p>
         ) : (
           <>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="block text-sm">
-                <span className="text-xs font-medium text-salon-stone">Tenant</span>
+                <span className="text-xs font-medium text-muted-foreground">Tenant</span>
                 <select
                   value={selectedTenantId}
                   onChange={(e) => setSelectedTenantId(e.target.value)}
-                  className="mt-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
+                  className="mt-1 w-full border border-input rounded-xl px-3 py-2 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {tenants.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -107,11 +107,11 @@ export default function AdminSubscriptionsPage() {
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="text-xs font-medium text-salon-stone">Plan</span>
+                <span className="text-xs font-medium text-muted-foreground">Plan</span>
                 <select
                   value={plan}
                   onChange={(e) => setPlan(e.target.value as any)}
-                  className="mt-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
+                  className="mt-1 w-full border border-input rounded-xl px-3 py-2 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="basic">Basic</option>
                   <option value="pro">Pro</option>
@@ -119,11 +119,11 @@ export default function AdminSubscriptionsPage() {
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="text-xs font-medium text-salon-stone">Status</span>
+                <span className="text-xs font-medium text-muted-foreground">Status</span>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
-                  className="mt-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm"
+                  className="mt-1 w-full border border-input rounded-xl px-3 py-2 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="active">Active</option>
                   <option value="trial">Trial</option>
@@ -134,15 +134,15 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="text-xs text-salon-stone">
-                Current: <span className="font-medium text-salon-espresso">{selectedSub?.plan ?? '—'}</span> ·{' '}
-                <span className="font-medium text-salon-espresso">{selectedSub?.status ?? '—'}</span>
+              <p className="text-xs text-muted-foreground">
+                Current: <span className="font-medium text-foreground">{selectedSub?.plan ?? '—'}</span> ·{' '}
+                <span className="font-medium text-foreground">{selectedSub?.status ?? '—'}</span>
               </p>
               <button
                 type="button"
                 onClick={save}
                 disabled={actionLoading || !selectedTenantId}
-                className="px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-medium disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Saving…' : 'Save'}
               </button>

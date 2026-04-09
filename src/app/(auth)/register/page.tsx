@@ -27,7 +27,7 @@ export default function RegisterPage() {
   const { registerCustomer, registerSalonOwner } = useAuth();
   const { locale } = useLocale();
   const t = getPublicT(locale);
-  const [mode, setMode] = useState<Mode>('salon');
+  const [mode, setMode] = useState<Mode>('customer');
   const [step, setStep] = useState<Step>('form');
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,11 +118,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-salon-cream">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--elite-bg)] text-[var(--elite-text)]">
       <div className="lg:w-1/2 relative min-h-[220px] lg:min-h-screen flex-shrink-0">
         {imgError ? (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#d5e8e4] via-salon-cream to-salon-sand flex items-center justify-center p-8">
-            <span className="font-display text-salon-espresso text-xl font-semibold text-center">{APP_FULL_NAME}</span>
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--elite-surface)] via-[var(--elite-card)] to-[var(--elite-card-2)] flex items-center justify-center p-8">
+            <span className="font-display text-[var(--elite-text)] text-xl font-semibold text-center">{APP_FULL_NAME}</span>
           </div>
         ) : (
           <div className="absolute inset-0">
@@ -137,16 +137,16 @@ export default function RegisterPage() {
             />
           </div>
         )}
-        <div className="absolute inset-0 bg-salon-espresso/20 lg:bg-salon-espresso/30 pointer-events-none" aria-hidden />
+        <div className="absolute inset-0 bg-black/35 lg:bg-black/45 pointer-events-none" aria-hidden />
       </div>
 
-      <div className="flex-1 flex flex-col bg-salon-cream">
-        <header className="border-b border-salon-sand/60 bg-card/80 backdrop-blur-sm flex-shrink-0">
+      <div className="flex-1 flex flex-col bg-[var(--elite-bg)]">
+        <header className="border-b border-[var(--elite-border)] bg-[var(--elite-card)]/70 backdrop-blur-sm flex-shrink-0">
           <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="font-display text-lg font-semibold text-salon-espresso hover:text-salon-bark transition-colors">
+            <Link href="/" className="font-display text-lg font-semibold text-[var(--elite-text)] hover:text-primary transition-colors">
               {APP_NAME}
             </Link>
-            <Link href="/login" className="text-sm text-salon-stone hover:text-salon-espresso">
+            <Link href="/login" className="text-sm text-[var(--elite-muted)] hover:text-[var(--elite-text)]">
               {t('alreadyHaveAccountLogin')}
             </Link>
           </div>
@@ -154,37 +154,37 @@ export default function RegisterPage() {
 
         <main className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md">
-            <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-2">
+            <h1 className="font-display text-3xl font-semibold text-[var(--elite-text)] mb-2">
               {t('registerHeading')}
             </h1>
-            <p className="text-salon-stone text-sm mb-6">
+            <p className="text-[var(--elite-muted)] text-sm mb-6">
               {t('registerSubheading')}
             </p>
 
-            <div className="mb-4 inline-flex rounded-full bg-salon-cream/70 border border-salon-sand/60 p-1 text-sm">
-              <button
-                type="button"
-                onClick={() => setMode('salon')}
-                className={`px-4 py-1.5 rounded-full ${mode === 'salon' ? 'bg-salon-espresso text-salon-cream' : 'text-salon-espresso'}`}
-              >
-                {t('iRunASalon')}
-              </button>
+            <div className="mb-4 inline-flex rounded-full bg-[var(--elite-surface)] border border-[var(--elite-border)] p-1 text-sm">
               <button
                 type="button"
                 onClick={() => setMode('customer')}
-                className={`px-4 py-1.5 rounded-full ${mode === 'customer' ? 'bg-salon-espresso text-salon-cream' : 'text-salon-espresso'}`}
+                className={`px-4 py-1.5 rounded-full transition-colors ${mode === 'customer' ? 'bg-[var(--elite-orange)] text-white' : 'text-[var(--elite-text)] hover:bg-[var(--elite-card)]'}`}
               >
                 {t('imAGuest')}
               </button>
+              <button
+                type="button"
+                onClick={() => setMode('salon')}
+                className={`px-4 py-1.5 rounded-full transition-colors ${mode === 'salon' ? 'bg-[var(--elite-orange)] text-white' : 'text-[var(--elite-text)] hover:bg-[var(--elite-card)]'}`}
+              >
+                {t('iRunASalon')}
+              </button>
             </div>
 
-            <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-6">
+            <div className="bg-[var(--elite-card)] rounded-2xl border border-[var(--elite-border)] shadow-sm p-6">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(step === 'form' ? handleSendOtp : handleSubmit, () =>
                     toastError(t('checkHighlightedFields')),
                   )}
-                  className="space-y-4"
+                  className="space-y-4 [&_label]:text-[var(--elite-muted)] [&_label]:font-medium [&_input]:bg-[var(--elite-surface)] [&_input]:border-[var(--elite-border-2)] [&_input]:text-[var(--elite-text)] [&_input]:placeholder:text-[var(--elite-muted)] [&_input]:rounded-xl [&_input:focus]:border-[var(--elite-orange)] [&_input:focus]:ring-1 [&_input:focus]:ring-[var(--elite-orange-dim)]"
                   autoComplete="off"
                 >
                   {step === 'form' ? (
@@ -214,7 +214,7 @@ export default function RegisterPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        className="px-0 text-xs text-salon-stone hover:text-salon-espresso"
+                        className="px-0 text-xs text-[var(--elite-muted)] hover:text-[var(--elite-text)]"
                         onClick={() => { setStep('form'); form.setValue('otpCode', ''); }}
                       >
                         {t('changeDetails')}
@@ -234,7 +234,14 @@ export default function RegisterPage() {
             </div>
 
             <p className="mt-6 text-center">
-              <Link href="/" className="text-salon-stone text-sm hover:text-salon-espresso transition-colors">
+              <span className="text-sm text-[var(--elite-muted)]">{t('alreadyHaveAccount')} </span>
+              <Link href="/login" className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
+                {t('logIn')}
+              </Link>
+            </p>
+
+            <p className="mt-4 text-center">
+              <Link href="/" className="text-[var(--elite-muted)] text-sm hover:text-[var(--elite-text)] transition-colors">
                 {t('backToHomeLink')}
               </Link>
             </p>

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt } from 'lucide-react';
 import FlowTopbar from '@/components/layout/FlowTopbar';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -72,10 +73,10 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
       <div
-        className="relative bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[var(--elite-border)]"
+        className="relative bg-[var(--elite-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[var(--elite-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -196,7 +197,7 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
-  const [loading, setLoading]   = useState(false);
+  const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [from, setFrom]         = useState('');
@@ -329,10 +330,12 @@ export default function InvoicesPage() {
                     </td>
                   </tr>
                 )}
-                {loading && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">Loading…</td>
-                  </tr>
+                {loading && invoices.length === 0 && (
+                  <>
+                    <tr><td colSpan={7} className="px-4 py-3"><Skeleton className="h-8 w-full rounded-lg" /></td></tr>
+                    <tr><td colSpan={7} className="px-4 py-3"><Skeleton className="h-8 w-full rounded-lg" /></td></tr>
+                    <tr><td colSpan={7} className="px-4 py-3"><Skeleton className="h-8 w-full rounded-lg" /></td></tr>
+                  </>
                 )}
               </tbody>
             </table>

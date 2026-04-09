@@ -388,8 +388,8 @@ export default function AppointmentsPage() {
     <div className="elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
       <FlowTopbar />
 
-      <div className="cal-layout grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="cal-sidebar elite-panel-soft h-fit p-3">
+      <div className="cal-layout grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="cal-sidebar elite-panel-soft h-fit p-3 xl:sticky xl:top-20">
           <div className="cal-date-big rounded-xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-3 text-center">
             <p className="text-[10px] uppercase tracking-[0.2em] elite-subtle">Today</p>
             <p className="mt-1 text-4xl font-bold text-[var(--elite-orange)]">{focus.getDate()}</p>
@@ -440,7 +440,7 @@ export default function AppointmentsPage() {
         <section className="cal-main">
           <h1 className="font-display text-2xl font-semibold mb-2 elite-title">Today&apos;s Schedule</h1>
           <p className="mb-3 text-xs elite-subtle">Click any appointment to see details. Click checkout to process payment.</p>
-          <div className="flex gap-2 mb-2 flex-wrap items-center">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl elite-btn-ghost transition-colors" aria-label={td('calNavPrevious')}>
             <ChevronLeft className="size-4" />
@@ -451,10 +451,10 @@ export default function AppointmentsPage() {
           <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl elite-btn-ghost transition-colors" aria-label={td('calNavNext')}>
             <ChevronRight className="size-4" />
           </button>
-          <span className="ml-2 text-sm font-medium elite-subtle">{navLabel()}</span>
+          <span className="ml-1 sm:ml-2 text-sm font-medium elite-subtle">{navLabel()}</span>
         </div>
 
-        <div className="flex gap-2 ml-auto">
+        <div className="flex gap-2">
           <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode !== 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Timeline</button>
           <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>List</button>
         </div>
@@ -462,7 +462,7 @@ export default function AppointmentsPage() {
         <button
           type="button"
           onClick={() => setShowWalkIn(true)}
-          className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold elite-btn-primary transition-colors"
+          className="sm:ml-auto px-4 py-2 rounded-xl text-sm font-semibold elite-btn-primary transition-colors"
         >
           {td('calWalkIn')}
         </button>
@@ -695,7 +695,7 @@ export default function AppointmentsPage() {
 
       {checkoutAppointment && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setCheckoutAppointmentId(null)} />
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" onClick={() => setCheckoutAppointmentId(null)} />
           <div className="relative ml-auto h-full w-full max-w-5xl overflow-y-auto border-l border-[var(--elite-border)] bg-[var(--elite-surface)] p-4 shadow-xl elite-shell">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold elite-title">{td('calCheckout')}</h2>
@@ -718,8 +718,8 @@ export default function AppointmentsPage() {
       )}
 
       {showWalkIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowWalkIn(false)}>
-          <div className="bg-card rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4" onClick={() => setShowWalkIn(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-xl font-semibold text-foreground">New walk-in appointment</h2>
               <button

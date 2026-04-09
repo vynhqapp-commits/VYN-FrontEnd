@@ -19,6 +19,7 @@ import { toastError, toastSuccess } from "@/lib/toast";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
 type LineType = "service" | "product";
@@ -405,7 +406,17 @@ export default function SaleCheckoutForm({
 
   if (loading) {
     return (
-      <div className="text-sm text-salon-stone">Loading checkout data...</div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)] elite-shell">
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-[280px] w-full rounded-xl" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-[260px] w-full rounded-xl" />
+          <Skeleton className="h-[300px] w-full rounded-xl" />
+        </div>
+      </div>
     );
   }
 
@@ -451,7 +462,7 @@ export default function SaleCheckoutForm({
             <h2 className="font-display text-sm font-semibold elite-title">
               Items
             </h2>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
               <select
                 onChange={(e) =>
                   e.target.value
@@ -459,7 +470,7 @@ export default function SaleCheckoutForm({
                       (e.target.value = ""))
                     : undefined
                 }
-                className="elite-input rounded-lg px-3 py-1.5 text-xs"
+                className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
                 defaultValue=""
               >
                 <option value="">+ Add service</option>
@@ -476,7 +487,7 @@ export default function SaleCheckoutForm({
                       (e.target.value = ""))
                     : undefined
                 }
-                className="elite-input rounded-lg px-3 py-1.5 text-xs"
+                className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
                 defaultValue=""
               >
                 <option value="">+ Add product</option>
@@ -497,7 +508,7 @@ export default function SaleCheckoutForm({
               {lines.map((line) => (
                 <div
                   key={line.id}
-                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] gap-2 items-center"
+                  className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] gap-2 items-center"
                 >
                   <div>
                     <p className="text-sm font-medium elite-title truncate">
@@ -554,13 +565,13 @@ export default function SaleCheckoutForm({
               onChange={(e) => setDiscountCode(e.target.value)}
               placeholder="Code (optional)"
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <select
                 value={discountType}
                 onChange={(e) =>
                   setDiscountType(e.target.value as "flat" | "percent")
                 }
-                className="w-full bg-card border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso"
+                className="w-full elite-input rounded-lg px-3 py-2 text-xs"
               >
                 <option value="flat">Flat</option>
                 <option value="percent">Percent %</option>
@@ -599,7 +610,7 @@ export default function SaleCheckoutForm({
             {tipRows.map((row) => (
               <div
                 key={row.id}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-2 items-center"
+                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-2 items-center"
               >
                 <select
                   value={row.staff_id}
@@ -680,7 +691,7 @@ export default function SaleCheckoutForm({
           {payments.map((p) => (
             <div
               key={p.id}
-              className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] gap-2 items-center"
+              className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] gap-2 items-center"
             >
               <select
                 value={p.method}

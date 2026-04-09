@@ -372,7 +372,7 @@ export default function ClientsPage() {
 
       {openClient && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4"
           role="dialog"
           aria-modal="true"
           onClick={() => setOpenClient(null)}

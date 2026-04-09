@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart } from "lucide-react";
+import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X } from "lucide-react";
 import {
   publicApi,
   customerApi,
@@ -296,22 +296,24 @@ export default function BookPage() {
   const activeFilterChips = [
     priceMin || priceMax ? {
       key: "price",
-      label: `Price: ${priceMin || "0"} - ${priceMax || "Any"}`,
+      label: t("filterPriceChip")
+        .replace("{min}", priceMin || "0")
+        .replace("{max}", priceMax || t("anyValue")),
       clear: () => { setPriceMin(""); setPriceMax(""); },
     } : null,
     ratingMin ? {
       key: "rating",
-      label: `Rating >= ${ratingMin}`,
+      label: t("filterRatingChip").replace("{value}", ratingMin),
       clear: () => setRatingMin(""),
     } : null,
     availabilityFilter ? {
       key: "availability",
-      label: `Availability: ${availabilityFilter}`,
+      label: t("filterAvailabilityChip").replace("{date}", availabilityFilter),
       clear: () => setAvailabilityFilter(""),
     } : null,
     genderPreference ? {
       key: "gender",
-      label: `Preference: ${genderPreference}`,
+      label: t("filterPreferenceChip").replace("{value}", genderPreference),
       clear: () => setGenderPreference(""),
     } : null,
   ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
@@ -499,6 +501,28 @@ export default function BookPage() {
         {/* ── Step 1: Choose salon ── */}
         {step === 1 && (
           <section className="animate-fade-in-up">
+            <div className="mb-6 rounded-2xl border border-salon-gold/20 bg-gradient-to-r from-salon-gold/10 via-salon-gold/5 to-transparent p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-salon-gold/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-salon-gold" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-salon-espresso">{t("step1Title")}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{t("step1Subtitle")}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-card border border-gray-200 text-salon-espresso">
+                  <ShieldCheck className="w-3.5 h-3.5 text-salon-gold" />
+                  {t("verifiedSalons")}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-card border border-gray-200 text-salon-espresso">
+                  <Zap className="w-3.5 h-3.5 text-salon-gold" />
+                  {t("quickBooking")}
+                </span>
+              </div>
+            </div>
+
             <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-1">
               {t("step1Title")}
             </h1>
@@ -517,6 +541,16 @@ export default function BookPage() {
                   onChange={(e) => handleSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-card border border-gray-200 rounded-xl text-salon-espresso placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold shadow-sm transition-shadow"
                 />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => handleSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-salon-espresso hover:bg-gray-50 transition-colors"
+                    aria-label={t("clearSearch")}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <button
                 type="button"
@@ -668,11 +702,29 @@ export default function BookPage() {
             {loading ? (
               <div className="flex justify-center py-16"><Spinner size="lg" /></div>
             ) : salons.length === 0 ? (
-              <p className="text-gray-400 text-center py-12">
-                {search ? t("noSalonsMatchSearch") : t("noSalonsAvailableYet")}
-              </p>
+              <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-gray-200 bg-card">
+                <p className="text-gray-400 mb-3">
+                  {search ? t("noSalonsMatchSearch") : t("noSalonsAvailableYet")}
+                </p>
+                {(search || activeFilterChips.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-card text-salon-espresso hover:border-salon-gold transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    {t("clearFilters")}
+                  </button>
+                )}
+              </div>
             ) : (
               <>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs text-gray-500">
+                    {t("salonsFound").replace("{n}", String(meta?.total ?? salons.length))}
+                  </p>
+                  <p className="text-xs text-gray-400">{t("tapSalonToContinue")}</p>
+                </div>
                 <ul className="space-y-3">
                   {salons.map((s, i) => (
                     <li
@@ -683,13 +735,18 @@ export default function BookPage() {
                       <button
                         type="button"
                         onClick={() => pickSalon((s as Tenant & { slug: string }).slug)}
-                        className="w-full text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group"
+                        className="w-full text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group hover:-translate-y-0.5"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="font-semibold text-salon-espresso group-hover:text-salon-gold transition-colors">
                               {s.name}
                             </p>
+                            {i < 2 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-salon-gold/10 text-salon-gold mt-1">
+                                {t("popular")}
+                              </span>
+                            )}
                             {s.address && (
                               <p className="flex items-center gap-1 text-gray-400 text-xs mt-1">
                                 <MapPin className="w-3 h-3" />
@@ -697,7 +754,10 @@ export default function BookPage() {
                               </p>
                             )}
                           </div>
-                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-salon-gold transition-colors shrink-0" />
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-salon-gold transition-colors" />
+                            <span className="text-[10px] text-gray-400 group-hover:text-salon-gold transition-colors">{t("view")}</span>
+                          </div>
                         </div>
                       </button>
                     </li>
@@ -789,6 +849,9 @@ export default function BookPage() {
                   )}
                 </div>
                 <p className="text-gray-500 text-sm mb-6">{t("chooseLocationServiceTitle")}</p>
+                <div className="mb-5 rounded-xl border border-gray-200 bg-card p-3">
+                  <p className="text-xs text-gray-500">{t("step2Helper")}</p>
+                </div>
                 {error && <div className="mb-4"><ErrorBox message={error} /></div>}
 
                 <div className="space-y-8">
@@ -867,6 +930,9 @@ export default function BookPage() {
             <p className="text-gray-500 text-sm mb-6">
               {selectedService?.name} · {selectedBranch?.name}
             </p>
+            <div className="mb-5 rounded-xl border border-gray-200 bg-card p-3">
+              <p className="text-xs text-gray-500">{t("step3Helper")}</p>
+            </div>
 
             <div className="mb-6">
               <SectionLabel>{t("date")}</SectionLabel>

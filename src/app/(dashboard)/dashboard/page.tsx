@@ -472,7 +472,7 @@ export default function DashboardPage() {
         description={`Today’s overview for this branch — bookings, clients, staff, and revenue.${branchFilter && branchFilter !== '' ? ` Location: ${locationScopeLabel || '…'}.` : ''}`}
         icon={<LayoutDashboard className="w-5 h-5" />}
         rightSlot={
-          <div className="flex flex-col gap-1 sm:items-end">
+          <div className="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
             <label htmlFor="dashboard-branch" className="text-xs elite-subtle">
               Branch
             </label>
@@ -481,7 +481,7 @@ export default function DashboardPage() {
               value={branchFilter != null && branchFilter !== '' ? String(branchFilter) : ''}
               onChange={(e) => setBranchFilter(e.target.value)}
               disabled={branchLoading || locations.length === 0}
-              className="elite-input h-9 w-full min-w-[12rem] px-3 text-sm sm:w-auto"
+              className="elite-input h-9 w-full min-w-0 px-3 text-sm sm:min-w-[12rem] sm:w-auto"
             >
               {locations.map((loc) => (
                 <option key={String(loc.id)} value={String(loc.id)}>
@@ -494,8 +494,8 @@ export default function DashboardPage() {
       />
 
       {/* KPI row */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="elite-panel">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="elite-panel min-h-[132px]">
           <CardHeader className="pb-2">
             <CardDescription>Today’s Revenue</CardDescription>
             <CardTitle className="text-2xl">
@@ -514,7 +514,7 @@ export default function DashboardPage() {
             <CreditCard className="text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
-        <Card className="elite-panel">
+        <Card className="elite-panel min-h-[132px]">
           <CardHeader className="pb-2">
             <CardDescription>Total Bookings</CardDescription>
             <CardTitle className="text-2xl">
@@ -530,7 +530,7 @@ export default function DashboardPage() {
             <CalendarDays className="text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
-        <Card className="elite-panel">
+        <Card className="elite-panel min-h-[132px]">
           <CardHeader className="pb-2">
             <CardDescription>Active Clients</CardDescription>
             <CardTitle className="text-2xl">
@@ -542,7 +542,7 @@ export default function DashboardPage() {
             <Users className="text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
-        <Card className="elite-panel">
+        <Card className="elite-panel min-h-[132px]">
           <CardHeader className="pb-2">
             <CardDescription>
               {dataPending ? 'Staff' : stats.staffCardMode === 'schedule' ? 'On duty now' : 'Active staff'}
@@ -562,7 +562,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* Appointments table */}
         <Card className="elite-panel">
           <CardHeader className="space-y-1">
@@ -571,14 +571,14 @@ export default function DashboardPage() {
                 <CardTitle>Appointments</CardTitle>
                 <CardDescription>Today’s schedule with quick filters.</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full items-center gap-2 sm:w-auto">
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search…"
                   className="w-full sm:w-56"
                 />
-                <Button variant="outline" className="border-[var(--elite-border-2)]">Filters</Button>
+                <Button variant="outline" className="shrink-0 border-[var(--elite-border-2)]">Filters</Button>
               </div>
             </div>
           </CardHeader>
@@ -598,34 +598,38 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                <div className="hidden md:block">
-                  <div className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] text-xs font-medium text-muted-foreground border-b pb-2">
-                    <div>Client</div>
-                    <div>Service</div>
-                    <div>Time</div>
-                    <div>Status</div>
+                <div className="hidden lg:block">
+                  <div className="min-w-[640px]">
+                    <div className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] text-xs font-medium text-muted-foreground border-b pb-2">
+                      <div>Client</div>
+                      <div>Service</div>
+                      <div>Time</div>
+                      <div>Status</div>
+                    </div>
                   </div>
-                  <div className="divide-y">
-                    {rows.map((r) => (
-                      <div
-                        key={r.id}
-                        className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] py-3 text-sm hover:bg-accent/40 transition-colors rounded-md px-2 -mx-2"
-                      >
-                        <div className="font-medium">{r.client}</div>
-                        <div className="text-muted-foreground">{r.service}</div>
-                        <div className="text-muted-foreground">{r.time}</div>
-                        <div>
-                          <Badge variant={statusVariant(r.status) as any}>
-                            {r.status}
-                          </Badge>
+                  <div className="max-h-[460px] overflow-auto">
+                    <div className="min-w-[640px] divide-y">
+                      {rows.map((r) => (
+                        <div
+                          key={r.id}
+                          className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] py-3 text-sm hover:bg-accent/40 transition-colors rounded-md px-2 -mx-2"
+                        >
+                          <div className="font-medium truncate pr-2">{r.client}</div>
+                          <div className="text-muted-foreground truncate pr-2">{r.service}</div>
+                          <div className="text-muted-foreground">{r.time}</div>
+                          <div>
+                            <Badge variant={statusVariant(r.status) as any}>
+                              {r.status}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 {/* Mobile cards */}
-                <div className="md:hidden space-y-2">
+                <div className="lg:hidden space-y-2">
                   {rows.map((r) => (
                     <div key={r.id} className="rounded-lg border p-3">
                       <div className="flex items-start justify-between gap-3">
@@ -684,7 +688,7 @@ export default function DashboardPage() {
           <CardTitle>Revenue</CardTitle>
           <CardDescription>Last 7 days.</CardDescription>
         </CardHeader>
-        <CardContent className="h-64">
+        <CardContent className="h-56 sm:h-64">
           {dataPending ? (
             <Skeleton className="h-full w-full rounded-md" />
           ) : (

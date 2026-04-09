@@ -66,12 +66,13 @@ export default function AppointmentDetailPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" onClick={onClose} />
       <div
-        className="relative ml-auto w-full max-w-md h-full shadow-xl border-l border-[var(--elite-border)] elite-shell"
+        className="relative mt-auto w-full h-[86vh] max-h-[86vh] rounded-t-2xl border-t border-[var(--elite-border)] bg-[var(--elite-surface)] shadow-xl overflow-y-auto
+          md:mt-0 md:ml-auto md:h-full md:max-h-full md:max-w-md md:rounded-none md:border-t-0 md:border-l elite-shell"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--elite-border)]">
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]">
           <div>
             <h2 className="font-display text-base font-semibold elite-title">{labels.title}</h2>
             <p className="text-xs elite-subtle mt-1">

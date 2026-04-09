@@ -65,13 +65,13 @@ function IssueModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
       <form
         onSubmit={submit}
-        className="relative bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 border border-[var(--elite-border)]"
+        className="relative bg-[var(--elite-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 border border-[var(--elite-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

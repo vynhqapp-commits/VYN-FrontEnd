@@ -97,6 +97,7 @@ export default function DebtAgingPage() {
         <div className="px-4 py-3 border-b border-[var(--elite-border)]">
           <h2 className="text-sm font-semibold elite-title">Pending write-off approvals</h2>
         </div>
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/40">
             <tr>
@@ -139,9 +140,11 @@ export default function DebtAgingPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="elite-panel overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/40">
             <tr>
@@ -164,6 +167,7 @@ export default function DebtAgingPage() {
             ))}
           </tbody>
         </table>
+        </div>
         {aging.length === 0 && <p className="p-6 text-muted-foreground text-center">No outstanding debt.</p>}
       </div>
     </div>

@@ -37,11 +37,38 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const { locale } = useLocale();
   const td = getDashboardT(locale);
+  const FLOW_TOPBAR_ROUTES = useMemo(
+    () => new Set([
+      "/dashboard/appointments",
+      "/dashboard/pos",
+      "/dashboard/cash-drawer",
+      "/dashboard/invoices",
+      "/dashboard/debt-aging",
+    ]),
+    [],
+  );
 
   const roleCandidate = (user?.role as AppRole | undefined) ?? undefined;
   const nav: ShellNavItem[] = useMemo(() => {
     if (!roleCandidate) return [];
-    return menuByRole[roleCandidate].map((i) => ({
+    const isFlowTopbarContext =
+      pathname === "/dashboard/appointments" ||
+      pathname.startsWith("/dashboard/appointments/") ||
+      pathname === "/dashboard/pos" ||
+      pathname.startsWith("/dashboard/pos/") ||
+      pathname === "/dashboard/cash-drawer" ||
+      pathname.startsWith("/dashboard/cash-drawer/") ||
+      pathname === "/dashboard/invoices" ||
+      pathname.startsWith("/dashboard/invoices/") ||
+      pathname === "/dashboard/debt-aging" ||
+      pathname.startsWith("/dashboard/debt-aging/");
+
+    const baseMenu = menuByRole[roleCandidate];
+    const sidebarMenu = isFlowTopbarContext
+      ? baseMenu.filter((i) => !FLOW_TOPBAR_ROUTES.has(i.href))
+      : baseMenu;
+
+    return sidebarMenu.map((i) => ({
       href: i.href,
       label: dashboardNavLabel(i.href, roleCandidate, td, i.label),
       icon:
@@ -87,7 +114,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           <Building2 className="size-5" />
         ) : null,
     }));
-  }, [roleCandidate, locale]);
+  }, [roleCandidate, locale, pathname, FLOW_TOPBAR_ROUTES]);
   const cmdItems = useMemo(
     () =>
       nav.map((i) => ({

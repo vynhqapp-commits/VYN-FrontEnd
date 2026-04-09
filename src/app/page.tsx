@@ -11,6 +11,7 @@ import { APP_NAME, APP_TAGLINE, BANNER_IMAGE } from '@/lib/app-name';
 import { useLocale } from '@/components/LocaleProvider';
 import { LocaleProvider } from '@/components/LocaleProvider';
 import { getPublicT } from '@/lib/i18n-public';
+import { Sparkles, CalendarDays, ShieldCheck } from 'lucide-react';
 
 function HomePageClient() {
   const router = useRouter();
@@ -51,16 +52,16 @@ function HomePageClient() {
         <div className="absolute inset-0">
           <Image src={BANNER_IMAGE} alt="" fill className="object-cover object-center" priority sizes="100vw" />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-salon-sand/30 to-salon-cream pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-salon-sand/30 to-salon-cream dark:from-black/40 dark:to-black/60 pointer-events-none" />
         <div className="max-w-6xl mx-auto px-4 pt-16 pb-20 sm:pt-24 sm:pb-28 relative">
-          <div className="max-w-2xl animate-fade-in">
+          <div className="max-w-2xl animate-fade-in rounded-3xl border border-white/50 dark:border-white/15 bg-white/72 dark:bg-black/35 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10">
             <p className="text-salon-gold font-body text-sm font-semibold uppercase tracking-widest mb-4">
               {t('heroTagline')}
             </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-salon-espresso leading-tight mb-6">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold text-salon-espresso dark:text-white leading-tight mb-6">
               {t('heroHeading')}
             </h1>
-            <p className="text-salon-stone text-lg sm:text-xl mb-10 max-w-xl">
+            <p className="text-salon-stone dark:text-gray-200 text-lg sm:text-xl mb-10 max-w-xl">
               {t('heroSubheading')}
             </p>
             <div className="flex flex-wrap gap-4">
@@ -72,7 +73,7 @@ function HomePageClient() {
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center px-8 py-4 bg-salon-espresso text-salon-cream rounded-full font-semibold text-base hover:bg-salon-bark transition-colors"
+                className="inline-flex items-center justify-center px-8 py-4 bg-salon-espresso text-salon-cream rounded-full font-semibold text-base hover:bg-salon-bark dark:bg-card dark:text-card-foreground dark:border dark:border-border dark:hover:bg-muted transition-colors"
               >
                 {t('logIn')}
               </Link>
@@ -87,21 +88,21 @@ function HomePageClient() {
           <div className="grid sm:grid-cols-3 gap-10 sm:gap-8">
             <div className="text-center sm:text-start animate-slide-up" style={{ animationDelay: '0.1s' }}>
               <div className="w-12 h-12 rounded-2xl bg-salon-gold/10 flex items-center justify-center mx-auto sm:mx-0 mb-4">
-                <span className="text-2xl">✨</span>
+                <Sparkles className="w-5 h-5 text-salon-gold" aria-hidden="true" />
               </div>
               <h3 className="font-display text-xl font-semibold text-salon-espresso dark:text-foreground mb-2">{t('curatedSalonsTitle')}</h3>
               <p className="text-salon-stone dark:text-muted-foreground text-sm leading-relaxed">{t('curatedSalonsDesc')}</p>
             </div>
             <div className="text-center sm:text-start animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <div className="w-12 h-12 rounded-2xl bg-salon-rose/20 flex items-center justify-center mx-auto sm:mx-0 mb-4">
-                <span className="text-2xl">📅</span>
+                <CalendarDays className="w-5 h-5 text-salon-espresso dark:text-foreground" aria-hidden="true" />
               </div>
               <h3 className="font-display text-xl font-semibold text-salon-espresso dark:text-foreground mb-2">{t('realTimeTitle')}</h3>
               <p className="text-salon-stone dark:text-muted-foreground text-sm leading-relaxed">{t('realTimeDesc')}</p>
             </div>
             <div className="text-center sm:text-start animate-slide-up" style={{ animationDelay: '0.3s' }}>
               <div className="w-12 h-12 rounded-2xl bg-salon-sage/20 flex items-center justify-center mx-auto sm:mx-0 mb-4">
-                <span className="text-2xl">🔒</span>
+                <ShieldCheck className="w-5 h-5 text-salon-espresso dark:text-foreground" aria-hidden="true" />
               </div>
               <h3 className="font-display text-xl font-semibold text-salon-espresso dark:text-foreground mb-2">{t('onePlaceTitle')}</h3>
               <p className="text-salon-stone dark:text-muted-foreground text-sm leading-relaxed">{t('onePlaceDesc')}</p>
@@ -139,7 +140,7 @@ function HomePageClient() {
           <div className="text-center mt-12">
             <Link
               href="/book"
-              className="inline-flex items-center justify-center px-8 py-4 bg-salon-espresso text-salon-cream rounded-full font-semibold hover:bg-salon-bark transition-colors"
+              className="inline-flex items-center justify-center px-8 py-4 bg-salon-espresso text-salon-cream rounded-full font-semibold hover:bg-salon-bark dark:bg-card dark:text-card-foreground dark:border dark:border-border dark:hover:bg-muted transition-colors"
             >
               {t('startBooking')}
             </Link>
