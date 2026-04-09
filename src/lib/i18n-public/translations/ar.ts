@@ -167,6 +167,8 @@ export const publicTranslationsAr = {
   loginHeading: "تسجيل الدخول",
   loginSubheading: "سجّل دخولك بحساب الصالون أو المنصة. سيتم توجيهك إلى المكان المناسب بناءً على دورك.",
   dontHaveAccount: "ليس لديك حساب؟ سجّل الآن",
+  dontHaveAccountLead: "ليس لديك حساب؟",
+  signUp: "سجّل الآن",
   password: "كلمة المرور",
   sendOtp: "إرسال رمز OTP",
   signingIn: "جارٍ تسجيل الدخول...",

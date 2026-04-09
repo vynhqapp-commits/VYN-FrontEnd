@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import FlowTopbar from '@/components/layout/FlowTopbar';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
 import SaleCheckoutForm from '@/components/pos/SaleCheckoutForm';
@@ -47,6 +48,7 @@ export default function AppointmentsPage() {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showWalkIn, setShowWalkIn] = useState(false);
   const [checkoutAppointmentId, setCheckoutAppointmentId] = useState<string | null>(null);
+  const [staffFilter, setStaffFilter] = useState<string>('all');
 
   // Walk-in modal state
   const [walkInLoading, setWalkInLoading] = useState(false);
@@ -116,7 +118,7 @@ export default function AppointmentsPage() {
 
   const getStaffColorMeta = (staffId: string | undefined | null) => {
     const id = staffId ? String(staffId) : '';
-    if (!id) return { bg: 'bg-salon-sand/30', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+    if (!id) return { bg: 'bg-muted/40', border: 'border-border', text: 'text-muted-foreground' };
     const idx = staffHash(id) % staffPalette.length;
     return staffPalette[idx];
   };
@@ -361,52 +363,125 @@ export default function AppointmentsPage() {
     return focus.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   };
 
+  const doneCount = appointments.filter((a) => a.status === 'completed').length;
+  const pendingCount = appointments.filter((a) => a.status === 'scheduled' || a.status === 'checked_in').length;
+  const expectedRevenue = appointments.reduce((sum, a) => {
+    const svcPrice =
+      Number(a.Service?.price ?? 0) ||
+      Number(a.services?.[0]?.service?.price ?? 0) ||
+      0;
+    return sum + svcPrice;
+  }, 0);
+
+  const staffRows = Array.from(
+    appointments.reduce((map, a) => {
+      const key = String(a.staff_id ?? a.Staff?.id ?? a.staff?.id ?? 'unassigned');
+      if (!map.has(key)) map.set(key, getStaffLabel(a));
+      return map;
+    }, new Map<string, string>())
+  );
+  const filteredAppointments = appointments.filter((a) =>
+    staffFilter === 'all' ? true : String(a.staff_id ?? a.Staff?.id ?? a.staff?.id ?? '') === staffFilter
+  );
+
   return (
-    <div>
-      <h1 className="font-display text-2xl font-semibold text-salon-espresso mb-4">{td('calPageTitle')}</h1>
-      <div className="flex gap-2 mb-2 flex-wrap items-center">
+    <div className="elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
+      <FlowTopbar />
+
+      <div className="cal-layout grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="cal-sidebar elite-panel-soft h-fit p-3">
+          <div className="cal-date-big rounded-xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-3 text-center">
+            <p className="text-[10px] uppercase tracking-[0.2em] elite-subtle">Today</p>
+            <p className="mt-1 text-4xl font-bold text-[var(--elite-orange)]">{focus.getDate()}</p>
+            <p className="text-xs elite-subtle">{focus.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
+          </div>
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
+              <p className="text-[10px] uppercase elite-subtle">Total Appointments</p>
+              <p className="text-sm font-semibold elite-title">{appointments.length}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
+              <p className="text-[10px] uppercase elite-subtle">Completed</p>
+              <p className="text-sm font-semibold text-[var(--elite-green)]">{doneCount}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
+              <p className="text-[10px] uppercase elite-subtle">Pending Checkout</p>
+              <p className="text-sm font-semibold text-[var(--elite-orange)]">{pendingCount}</p>
+            </div>
+            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
+              <p className="text-[10px] uppercase elite-subtle">Expected Revenue</p>
+              <p className="text-sm font-semibold text-[var(--elite-teal)]">€ {expectedRevenue.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="mb-2 text-[10px] uppercase tracking-[0.2em] elite-subtle">Staff</p>
+            <div className="staff-filter space-y-1">
+              <button type="button" onClick={() => setStaffFilter('all')} className={`staff-chip w-full rounded-lg border px-2 py-2 text-left text-xs ${staffFilter === 'all' ? 'border-[var(--elite-border-2)] bg-[var(--elite-card)] elite-title' : 'border-[var(--elite-border)] bg-transparent elite-subtle'}`}>
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--elite-border-2)] text-[10px]">ALL</span>
+                All Staff
+              </button>
+              {staffRows.map(([id, name]) => (
+                <button key={id} type="button" onClick={() => setStaffFilter(id)} className={`staff-chip w-full rounded-lg border px-2 py-2 text-left text-xs ${staffFilter === id ? 'border-[var(--elite-border-2)] bg-[var(--elite-card)] elite-title' : 'border-[var(--elite-border)] bg-transparent elite-subtle'}`}>
+                  <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--elite-border-2)] text-[10px]">
+                    {name
+                      .split(' ')
+                      .map((x) => x[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className="cal-main">
+          <h1 className="font-display text-2xl font-semibold mb-2 elite-title">Today&apos;s Schedule</h1>
+          <p className="mb-3 text-xs elite-subtle">Click any appointment to see details. Click checkout to process payment.</p>
+          <div className="flex gap-2 mb-2 flex-wrap items-center">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label={td('calNavPrevious')}>
+          <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl elite-btn-ghost transition-colors" aria-label={td('calNavPrevious')}>
             <ChevronLeft className="size-4" />
           </button>
-          <button type="button" onClick={() => moveFocus('today')} className="px-3 py-2 rounded-xl text-sm font-semibold border border-salon-sand/60 bg-white hover:bg-salon-cream/50 transition-colors text-salon-stone" aria-label={td('calNavToday')}>
+          <button type="button" onClick={() => moveFocus('today')} className="px-3 py-2 rounded-xl text-sm font-semibold elite-btn-ghost transition-colors" aria-label={td('calNavToday')}>
             {td('calNavToday')}
           </button>
-          <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl border border-salon-sand/60 bg-salon-cream/50 hover:bg-salon-sand/30 transition-colors text-salon-espresso" aria-label={td('calNavNext')}>
+          <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl elite-btn-ghost transition-colors" aria-label={td('calNavNext')}>
             <ChevronRight className="size-4" />
           </button>
-          <span className="ml-2 text-sm font-medium text-salon-stone">{navLabel()}</span>
+          <span className="ml-2 text-sm font-medium elite-subtle">{navLabel()}</span>
         </div>
 
         <div className="flex gap-2 ml-auto">
-          <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewList')}</button>
-          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewDay')}</button>
-          <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewWeek')}</button>
-          <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'month' ? 'bg-salon-gold text-white' : 'bg-salon-sand/40 text-salon-stone hover:bg-salon-sand/60'}`}>{td('calViewMonth')}</button>
+          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode !== 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Timeline</button>
+          <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>List</button>
         </div>
 
         <button
           type="button"
           onClick={() => setShowWalkIn(true)}
-          className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold bg-salon-espresso text-white hover:bg-salon-bark transition-colors"
+          className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold elite-btn-primary transition-colors"
         >
           {td('calWalkIn')}
         </button>
       </div>
       {viewMode !== 'list' && (viewMode === 'week' || viewMode === 'month') && (
-        <p className="text-xs text-salon-stone mb-4">{td('calStaffColumnsHint')}</p>
+        <p className="text-xs text-muted-foreground mb-4">{td('calStaffColumnsHint')}</p>
       )}
 
       {viewMode !== 'list' &&
         ((viewMode === 'day' || viewMode === 'week') && appointments.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-8 text-center text-salon-stone">
+          <div className="elite-panel p-8 text-center elite-subtle">
             {td('calEmptyListRange')}
           </div>
         ) : (
-          <CalendarGrid
+          <div id="calTimeline" className="timeline">
+            <CalendarGrid
             view={viewMode}
             focusDate={focus}
-            appointments={appointments}
+            appointments={filteredAppointments}
             changingId={changingId ?? reschedulingId}
             onStatusChange={updateStatus}
             onAppointmentClick={(id) => setSelectedAppointmentId(id)}
@@ -437,20 +512,21 @@ export default function AppointmentsPage() {
               dowLabels: calendarDowLabels,
             }}
           />
+          </div>
         ))}
 
       {viewMode === 'list' && (
         <>
           {/* Mobile: cards */}
           <div className="grid gap-3 sm:hidden">
-            {appointments.map((a) => (
-              <div key={a.id} className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4">
+            {filteredAppointments.map((a) => (
+              <div key={a.id} className="bg-card rounded-xl border border-border shadow-sm p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-salon-espresso">
+                    <p className="text-sm font-semibold text-foreground">
                       {a.Client?.full_name ?? a.client_id}
                     </p>
-                    <p className="text-xs text-salon-stone mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {a.Service?.name ?? a.service_id}
                     </p>
                     <div className="mt-1 flex flex-wrap gap-2">
@@ -466,14 +542,14 @@ export default function AppointmentsPage() {
                         );
                       })()}
                     </div>
-                    <p className="text-xs text-salon-stone mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {(() => {
                         const start = getAppointmentStartDate(a);
                         return start ? start.toLocaleString() : '—';
                       })()}
                     </p>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full border border-salon-sand/60 text-salon-stone">
+                  <span className="text-xs px-2 py-1 rounded-full border border-border text-muted-foreground">
                     {a.status}
                   </span>
                 </div>
@@ -483,7 +559,7 @@ export default function AppointmentsPage() {
                       <button
                         type="button"
                         onClick={() => openCheckout(a.id)}
-                        className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-primary text-primary-foreground border-primary hover:opacity-90"
                       >
                         {td('calCheckout')}
                       </button>
@@ -498,8 +574,8 @@ export default function AppointmentsPage() {
                         onClick={() => updateStatus(a.id, st)}
                         className={`px-2 py-1 rounded-full text-[11px] border ${
                           a.status === st
-                            ? 'bg-salon-gold text-white border-salon-gold'
-                            : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-card text-muted-foreground border-border hover:border-primary'
                         } disabled:opacity-40 disabled:cursor-not-allowed`}
                       >
                         {st.replace('_', ' ')}
@@ -509,34 +585,34 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             ))}
-            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">{td('calEmptyListRange')}</p>}
+            {filteredAppointments.length === 0 && <p className="p-6 text-muted-foreground text-center">{td('calEmptyListRange')}</p>}
           </div>
 
           {/* Desktop/tablet: table */}
-          <div className="hidden sm:block bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
-            <table className="min-w-full divide-y divide-salon-sand/60">
-              <thead className="bg-salon-sand/30">
+          <div className="hidden sm:block elite-panel overflow-hidden">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Start</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Client</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Service</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Staff</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">{td('calCheckout')}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Start</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Client</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Service</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Staff</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{td('calCheckout')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-salon-sand/60">
-                {appointments.map((a) => (
+              <tbody className="divide-y divide-border">
+                {filteredAppointments.map((a) => (
                   <tr key={a.id}>
-                    <td className="px-4 py-3 text-sm text-salon-stone">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {(() => {
                         const start = getAppointmentStartDate(a);
                         return start ? start.toLocaleString() : '—';
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-salon-espresso">{a.Client?.full_name ?? a.client_id}</td>
-                    <td className="px-4 py-3 text-sm text-salon-stone">{a.Service?.name ?? a.service_id}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{a.Client?.full_name ?? a.client_id}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{a.Service?.name ?? a.service_id}</td>
                     <td className="px-4 py-3 text-sm">
                       {(() => {
                         const staffLabel = getStaffLabel(a);
@@ -550,19 +626,19 @@ export default function AppointmentsPage() {
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-salon-stone">{a.status}</td>
-                    <td className="px-4 py-3 text-sm text-salon-stone">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{a.status}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       {(a.status === 'scheduled' || a.status === 'checked_in') && (
                         <button
                           type="button"
                           onClick={() => openCheckout(a.id)}
-                              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+                              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-primary text-primary-foreground border-primary hover:opacity-90"
                         >
                           {td('calCheckout')}
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-salon-stone">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       <div className="flex flex-wrap gap-1">
                         {statuses.map((st) => (
                           <button
@@ -572,8 +648,8 @@ export default function AppointmentsPage() {
                             onClick={() => updateStatus(a.id, st)}
                             className={`px-2 py-1 rounded-full text-[11px] border ${
                               a.status === st
-                                ? 'bg-salon-gold text-white border-salon-gold'
-                                : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-card text-muted-foreground border-border hover:border-primary'
                             } disabled:opacity-40 disabled:cursor-not-allowed`}
                           >
                             {st.replace('_', ' ')}
@@ -585,10 +661,12 @@ export default function AppointmentsPage() {
                 ))}
               </tbody>
             </table>
-            {appointments.length === 0 && <p className="p-6 text-salon-stone text-center">{td('calEmptyListRange')}</p>}
+            {filteredAppointments.length === 0 && <p className="p-6 text-muted-foreground text-center">{td('calEmptyListRange')}</p>}
           </div>
         </>
       )}
+        </section>
+      </div>
 
       {selectedAppointment && selectedAppointmentId && viewMode !== 'list' && (
         <AppointmentDetailPanel
@@ -618,10 +696,10 @@ export default function AppointmentsPage() {
       {checkoutAppointment && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setCheckoutAppointmentId(null)} />
-          <div className="relative ml-auto h-full w-full max-w-5xl overflow-y-auto border-l border-salon-sand/40 bg-white p-4 shadow-xl">
+          <div className="relative ml-auto h-full w-full max-w-5xl overflow-y-auto border-l border-[var(--elite-border)] bg-[var(--elite-surface)] p-4 shadow-xl elite-shell">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold text-salon-espresso">{td('calCheckout')}</h2>
-              <button type="button" onClick={() => setCheckoutAppointmentId(null)} className="rounded-lg p-1.5 text-salon-stone hover:bg-salon-sand/40">
+              <h2 className="font-display text-lg font-semibold elite-title">{td('calCheckout')}</h2>
+              <button type="button" onClick={() => setCheckoutAppointmentId(null)} className="rounded-lg p-1.5 elite-subtle hover:bg-[var(--elite-card)]">
                 <X className="size-4" />
               </button>
             </div>
@@ -641,13 +719,13 @@ export default function AppointmentsPage() {
 
       {showWalkIn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowWalkIn(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-xl font-semibold text-salon-espresso">New walk-in appointment</h2>
+              <h2 className="font-display text-xl font-semibold text-foreground">New walk-in appointment</h2>
               <button
                 type="button"
                 onClick={() => setShowWalkIn(false)}
-                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -659,9 +737,9 @@ export default function AppointmentsPage() {
             )}
             <div className="space-y-3 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Location</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Location</label>
                 <select
-                  className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   value={walkInForm.location_id}
                   onChange={(e) => setWalkInForm((f) => ({ ...f, location_id: e.target.value }))}
                 >
@@ -674,9 +752,9 @@ export default function AppointmentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Client</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Client</label>
                 <select
-                  className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   value={walkInForm.client_id}
                   onChange={(e) => setWalkInForm((f) => ({ ...f, client_id: e.target.value }))}
                 >
@@ -689,9 +767,9 @@ export default function AppointmentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Service</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Service</label>
                 <select
-                  className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   value={walkInForm.service_id}
                   onChange={(e) => setWalkInForm((f) => ({ ...f, service_id: e.target.value }))}
                 >
@@ -705,28 +783,28 @@ export default function AppointmentsPage() {
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-salon-stone mb-1">Date</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Date</label>
                   <input
                     type="date"
-                    className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                    className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                     value={walkInForm.date}
                     onChange={(e) => setWalkInForm((f) => ({ ...f, date: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-salon-stone mb-1">Time</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Time</label>
                   <input
                     type="time"
-                    className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                    className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                     value={walkInForm.time}
                     onChange={(e) => setWalkInForm((f) => ({ ...f, time: e.target.value }))}
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Notes</label>
                 <textarea
-                  className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   rows={2}
                   value={walkInForm.notes}
                   onChange={(e) => setWalkInForm((f) => ({ ...f, notes: e.target.value }))}
@@ -737,7 +815,7 @@ export default function AppointmentsPage() {
               <button
                 type="button"
                 onClick={() => setShowWalkIn(false)}
-                className="px-4 py-2 rounded-xl text-sm border border-salon-sand/60 text-salon-espresso hover:bg-salon-sand/30 transition-colors"
+                className="px-4 py-2 rounded-xl text-sm border border-border text-foreground hover:bg-accent transition-colors"
               >
                 Cancel
               </button>
@@ -751,7 +829,7 @@ export default function AppointmentsPage() {
                   !walkInForm.service_id ||
                   !walkInForm.time
                 }
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-salon-gold text-white hover:bg-salon-goldLight disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {walkInLoading ? 'Saving…' : 'Save walk-in'}
               </button>

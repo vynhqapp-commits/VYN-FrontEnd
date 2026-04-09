@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Download, Lock, TrendingUp, CreditCard, Package, BarChart2, Calendar } from 'lucide-react';
 import { locationsApi, reportsApi, InventoryMovementRow, MonthlyClosing } from '@/lib/api';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 /* ─────────────── helpers ─────────────── */
 function downloadCsv(url: string, filename: string, onError: (msg: string) => void) {
@@ -209,35 +210,35 @@ export default function ReportsPage() {
   };
 
   /* ── shared input class ── */
-  const inputCls = 'w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40';
+  const inputCls =
+    'w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 elite-shell">
       {/* ── header ── */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Reports</h1>
-          <p className="text-salon-stone text-sm mt-1">
-            Financial health, VAT, payment channels, inventory movement, and period management.
-          </p>
-        </div>
+        <DashboardPageHeader
+          title="Reports"
+          description="Financial health, VAT, payment channels, inventory movement, and period management."
+          icon={<BarChart2 className="w-5 h-5" />}
+        />
         <div className="flex flex-wrap gap-2 text-sm">
           <div>
-            <label className="block text-xs text-salon-stone mb-1">Period (YYYY-MM)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Period (YYYY-MM)</label>
             <input
               type="text"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="border border-salon-sand/60 rounded-xl px-3 py-2 w-32 bg-salon-cream/50 text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/40"
+              className="border border-border rounded-xl px-3 py-2 w-32 bg-muted/40 text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
             />
           </div>
           <div>
-            <label className="block text-xs text-salon-stone mb-1">Location</label>
+            <label className="block text-xs text-muted-foreground mb-1">Location</label>
             <select
               value={locationId}
               onChange={(e) => setLocationId(e.target.value)}
               onFocus={ensureLocations}
-              className="border border-salon-sand/60 rounded-xl px-3 py-2 min-w-[140px] bg-salon-cream/50 text-sm"
+              className="min-w-[140px] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
             >
               <option value="">All</option>
               {locations.map((loc) => (
@@ -251,29 +252,29 @@ export default function ReportsPage() {
       {/* ── row 1: P&L + VAT ── */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* P&L */}
-        <section className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 lg:col-span-2 space-y-3">
+        <section className="elite-panel p-4 lg:col-span-2 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-salon-gold/10">
-                <TrendingUp className="w-4 h-4 text-salon-gold" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h2 className="font-display text-base font-semibold text-salon-espresso">Profit &amp; Loss</h2>
-                <p className="text-xs text-salon-stone">Revenue, expenses, and commissions for the selected period.</p>
+                <h2 className="font-display text-base font-semibold text-foreground">Profit &amp; Loss</h2>
+                <p className="text-xs text-muted-foreground">Revenue, expenses, and commissions for the selected period.</p>
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={loadPnl}
                 disabled={pnlLoading}
-                className="px-3 py-1.5 bg-salon-gold text-white rounded-xl text-xs font-medium hover:bg-salon-goldLight disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 bg-primary text-primary-foreground rounded-xl text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
               >
                 {pnlLoading ? 'Loading…' : 'Load'}
               </button>
               <button
                 type="button"
                 onClick={exportPnlCsv}
-                className="px-3 py-1.5 border border-salon-sand/60 rounded-xl text-xs text-salon-espresso hover:bg-salon-sand/30 transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 border border-border rounded-xl text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-1"
               >
                 <Download className="w-3 h-3" /> CSV
               </button>
@@ -288,20 +289,20 @@ export default function ReportsPage() {
               <MetricCard label="Net Profit" value={pnl.profit.toFixed(2)} highlight />
             </div>
           ) : (
-            !pnlLoading && <p className="text-xs text-salon-stone">Load P&amp;L to see totals for this month.</p>
+            !pnlLoading && <p className="text-xs text-muted-foreground">Load P&amp;L to see totals for this month.</p>
           )}
         </section>
 
         {/* VAT */}
-        <section className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
+        <section className="elite-panel p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-blue-50">
                 <BarChart2 className="w-4 h-4 text-blue-500" />
               </div>
               <div>
-                <h2 className="font-display text-base font-semibold text-salon-espresso">VAT</h2>
-                <p className="text-xs text-salon-stone">Taxable revenue for VAT submissions.</p>
+                <h2 className="font-display text-base font-semibold text-foreground">VAT</h2>
+                <p className="text-xs text-muted-foreground">Taxable revenue for VAT submissions.</p>
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -309,14 +310,14 @@ export default function ReportsPage() {
                 type="button"
                 onClick={loadVat}
                 disabled={vatLoading}
-                className="px-3 py-1.5 rounded-xl bg-salon-espresso text-salon-cream text-xs font-medium disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
               >
                 {vatLoading ? 'Loading…' : 'Load'}
               </button>
               <button
                 type="button"
                 onClick={exportVatCsv}
-                className="px-3 py-1.5 border border-salon-sand/60 rounded-xl text-xs text-salon-espresso hover:bg-salon-sand/30 transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 border border-border rounded-xl text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-1"
               >
                 <Download className="w-3 h-3" /> CSV
               </button>
@@ -325,19 +326,19 @@ export default function ReportsPage() {
           {vatError && <p className="text-xs text-red-600">{vatError}</p>}
           {vatTotal != null ? (
             <div className="space-y-2">
-              <div className="rounded-xl bg-salon-cream/70 border border-salon-sand/40 px-3 py-3">
-                <p className="text-xs text-salon-stone">Total taxable revenue</p>
-                <p className="font-display text-2xl text-salon-espresso mt-1">{vatTotal.toFixed(2)}</p>
+              <div className="rounded-xl bg-muted/50 border border-border px-3 py-3">
+                <p className="text-xs text-muted-foreground">Total taxable revenue</p>
+                <p className="font-display text-2xl text-foreground mt-1">{vatTotal.toFixed(2)}</p>
               </div>
-              <div className="text-xs text-salon-stone space-y-0.5">
-                <p>VAT rate: <span className="text-salon-espresso font-medium">{vatRate == null ? 'not set' : `${vatRate.toFixed(2)}%`}</span></p>
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                <p>VAT rate: <span className="text-foreground font-medium">{vatRate == null ? 'not set' : `${vatRate.toFixed(2)}%`}</span></p>
                 {estimatedVat != null && (
-                  <p>Estimated VAT: <span className="text-salon-espresso font-medium">{estimatedVat.toFixed(2)}</span></p>
+                  <p>Estimated VAT: <span className="text-foreground font-medium">{estimatedVat.toFixed(2)}</span></p>
                 )}
               </div>
             </div>
           ) : (
-            !vatLoading && <p className="text-xs text-salon-stone">Load VAT to see figures for this month.</p>
+            !vatLoading && <p className="text-xs text-muted-foreground">Load VAT to see figures for this month.</p>
           )}
         </section>
       </div>
@@ -345,15 +346,15 @@ export default function ReportsPage() {
       {/* ── row 2: Payment channels + Monthly closing ── */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Payment channels */}
-        <section className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 lg:col-span-2 space-y-3">
+        <section className="elite-panel p-4 lg:col-span-2 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-green-50">
                 <CreditCard className="w-4 h-4 text-green-600" />
               </div>
               <div>
-                <h2 className="font-display text-base font-semibold text-salon-espresso">Payment channels</h2>
-                <p className="text-xs text-salon-stone">Which methods (cash, card, wallets) your guests use.</p>
+                <h2 className="font-display text-base font-semibold text-foreground">Payment channels</h2>
+                <p className="text-xs text-muted-foreground">Which methods (cash, card, wallets) your guests use.</p>
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -361,14 +362,14 @@ export default function ReportsPage() {
                 type="button"
                 onClick={loadPaymentBreakdown}
                 disabled={paymentLoading}
-                className="px-3 py-1.5 rounded-xl bg-salon-espresso text-salon-cream text-xs font-medium disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
               >
                 {paymentLoading ? 'Loading…' : 'Run'}
               </button>
               <button
                 type="button"
                 onClick={exportPaymentsCsv}
-                className="px-3 py-1.5 border border-salon-sand/60 rounded-xl text-xs text-salon-espresso hover:bg-salon-sand/30 transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 border border-border rounded-xl text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-1"
               >
                 <Download className="w-3 h-3" /> CSV
               </button>
@@ -376,11 +377,11 @@ export default function ReportsPage() {
           </div>
           <div className="flex flex-col md:flex-row gap-2 text-sm">
             <label className="flex-1">
-              <span className="block text-xs text-salon-stone mb-1">From</span>
+              <span className="block text-xs text-muted-foreground mb-1">From</span>
               <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
             </label>
             <label className="flex-1">
-              <span className="block text-xs text-salon-stone mb-1">To</span>
+              <span className="block text-xs text-muted-foreground mb-1">To</span>
               <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
             </label>
           </div>
@@ -388,38 +389,38 @@ export default function ReportsPage() {
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             {paymentBreakdown
               ? Object.entries(paymentBreakdown).map(([method, amount]) => (
-                  <div key={method} className="rounded-xl border border-salon-sand/40 bg-salon-cream/70 px-3 py-3 text-sm">
-                    <p className="text-xs uppercase tracking-wide text-salon-stone">{method}</p>
-                    <p className="font-display text-xl text-salon-espresso mt-1">{amount.toFixed(2)}</p>
+                  <div key={method} className="rounded-xl border border-border bg-muted/50 px-3 py-3 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{method}</p>
+                    <p className="font-display text-xl text-foreground mt-1">{amount.toFixed(2)}</p>
                   </div>
                 ))
-              : !paymentLoading && <p className="text-xs text-salon-stone">Run the report to see payment mix.</p>}
+              : !paymentLoading && <p className="text-xs text-muted-foreground">Run the report to see payment mix.</p>}
           </div>
         </section>
 
         {/* Monthly closing */}
-        <section className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
+        <section className="elite-panel p-4 space-y-3">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-red-50">
               <Lock className="w-4 h-4 text-red-500" />
             </div>
             <div>
-              <h2 className="font-display text-base font-semibold text-salon-espresso">Monthly closing</h2>
-              <p className="text-xs text-salon-stone">Lock a period once reconciliation is complete.</p>
+              <h2 className="font-display text-base font-semibold text-foreground">Monthly closing</h2>
+              <p className="text-xs text-muted-foreground">Lock a period once reconciliation is complete.</p>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-salon-stone mb-1">Period to close</label>
+            <label className="block text-xs text-muted-foreground mb-1">Period to close</label>
             <input
               type="text"
               value={period}
               readOnly
-              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm text-salon-espresso"
+              className="w-full border border-border rounded-xl px-3 py-2 bg-muted/40 text-sm text-foreground"
             />
           </div>
           <div>
-            <label className="block text-xs text-salon-stone mb-1">Notes (optional)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Notes (optional)</label>
             <textarea
               value={closeNotes}
               onChange={(e) => setCloseNotes(e.target.value)}
@@ -440,17 +441,17 @@ export default function ReportsPage() {
 
           {/* Past closings */}
           <div className="mt-2">
-            <p className="text-xs font-medium text-salon-stone mb-2">Past closings</p>
-            {closingsLoading && <p className="text-xs text-salon-stone">Loading…</p>}
+            <p className="text-xs font-medium text-muted-foreground mb-2">Past closings</p>
+            {closingsLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
             {!closingsLoading && closings.length === 0 && (
-              <p className="text-xs text-salon-stone italic">No closed periods yet.</p>
+              <p className="text-xs text-muted-foreground italic">No closed periods yet.</p>
             )}
             <div className="space-y-1.5 max-h-52 overflow-y-auto">
               {closings.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border border-salon-sand/40 bg-salon-cream/50 px-2.5 py-1.5 text-xs">
+                <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-xs">
                   <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3 h-3 text-salon-stone" />
-                    <span className="font-medium text-salon-espresso">
+                    <Calendar className="w-3 h-3 text-muted-foreground" />
+                    <span className="font-medium text-foreground">
                       {MONTH_NAMES[(c.month ?? 1) - 1]} {c.year}
                     </span>
                   </div>
@@ -459,7 +460,7 @@ export default function ReportsPage() {
                       {c.status}
                     </span>
                     {c.closed_at && (
-                      <span className="text-salon-stone">
+                      <span className="text-muted-foreground">
                         {new Date(c.closed_at).toLocaleDateString()}
                       </span>
                     )}
@@ -472,56 +473,56 @@ export default function ReportsPage() {
       </div>
 
       {/* ── Inventory movement ── */}
-      <section className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
+      <section className="elite-panel p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-purple-50">
               <Package className="w-4 h-4 text-purple-600" />
             </div>
             <div>
-              <h2 className="font-display text-base font-semibold text-salon-espresso">Inventory movement</h2>
-              <p className="text-xs text-salon-stone">Track stock ins, outs, and service deductions.</p>
+              <h2 className="font-display text-base font-semibold text-foreground">Inventory movement</h2>
+              <p className="text-xs text-muted-foreground">Track stock ins, outs, and service deductions.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={loadInventory}
             disabled={inventoryLoading}
-            className="px-3 py-1.5 rounded-xl bg-salon-espresso text-salon-cream text-xs font-medium disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
           >
             {inventoryLoading ? 'Loading…' : 'Load'}
           </button>
         </div>
         <div className="flex flex-col md:flex-row gap-2 text-sm">
           <label className="flex-1">
-            <span className="block text-xs text-salon-stone mb-1">From</span>
+            <span className="block text-xs text-muted-foreground mb-1">From</span>
             <input type="date" value={inventoryFrom} onChange={(e) => setInventoryFrom(e.target.value)} className={inputCls} />
           </label>
           <label className="flex-1">
-            <span className="block text-xs text-salon-stone mb-1">To</span>
+            <span className="block text-xs text-muted-foreground mb-1">To</span>
             <input type="date" value={inventoryTo} onChange={(e) => setInventoryTo(e.target.value)} className={inputCls} />
           </label>
         </div>
         {inventorySummary && (
           <div className="grid gap-2 sm:grid-cols-3 text-xs">
-            <div className="rounded-lg border border-salon-sand/40 bg-green-50 px-3 py-2 flex items-center justify-between">
+            <div className="rounded-lg border border-border bg-green-50 px-3 py-2 flex items-center justify-between">
               <span className="text-green-700">In</span>
               <span className="font-semibold text-green-700">{inventorySummary.in}</span>
             </div>
-            <div className="rounded-lg border border-salon-sand/40 bg-red-50 px-3 py-2 flex items-center justify-between">
+            <div className="rounded-lg border border-border bg-red-50 px-3 py-2 flex items-center justify-between">
               <span className="text-red-700">Out</span>
               <span className="font-semibold text-red-700">{inventorySummary.out}</span>
             </div>
-            <div className="rounded-lg border border-salon-sand/40 bg-salon-cream/70 px-3 py-2 flex items-center justify-between">
-              <span className="text-salon-stone">Net</span>
+            <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 flex items-center justify-between">
+              <span className="text-muted-foreground">Net</span>
               <span className={`font-semibold ${inventorySummary.net >= 0 ? 'text-green-700' : 'text-red-600'}`}>{inventorySummary.net}</span>
             </div>
           </div>
         )}
         {inventoryError && <p className="text-xs text-red-600">{inventoryError}</p>}
-        <div className="overflow-x-auto max-h-72 border border-salon-sand/40 rounded-xl">
+        <div className="overflow-x-auto max-h-72 border border-border rounded-xl">
           <table className="min-w-full text-xs">
-            <thead className="bg-salon-cream/70 text-salon-stone sticky top-0">
+            <thead className="bg-muted/50 text-muted-foreground sticky top-0">
               <tr>
                 <th className="py-2 px-3 text-left font-medium">When</th>
                 <th className="py-2 px-3 text-left font-medium">Product</th>
@@ -531,24 +532,24 @@ export default function ReportsPage() {
                 <th className="py-2 px-3 text-left font-medium">Reason</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-salon-sand/40">
+            <tbody className="divide-y divide-border">
               {inventory?.map((row) => (
-                <tr key={row.id} className="hover:bg-salon-cream/30">
-                  <td className="py-2 px-3 text-salon-stone whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : '—'}</td>
-                  <td className="py-2 px-3 text-salon-espresso">{row.product_name || '—'}</td>
-                  <td className="py-2 px-3 text-salon-stone">{row.branch_name || '—'}</td>
+                <tr key={row.id} className="hover:bg-muted/30">
+                  <td className="py-2 px-3 text-muted-foreground whitespace-nowrap">{row.created_at ? new Date(row.created_at).toLocaleDateString() : '—'}</td>
+                  <td className="py-2 px-3 text-foreground">{row.product_name || '—'}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{row.branch_name || '—'}</td>
                   <td className="py-2 px-3">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${row.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {row.type}
                     </span>
                   </td>
-                  <td className="py-2 px-3 text-right text-salon-espresso font-medium">{row.quantity}</td>
-                  <td className="py-2 px-3 text-salon-stone">{row.reason || '—'}</td>
+                  <td className="py-2 px-3 text-right text-foreground font-medium">{row.quantity}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{row.reason || '—'}</td>
                 </tr>
               ))}
               {!inventory?.length && !inventoryLoading && (
                 <tr>
-                  <td className="py-4 px-3 text-center text-salon-stone" colSpan={6}>
+                  <td className="py-4 px-3 text-center text-muted-foreground" colSpan={6}>
                     Select a date range and load to see stock movements.
                   </td>
                 </tr>
@@ -559,40 +560,40 @@ export default function ReportsPage() {
       </section>
 
       {/* ── Margins ── */}
-      <section className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
+      <section className="elite-panel p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-amber-50">
               <BarChart2 className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <h2 className="font-display text-base font-semibold text-salon-espresso">Margins</h2>
-              <p className="text-xs text-salon-stone">Revenue vs cost per service/product.</p>
+              <h2 className="font-display text-base font-semibold text-foreground">Margins</h2>
+              <p className="text-xs text-muted-foreground">Revenue vs cost per service/product.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={loadMargins}
             disabled={marginsLoading}
-            className="px-3 py-1.5 rounded-xl bg-salon-espresso text-salon-cream text-xs font-medium disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
           >
             {marginsLoading ? 'Loading…' : 'Run'}
           </button>
         </div>
         <div className="flex flex-col md:flex-row gap-2 text-sm">
           <label className="flex-1">
-            <span className="block text-xs text-salon-stone mb-1">From</span>
+            <span className="block text-xs text-muted-foreground mb-1">From</span>
             <input type="date" value={marginFrom} onChange={(e) => setMarginFrom(e.target.value)} className={inputCls} />
           </label>
           <label className="flex-1">
-            <span className="block text-xs text-salon-stone mb-1">To</span>
+            <span className="block text-xs text-muted-foreground mb-1">To</span>
             <input type="date" value={marginTo} onChange={(e) => setMarginTo(e.target.value)} className={inputCls} />
           </label>
         </div>
         {marginsError && <p className="text-xs text-red-600">{marginsError}</p>}
-        <div className="overflow-x-auto border border-salon-sand/40 rounded-xl">
+        <div className="overflow-x-auto border border-border rounded-xl">
           <table className="min-w-full text-xs">
-            <thead className="bg-salon-cream/70 text-salon-stone">
+            <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="py-2 px-3 text-left font-medium">Type</th>
                 <th className="py-2 px-3 text-left font-medium">Name</th>
@@ -602,24 +603,24 @@ export default function ReportsPage() {
                 <th className="py-2 px-3 text-right font-medium">Margin %</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-salon-sand/40">
+            <tbody className="divide-y divide-border">
               {margins?.map((row) => (
-                <tr key={`${row.type}-${row.id}`} className="hover:bg-salon-cream/30">
+                <tr key={`${row.type}-${row.id}`} className="hover:bg-muted/30">
                   <td className="py-2 px-3">
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${row.type === 'service' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
                       {row.type}
                     </span>
                   </td>
-                  <td className="py-2 px-3 text-salon-espresso font-medium">{row.name}</td>
-                  <td className="py-2 px-3 text-right text-salon-espresso">{row.revenue.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right text-salon-stone">{row.cost.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-foreground font-medium">{row.name}</td>
+                  <td className="py-2 px-3 text-right text-foreground">{row.revenue.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right text-muted-foreground">{row.cost.toFixed(2)}</td>
                   <td className={`py-2 px-3 text-right font-medium ${row.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>{row.margin.toFixed(2)}</td>
                   <td className={`py-2 px-3 text-right font-medium ${row.margin_pct >= 0 ? 'text-green-700' : 'text-red-600'}`}>{row.margin_pct.toFixed(2)}%</td>
                 </tr>
               ))}
               {!margins?.length && !marginsLoading && (
                 <tr>
-                  <td className="py-4 px-3 text-center text-salon-stone" colSpan={6}>
+                  <td className="py-4 px-3 text-center text-muted-foreground" colSpan={6}>
                     Select a date range and run to see margin analysis.
                   </td>
                 </tr>
@@ -635,9 +636,9 @@ export default function ReportsPage() {
 /* ── small metric card ── */
 function MetricCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl border px-3 py-3 ${highlight ? 'bg-salon-gold/10 border-salon-gold/40' : 'bg-salon-cream/70 border-salon-sand/40'}`}>
-      <p className="text-xs text-salon-stone">{label}</p>
-      <p className={`font-display text-xl mt-1 ${highlight ? 'text-salon-gold' : 'text-salon-espresso'}`}>{value}</p>
+    <div className={`rounded-xl border px-3 py-3 ${highlight ? 'border-primary/40 bg-primary/10' : 'border-border bg-muted/50'}`}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`font-display text-xl mt-1 ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
     </div>
   );
 }

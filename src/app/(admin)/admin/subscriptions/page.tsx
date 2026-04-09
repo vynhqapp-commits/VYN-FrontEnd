@@ -88,7 +88,7 @@ export default function AdminSubscriptionsPage() {
         <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-sm">{savedMsg}</div>
       )}
 
-      <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-5 space-y-4">
+      <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-5 space-y-4">
         {loading ? (
           <p className="text-sm text-salon-stone">Loading subscriptions...</p>
         ) : (

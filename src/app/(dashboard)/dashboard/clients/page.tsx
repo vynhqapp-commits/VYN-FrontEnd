@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Mail, MessageCircle, Phone, RefreshCw, X } from 'lucide-react';
+import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X } from 'lucide-react';
 import { clientsApi, debtApi, salonProfileApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -253,25 +254,29 @@ export default function ClientsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-salon-espresso mb-4">Clients</h1>
+      <DashboardPageHeader
+        className="mb-4"
+        title="Clients"
+        icon={<Users className="w-5 h-5" />}
+      />
       {/* Mobile list (cards) */}
       <div className="md:hidden space-y-3">
         {clients.length === 0 ? (
-          <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-6 text-salon-stone text-center">
+          <div className="bg-card rounded-xl border border-border shadow-sm p-6 text-muted-foreground text-center">
             No clients found.
           </div>
         ) : (
           clients.map((c) => (
             <div
               key={c.id}
-              className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4"
+              className="bg-card rounded-2xl border border-border shadow-sm p-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-salon-espresso truncate">
+                  <p className="text-sm font-semibold text-foreground truncate">
                     {c.full_name}
                   </p>
-                  <p className="text-xs text-salon-stone mt-1 truncate">
+                  <p className="text-xs text-muted-foreground mt-1 truncate">
                     <a
                       href={c.phone ? `tel:${c.phone}` : '#'}
                       onClick={(e) => {
@@ -292,14 +297,14 @@ export default function ClientsPage() {
                       {c.email ?? '—'}
                     </a>
                   </p>
-                  <p className="text-xs text-salon-stone mt-1 truncate">
+                  <p className="text-xs text-muted-foreground mt-1 truncate">
                     Tags: {c.tags ?? '—'}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => openDetails(c)}
-                  className="shrink-0 px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight"
+                  className="shrink-0 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
                 >
                   View
                 </button>
@@ -310,23 +315,23 @@ export default function ClientsPage() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-salon-sand/60">
-          <thead className="bg-salon-sand/30">
+      <div className="hidden md:block bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Phone</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Tags</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Phone</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tags</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-salon-sand/60">
+          <tbody className="divide-y divide-border">
             {clients.map((c) => (
               <tr key={c.id}>
-                <td className="px-4 py-3 text-sm text-salon-espresso">{c.full_name}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{c.phone ?? '—'}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">
+                <td className="px-4 py-3 text-sm text-foreground">{c.full_name}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{c.phone ?? '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
                   {c.phone ? (
                     <a className="hover:underline" href={`tel:${c.phone}`}>
                       {c.phone}
@@ -335,7 +340,7 @@ export default function ClientsPage() {
                     '—'
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-salon-stone">
+                <td className="px-4 py-3 text-sm text-muted-foreground">
                   {c.email ? (
                     <a className="hover:underline" href={`mailto:${c.email}`}>
                       {c.email}
@@ -344,14 +349,16 @@ export default function ClientsPage() {
                     '—'
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{c.tags ?? '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{c.tags ?? '—'}</td>
                 <td className="px-4 py-3 text-sm">
                   <button
                     type="button"
                     onClick={() => openDetails(c)}
-                    className="px-3 py-1.5 rounded-lg border border-salon-sand/60 text-salon-espresso hover:border-salon-gold hover:bg-salon-gold/5 transition-colors text-sm"
+                    aria-label="View client notes"
+                    title="View client notes"
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
                   >
-                    View / Notes
+                    <Eye className="size-4" />
                   </button>
                 </td>
               </tr>
@@ -359,7 +366,7 @@ export default function ClientsPage() {
           </tbody>
         </table>
         {clients.length === 0 && (
-          <p className="p-6 text-salon-stone text-center">No clients found.</p>
+          <p className="p-6 text-muted-foreground text-center">No clients found.</p>
         )}
       </div>
 
@@ -371,19 +378,19 @@ export default function ClientsPage() {
           onClick={() => setOpenClient(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-card rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-salon-sand/50 px-4 sm:px-6 py-4">
+            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur border-b border-border px-4 sm:px-6 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="font-display text-xl font-semibold text-salon-espresso">{openClient.full_name}</h2>
-                  <p className="text-salon-stone text-sm">{openClient.email ?? '—'} · {openClient.phone ?? '—'}</p>
+                  <h2 className="font-display text-xl font-semibold text-foreground">{openClient.full_name}</h2>
+                  <p className="text-muted-foreground text-sm">{openClient.email ?? '—'} · {openClient.phone ?? '—'}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setOpenClient(null)}
-                  className="p-2 rounded-xl text-salon-stone hover:bg-salon-sand/40 transition-colors"
+                  className="p-2 rounded-xl text-muted-foreground hover:bg-accent transition-colors"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5" />
@@ -393,13 +400,13 @@ export default function ClientsPage() {
 
             <div className="px-4 sm:px-6 py-6 grid gap-6 lg:grid-cols-12">
               <div className="lg:col-span-4 space-y-6">
-                <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                  <h3 className="text-sm font-semibold text-salon-espresso mb-1">Tags</h3>
-                  <p className="text-xs text-salon-stone mb-3">Comma separated (e.g. VIP, color, prefers_morning)</p>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Tags</h3>
+                  <p className="text-xs text-muted-foreground mb-3">Comma separated (e.g. VIP, color, prefers_morning)</p>
                   <input
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
-                    className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/30 focus:border-salon-gold"
+                    className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
                     placeholder="VIP, ..."
                   />
                   <div className="mt-3 flex justify-end">
@@ -407,29 +414,29 @@ export default function ClientsPage() {
                       type="button"
                       onClick={saveTags}
                       disabled={savingTags}
-                      className="px-4 py-2 rounded-xl bg-salon-gold text-white font-semibold text-sm hover:bg-salon-goldLight disabled:opacity-40"
+                      className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 disabled:opacity-40"
                     >
                       {savingTags ? 'Saving…' : 'Save tags'}
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                  <h3 className="text-sm font-semibold text-salon-espresso mb-3">Notes</h3>
-                  <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 max-h-64 overflow-auto">
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Notes</h3>
+                  <div className="border border-border rounded-xl p-3 bg-muted/40 max-h-64 overflow-auto">
                     {detailLoading ? (
                       <div className="space-y-2">
                         <Skeleton className="h-12 w-full rounded-xl" />
                         <Skeleton className="h-12 w-full rounded-xl" />
                       </div>
                     ) : notes.length === 0 ? (
-                      <p className="text-sm text-salon-stone">No notes yet.</p>
+                      <p className="text-sm text-muted-foreground">No notes yet.</p>
                     ) : (
                       <div className="space-y-3">
                         {notes.map((n) => (
-                          <div key={n.id} className="bg-white border border-salon-sand/40 rounded-xl p-3">
-                            <p className="text-sm text-salon-espresso">{n.note}</p>
-                            <p className="text-xs text-salon-stone mt-1">
+                          <div key={n.id} className="bg-card border border-border rounded-xl p-3">
+                            <p className="text-sm text-foreground">{n.note}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
                               {n.user?.email ?? n.user?.name ?? 'Staff'}{n.created_at ? ` · ${new Date(n.created_at).toLocaleString()}` : ''}
                             </p>
                           </div>
@@ -442,14 +449,14 @@ export default function ClientsPage() {
                     <input
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}
-                      className="flex-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/30 focus:border-salon-gold"
+                      className="flex-1 w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
                       placeholder="Add a note..."
                     />
                     <button
                       type="button"
                       onClick={addNote}
                       disabled={savingNote || !noteText.trim()}
-                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-salon-espresso text-white font-semibold text-sm hover:bg-salon-bark disabled:opacity-40"
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 disabled:opacity-40"
                     >
                       {savingNote ? 'Adding…' : 'Add'}
                     </button>
@@ -458,9 +465,9 @@ export default function ClientsPage() {
               </div>
 
               <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                  <h3 className="text-sm font-semibold text-salon-espresso mb-3">Debt</h3>
-                  <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Debt</h3>
+                  <div className="border border-border rounded-xl p-3 bg-muted/40 space-y-2">
                   {debtLoading ? (
                     <div className="space-y-2">
                       <Skeleton className="h-4 w-40" />
@@ -470,7 +477,7 @@ export default function ClientsPage() {
                     <>
                       <p className="text-sm">
                         Outstanding balance:{' '}
-                        <span className="font-semibold text-salon-espresso">
+                        <span className="font-semibold text-foreground">
                           {fmt(typeof debtBalance === 'number' ? debtBalance : Number(debtBalance || 0))}
                         </span>
                       </p>
@@ -483,19 +490,19 @@ export default function ClientsPage() {
                               step="0.01"
                               value={debtPaymentAmount}
                               onChange={(e) => setDebtPaymentAmount(e.target.value)}
-                              className="flex-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/30 focus:border-salon-gold"
+                              className="flex-1 w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
                               placeholder="Payment amount"
                             />
                             <button
                               type="button"
                               disabled={!debtPaymentAmount}
                               onClick={handleDebtPayment}
-                              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight disabled:opacity-40"
+                              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40"
                             >
                               Record payment
                             </button>
                           </div>
-                          <p className="text-[11px] text-salon-stone mt-1">
+                          <p className="text-[11px] text-muted-foreground mt-1">
                             Applies to the oldest open debt entry.
                           </p>
                           <div className="flex flex-col gap-2 mt-2 sm:flex-row">
@@ -503,7 +510,7 @@ export default function ClientsPage() {
                               type="text"
                               value={writeOffReason}
                               onChange={(e) => setWriteOffReason(e.target.value)}
-                              className="flex-1 w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/30 focus:border-salon-gold"
+                              className="flex-1 w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
                               placeholder="Write-off reason (optional)"
                             />
                             <button
@@ -522,37 +529,37 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                    <h3 className="text-sm font-semibold text-salon-espresso mb-3">Packages</h3>
-                    <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
+                  <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Packages</h3>
+                    <div className="border border-border rounded-xl p-3 bg-muted/40 space-y-2">
                     {packagesLoading ? (
                       <div className="space-y-2">
                         <Skeleton className="h-12 w-full rounded-xl" />
                         <Skeleton className="h-12 w-full rounded-xl" />
                       </div>
                     ) : packages.length === 0 ? (
-                      <p className="text-sm text-salon-stone">No packages found.</p>
+                      <p className="text-sm text-muted-foreground">No packages found.</p>
                     ) : (
                       <div className="space-y-2">
                         {packages.map((p) => (
                           <div
                             key={p.id}
-                            className="bg-white border border-salon-sand/40 rounded-xl p-3"
+                            className="bg-card border border-border rounded-xl p-3"
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div>
-                                <p className="text-sm font-semibold text-salon-espresso">
+                                <p className="text-sm font-semibold text-foreground">
                                   {p.name ?? 'Package'}
                                 </p>
-                                <p className="text-xs text-salon-stone mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   Expires: {p.expires_at ? p.expires_at : '—'}
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-semibold text-salon-espresso">
+                                <p className="text-sm font-semibold text-foreground">
                                   {p.remaining_services}
                                 </p>
-                                <p className="text-[11px] text-salon-stone">Remaining</p>
+                                <p className="text-[11px] text-muted-foreground">Remaining</p>
                               </div>
                             </div>
                           </div>
@@ -563,32 +570,32 @@ export default function ClientsPage() {
                   </div>
                   </div>
 
-                  <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                    <h3 className="text-sm font-semibold text-salon-espresso mb-3">Membership</h3>
-                    <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
+                  <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Membership</h3>
+                    <div className="border border-border rounded-xl p-3 bg-muted/40 space-y-2">
                     {membershipsLoading ? (
                       <div className="space-y-2">
                         <Skeleton className="h-12 w-full rounded-xl" />
                         <Skeleton className="h-12 w-full rounded-xl" />
                       </div>
                     ) : memberships.length === 0 ? (
-                      <p className="text-sm text-salon-stone">No memberships found.</p>
+                      <p className="text-sm text-muted-foreground">No memberships found.</p>
                     ) : (
                       <div className="space-y-2">
                         {memberships.map((m) => (
                           <div
                             key={m.id}
-                            className="bg-white border border-salon-sand/40 rounded-xl p-3"
+                            className="bg-card border border-border rounded-xl p-3"
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div>
-                                <p className="text-sm font-semibold text-salon-espresso">
+                                <p className="text-sm font-semibold text-foreground">
                                   {m.name ?? m.plan ?? 'Membership'}
                                 </p>
-                                <p className="text-xs text-salon-stone mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   Next renewal: {m.renewal_date ? m.renewal_date : '—'}
                                 </p>
-                                <p className="text-xs text-salon-stone mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   Remaining credits: {m.remaining_services}
                                 </p>
                               </div>
@@ -597,7 +604,7 @@ export default function ClientsPage() {
                                   type="button"
                                   disabled={renewLoadingId === m.id}
                                   onClick={() => handleRenewMembership(m.id)}
-                                  className="shrink-0 px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight disabled:opacity-40"
+                                  className="shrink-0 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40"
                                 >
                                   {renewLoadingId === m.id ? 'Renewing…' : (
                                     <span className="inline-flex items-center gap-2">
@@ -618,9 +625,9 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                    <h3 className="text-sm font-semibold text-salon-espresso mb-3">Stats</h3>
-                    <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
+                  <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Stats</h3>
+                    <div className="border border-border rounded-xl p-3 bg-muted/40 space-y-2">
                     {statsLoading ? (
                       <div className="space-y-2">
                         <Skeleton className="h-4 w-32" />
@@ -631,37 +638,37 @@ export default function ClientsPage() {
                       <div className="space-y-1">
                         <p className="text-sm">
                           Total spent:{' '}
-                          <span className="font-semibold text-salon-espresso">
+                          <span className="font-semibold text-foreground">
                             {fmt(Number(stats.total_spent ?? 0))}
                           </span>
                         </p>
                         <p className="text-sm">
                           Avg ticket:{' '}
-                          <span className="font-semibold text-salon-espresso">
+                          <span className="font-semibold text-foreground">
                             {fmt(Number(stats.avg_ticket ?? 0))}
                           </span>
                         </p>
-                        <p className="text-xs text-salon-stone">
+                        <p className="text-xs text-muted-foreground">
                           Invoice count: {stats.invoice_count ?? 0}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-salon-stone">No stats yet.</p>
+                      <p className="text-sm text-muted-foreground">No stats yet.</p>
                     )}
                     {statsError && <p className="text-sm text-red-600">{statsError}</p>}
                   </div>
                   </div>
 
-                  <div className="bg-white border border-salon-sand/60 rounded-2xl p-4 shadow-sm">
-                    <h3 className="text-sm font-semibold text-salon-espresso mb-3">Contact</h3>
-                    <div className="border border-salon-sand/50 rounded-xl p-3 bg-salon-cream/40 space-y-2">
+                  <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Contact</h3>
+                    <div className="border border-border rounded-xl p-3 bg-muted/40 space-y-2">
                     <div className="flex flex-col gap-2">
                       <a
                         href={openClient?.phone ? `tel:${openClient.phone}` : '#'}
                         onClick={(e) => {
                           if (!openClient?.phone) e.preventDefault();
                         }}
-                        className="w-full px-4 py-2 rounded-xl bg-white border border-salon-sand/60 text-salon-espresso text-sm font-semibold hover:bg-salon-sand/40 disabled:opacity-40 inline-flex items-center justify-center gap-2"
+                        className="w-full px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-semibold hover:bg-accent disabled:opacity-40 inline-flex items-center justify-center gap-2"
                       >
                         <Phone className="w-4 h-4" />
                         Call
@@ -671,7 +678,7 @@ export default function ClientsPage() {
                         onClick={(e) => {
                           if (!openClient?.phone) e.preventDefault();
                         }}
-                        className="w-full px-4 py-2 rounded-xl bg-white border border-salon-sand/60 text-salon-espresso text-sm font-semibold hover:bg-salon-sand/40 disabled:opacity-40 inline-flex items-center justify-center gap-2"
+                        className="w-full px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-semibold hover:bg-accent disabled:opacity-40 inline-flex items-center justify-center gap-2"
                       >
                         <MessageCircle className="w-4 h-4" />
                         SMS
@@ -681,14 +688,14 @@ export default function ClientsPage() {
                         onClick={(e) => {
                           if (!openClient?.email) e.preventDefault();
                         }}
-                        className="w-full px-4 py-2 rounded-xl bg-white border border-salon-sand/60 text-salon-espresso text-sm font-semibold hover:bg-salon-sand/40 disabled:opacity-40 inline-flex items-center justify-center gap-2"
+                        className="w-full px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-semibold hover:bg-accent disabled:opacity-40 inline-flex items-center justify-center gap-2"
                       >
                         <Mail className="w-4 h-4" />
                         Email
                       </a>
                     </div>
                     {( !openClient?.phone && !openClient?.email) && (
-                      <p className="text-sm text-salon-stone">No phone/email available.</p>
+                      <p className="text-sm text-muted-foreground">No phone/email available.</p>
                     )}
                   </div>
                   </div>

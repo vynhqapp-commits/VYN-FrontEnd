@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 
+import { ThemeToggle } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,8 +159,12 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/" && pathname?.startsWith(href + "/"));
+  const isActive = (href: string) => {
+    if (!pathname) return false;
+    // Keep dashboard root exact so it doesn't stay active on every sub-route.
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname === href || pathname.startsWith(href + "/");
+  };
 
   useEffect(() => {
     setMobileOpen(false);
@@ -192,13 +197,19 @@ export function AppShell({
             className={cn(
               "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               isActive(i.href)
-                ? "bg-accent text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                ? "bg-[var(--elite-orange)] text-white border border-[var(--elite-orange)]"
+                : "text-[color:var(--sidebar-nav-text)] hover:bg-accent hover:text-foreground",
               collapsed && mode === "desktop" ? "justify-center" : "",
             )}
             title={collapsed && mode === "desktop" ? i.label : undefined}
           >
-            <span className="text-muted-foreground group-hover:text-foreground">
+            <span
+              className={cn(
+                isActive(i.href)
+                  ? "text-white"
+                  : "text-[color:var(--sidebar-nav-text)] group-hover:text-foreground",
+              )}
+            >
               {i.icon ?? <Dot className="size-5" />}
             </span>
             {!collapsed || mode === "mobile" ? <span>{i.label}</span> : null}
@@ -334,6 +345,8 @@ export function AppShell({
               <Bell />
             </Button>
 
+            <ThemeToggle className="size-9 shrink-0 border-transparent bg-transparent shadow-none hover:bg-accent" />
+
             {/* User menu dropdown */}
             <UserMenu
               userLabel={userLabel}
@@ -343,8 +356,8 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1">
-          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6">
+        <main className="flex-1 bg-[var(--elite-bg)]">
+          <div className="mx-auto w-full max-w-[96rem] px-4 sm:px-6 py-6">
             {children}
           </div>
         </main>

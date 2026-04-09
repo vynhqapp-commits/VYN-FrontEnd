@@ -100,13 +100,13 @@ export default function ReceiptPage() {
   return (
     <div className="p-6">
       <div className="flex gap-2 mb-4 no-print">
-        <button type="button" onClick={() => router.back()} className="px-4 py-2 border border-salon-sand/60 rounded-xl text-salon-espresso hover:bg-salon-sand/30 transition-colors">Back</button>
-        <button type="button" onClick={handlePrint} className="px-4 py-2 bg-salon-gold text-white rounded-xl font-medium hover:bg-salon-goldLight transition-colors">Print receipt</button>
+        <button type="button" onClick={() => router.back()} className="px-4 py-2 border border-border rounded-xl text-foreground hover:bg-accent transition-colors">Back</button>
+        <button type="button" onClick={handlePrint} className="px-4 py-2 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-colors">Print receipt</button>
         <button
           type="button"
           onClick={() => handleNotify('email')}
           disabled={notifyLoading !== null}
-          className="px-4 py-2 bg-salon-espresso text-white rounded-xl font-medium hover:bg-salon-bark disabled:opacity-50 transition-colors"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
         >
           {notifyLoading === 'email' ? 'Sending…' : 'Email receipt'}
         </button>
@@ -114,7 +114,7 @@ export default function ReceiptPage() {
           type="button"
           onClick={() => handleNotify('sms')}
           disabled={notifyLoading !== null}
-          className="px-4 py-2 border border-salon-sand/60 rounded-xl text-salon-espresso hover:bg-salon-sand/30 disabled:opacity-50 transition-colors"
+          className="px-4 py-2 border border-border rounded-xl text-foreground hover:bg-accent disabled:opacity-50 transition-colors"
         >
           {notifyLoading === 'sms' ? 'Preparing…' : 'SMS receipt'}
         </button>
@@ -132,34 +132,34 @@ export default function ReceiptPage() {
           {refundError}
         </div>
       )}
-      <div ref={printRef} className="bg-white shadow-sm rounded-xl border border-salon-sand/40 p-6 max-w-md">
-        <h1 className="font-display text-lg font-semibold text-salon-espresso border-b border-salon-sand/60 pb-2">Receipt</h1>
-        <p className="text-sm text-salon-stone mt-2">{r.Location?.name}</p>
-        <p className="text-sm text-salon-stone">{r.created_at ? new Date(r.created_at).toLocaleString() : ''}</p>
+      <div ref={printRef} className="bg-card shadow-sm rounded-xl border border-border p-6 max-w-md">
+        <h1 className="font-display text-lg font-semibold text-foreground border-b border-border pb-2">Receipt</h1>
+        <p className="text-sm text-muted-foreground mt-2">{r.Location?.name}</p>
+        <p className="text-sm text-muted-foreground">{r.created_at ? new Date(r.created_at).toLocaleString() : ''}</p>
         <table className="w-full mt-4 text-sm">
           <thead>
-            <tr className="border-b border-salon-sand/60">
-              <th className="text-left py-2 text-salon-stone font-semibold">Item</th>
-              <th className="text-right py-2 text-salon-stone font-semibold">Qty</th>
-              <th className="text-right py-2 text-salon-stone font-semibold">Price</th>
-              <th className="text-right py-2 text-salon-stone font-semibold">Total</th>
+            <tr className="border-b border-border">
+              <th className="text-left py-2 text-muted-foreground font-semibold">Item</th>
+              <th className="text-right py-2 text-muted-foreground font-semibold">Qty</th>
+              <th className="text-right py-2 text-muted-foreground font-semibold">Price</th>
+              <th className="text-right py-2 text-muted-foreground font-semibold">Total</th>
             </tr>
           </thead>
           <tbody>
             {(r.TransactionItems || []).map((item) => (
               <tr
                 key={`${item.Service?.name ?? item.Product?.name ?? 'item'}-${item.unit_price}-${item.quantity}-${item.total}`}
-                className="border-b border-salon-sand/40"
+                className="border-b border-border"
               >
-                <td className="py-2 text-salon-espresso">{item.Service?.name || item.Product?.name || '—'}</td>
-                <td className="text-right text-salon-stone">{item.quantity}</td>
-                <td className="text-right text-salon-stone">{Number(item.unit_price).toFixed(2)}</td>
-                <td className="text-right text-salon-stone">{Number(item.total).toFixed(2)}</td>
+                <td className="py-2 text-foreground">{item.Service?.name || item.Product?.name || '—'}</td>
+                <td className="text-right text-muted-foreground">{item.quantity}</td>
+                <td className="text-right text-muted-foreground">{Number(item.unit_price).toFixed(2)}</td>
+                <td className="text-right text-muted-foreground">{Number(item.total).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="mt-2 text-sm text-salon-stone">
+        <div className="mt-2 text-sm text-muted-foreground">
           {(r.Payments || []).map((p) => (
             <div key={p.method} className="flex justify-between">
               <span>{p.method}</span>
@@ -167,7 +167,7 @@ export default function ReceiptPage() {
             </div>
           ))}
         </div>
-        <p className="mt-2 font-semibold text-salon-espresso border-t border-salon-sand/60 pt-2">Total: {Number(r.total).toFixed(2)}</p>
+        <p className="mt-2 font-semibold text-foreground border-t border-border pt-2">Total: {Number(r.total).toFixed(2)}</p>
       </div>
     </div>
   );

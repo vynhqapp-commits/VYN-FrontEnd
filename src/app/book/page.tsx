@@ -67,8 +67,8 @@ function StepBar({ step, labels }: { step: number; labels: string[] }) {
                   ${done
                     ? "bg-salon-gold text-white shadow-sm shadow-salon-gold/40"
                     : active
-                      ? "bg-white border-2 border-salon-gold text-salon-gold shadow-sm"
-                      : "bg-white border border-gray-200 text-gray-400"
+                      ? "bg-card border-2 border-salon-gold text-salon-gold shadow-sm"
+                      : "bg-card border border-gray-200 text-gray-400"
                   }`}
               >
                 {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : idx}
@@ -400,7 +400,7 @@ export default function BookPage() {
       <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
         <PublicHeader />
         <main className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center animate-fade-in-up">
+          <div className="max-w-md w-full bg-card rounded-2xl shadow-sm border border-gray-100 p-8 text-center animate-fade-in-up">
             <div className="w-16 h-16 rounded-full bg-salon-gold/10 flex items-center justify-center mx-auto mb-5">
               <Check className="w-7 h-7 text-salon-gold" strokeWidth={2.5} />
             </div>
@@ -456,7 +456,7 @@ export default function BookPage() {
                     setStep(1); setConfirmed(null); setDetail(null);
                     setForm({ client_name: user?.fullName ?? user?.name ?? "", client_phone: "", client_email: user?.email ?? "" });
                   }}
-                  className="flex-1 py-3 bg-salon-gold text-white rounded-xl font-semibold text-sm hover:bg-salon-goldLight transition-colors"
+                  className="flex-1 py-3 bg-salon-gold text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-colors"
                 >
                   {t("bookAgain")}
                 </button>
@@ -515,14 +515,14 @@ export default function BookPage() {
                   placeholder={t("searchSalonsPlaceholder")}
                   value={search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-salon-espresso placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold shadow-sm transition-shadow"
+                  className="w-full pl-10 pr-4 py-3 bg-card border border-gray-200 rounded-xl text-salon-espresso placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold shadow-sm transition-shadow"
                 />
               </div>
               <button
                 type="button"
                 onClick={fetchNearbySalons}
                 disabled={locating || loading}
-                className="shrink-0 px-4 py-3 bg-white border border-gray-200 rounded-xl text-salon-espresso text-sm font-medium
+                className="shrink-0 px-4 py-3 bg-card border border-gray-200 rounded-xl text-salon-espresso text-sm font-medium
                   hover:border-salon-gold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
                 title={t("useMyLocation")}
               >
@@ -534,7 +534,7 @@ export default function BookPage() {
               </button>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 mb-6">
+            <div className="bg-card border border-gray-200 rounded-2xl shadow-sm p-4 sm:p-5 mb-6">
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -563,7 +563,7 @@ export default function BookPage() {
                         placeholder="0"
                         value={priceMin}
                         onChange={(e) => setPriceMin(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                        className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       />
                     </div>
                     <div>
@@ -577,7 +577,7 @@ export default function BookPage() {
                         placeholder="Any"
                         value={priceMax}
                         onChange={(e) => setPriceMax(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                        className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       />
                     </div>
                     <div>
@@ -593,7 +593,7 @@ export default function BookPage() {
                         placeholder="0 - 5"
                         value={ratingMin}
                         onChange={(e) => setRatingMin(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                        className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       />
                     </div>
                     <div>
@@ -606,7 +606,7 @@ export default function BookPage() {
                         value={availabilityFilter}
                         min={new Date().toISOString().slice(0, 10)}
                         onChange={(e) => setAvailabilityFilter(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                        className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -617,7 +617,7 @@ export default function BookPage() {
                         id="gender-preference"
                         value={genderPreference}
                         onChange={(e) => setGenderPreference(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+                        className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       >
                         <option value="">{t("genderAll")}</option>
                         <option value="ladies">{t("genderLadies")}</option>
@@ -654,7 +654,7 @@ export default function BookPage() {
                     <button
                       type="button"
                       onClick={resetFilters}
-                      className="px-4 py-2.5 border border-gray-200 bg-white rounded-xl text-sm font-medium hover:border-salon-gold transition-colors"
+                      className="px-4 py-2.5 border border-gray-200 bg-card rounded-xl text-sm font-medium hover:border-salon-gold transition-colors"
                     >
                       {t("resetAll")}
                     </button>
@@ -683,7 +683,7 @@ export default function BookPage() {
                       <button
                         type="button"
                         onClick={() => pickSalon((s as Tenant & { slug: string }).slug)}
-                        className="w-full text-start p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group"
+                        className="w-full text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div>
@@ -875,7 +875,7 @@ export default function BookPage() {
                 value={date}
                 min={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => { setDate(e.target.value); fetchSlots(branchId, serviceId, e.target.value); }}
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-salon-espresso shadow-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold transition-shadow"
+                className="w-full bg-card border border-gray-200 rounded-xl px-4 py-3 text-salon-espresso shadow-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold transition-shadow"
               />
             </div>
 
@@ -895,7 +895,7 @@ export default function BookPage() {
                         key={slot.start}
                         type="button"
                         onClick={() => pickSlot(slot)}
-                        className="py-3 rounded-xl border border-gray-200 bg-white text-salon-espresso text-sm font-medium
+                        className="py-3 rounded-xl border border-gray-200 bg-card text-salon-espresso text-sm font-medium
                           hover:border-salon-gold hover:bg-salon-gold/5 hover:shadow-sm
                           transition-all duration-150 animate-fade-in-up"
                         style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
@@ -922,7 +922,7 @@ export default function BookPage() {
             {error && <div className="mb-4"><ErrorBox message={error} /></div>}
 
             {/* Summary card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-2 text-sm">
+            <div className="bg-card rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-2 text-sm">
               <SummaryRow label={t("summaryService")} value={selectedService?.name ?? "—"} />
               <SummaryRow label={t("summaryLocation")} value={selectedBranch?.name ?? "—"} />
               <SummaryRow
@@ -1058,7 +1058,7 @@ function SelectCard({
         transition-all duration-200 shadow-sm animate-fade-in-up
         ${active
           ? "border-salon-gold bg-salon-gold/5 shadow-sm shadow-salon-gold/20"
-          : "border-gray-100 bg-white hover:border-salon-gold/40 hover:shadow-md"
+          : "border-gray-100 bg-card hover:border-salon-gold/40 hover:shadow-md"
         }`}
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
@@ -1088,7 +1088,7 @@ function PrimaryBtn({
       disabled={disabled}
       onClick={onClick}
       className="w-full py-4 bg-salon-gold text-white rounded-xl font-semibold text-sm
-        hover:bg-salon-goldLight disabled:opacity-40 disabled:cursor-not-allowed
+        hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed
         transition-colors shadow-sm"
     >
       {children}
@@ -1110,7 +1110,7 @@ function PagerBtn({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="px-4 py-2 text-sm rounded-xl border border-gray-200 bg-white text-salon-espresso
+      className="px-4 py-2 text-sm rounded-xl border border-gray-200 bg-card text-salon-espresso
         hover:border-salon-gold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
     >
       {children}
@@ -1144,7 +1144,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-salon-espresso
+        className="w-full bg-card border border-gray-200 rounded-xl px-4 py-3 text-salon-espresso
           placeholder-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40
           focus:border-salon-gold transition-shadow"
       />

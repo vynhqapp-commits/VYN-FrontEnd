@@ -82,7 +82,7 @@ function VerifyOtpForm() {
         <div className="absolute inset-0 bg-salon-espresso/20 lg:bg-salon-espresso/30 pointer-events-none" aria-hidden />
       </div>
       <div className="flex-1 flex flex-col bg-salon-cream">
-        <header className="border-b border-salon-sand/60 bg-white/80 backdrop-blur-sm">
+        <header className="border-b border-salon-sand/60 bg-card/80 backdrop-blur-sm">
           <div className="max-w-3xl mx-auto px-4 py-4">
             <Link href="/" className="font-display text-lg font-semibold text-salon-espresso hover:text-salon-bark transition-colors">
               {APP_NAME}
@@ -93,7 +93,7 @@ function VerifyOtpForm() {
           <div className="w-full max-w-md">
             <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-2">{t('verifyCodeHeading')}</h1>
             <p className="text-salon-stone text-sm mb-6">{t('verifyCodeSubheading')}</p>
-            <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-6">
+            <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-6">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(handleSubmit, () => toastError(t('checkHighlightedFields')))}

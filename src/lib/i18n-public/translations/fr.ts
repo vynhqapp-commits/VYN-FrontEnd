@@ -167,6 +167,8 @@ export const publicTranslationsFr = {
   loginHeading: "Se connecter",
   loginSubheading: "Connectez-vous avec votre compte salon ou plateforme. Vous serez redirigé selon votre rôle.",
   dontHaveAccount: "Pas encore de compte ? S'inscrire",
+  dontHaveAccountLead: "Pas encore de compte ?",
+  signUp: "S'inscrire",
   password: "Mot de passe",
   sendOtp: "Envoyer OTP",
   signingIn: "Connexion en cours...",

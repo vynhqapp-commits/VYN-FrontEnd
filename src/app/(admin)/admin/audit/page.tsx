@@ -51,7 +51,7 @@ export default function AdminAuditPage() {
         <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">{error}</div>
       )}
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-3 items-end">
         <label className="text-xs font-medium text-salon-stone">
           From
           <input value={from} onChange={(e) => setFrom(e.target.value)} type="date" className="mt-1 border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm" />
@@ -81,7 +81,7 @@ export default function AdminAuditPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-5 text-sm text-salon-stone">
+      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm p-5 text-sm text-salon-stone">
         {logs.length === 0 ? (
           <p>No audit logs.</p>
         ) : (
@@ -95,7 +95,7 @@ export default function AdminAuditPage() {
                   <th className="py-2 text-left font-medium">Tenant</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-salon-sand/30">
+              <tbody className="divide-y divide-border">
                 {logs.map((l) => (
                   <tr key={l.id}>
                     <td className="py-2">{l.created_at ? new Date(l.created_at).toLocaleString() : '—'}</td>

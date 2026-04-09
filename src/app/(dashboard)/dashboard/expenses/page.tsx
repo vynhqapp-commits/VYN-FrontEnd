@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { ReceiptText, X } from 'lucide-react';
 import { expensesApi, locationsApi, type Expense, type Location } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 const CATEGORIES = ['rent', 'utilities', 'salaries', 'marketing', 'supplies', 'other'] as const;
 
@@ -133,28 +134,30 @@ export default function ExpensesPage() {
   if (listError) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{listError}</div>;
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Expenses</h1>
-          <p className="text-salon-stone text-sm mt-1">Record business costs and keep your profitability accurate.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight transition-colors"
-        >
-          + Add expense
-        </button>
-      </div>
+    <div className="elite-shell">
+      <DashboardPageHeader
+        className="mb-4"
+        title="Expenses"
+        description="Record business costs and keep your profitability accurate."
+        icon={<ReceiptText className="w-5 h-5" />}
+        rightSlot={
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-colors"
+          >
+            + Add expense
+          </button>
+        }
+      />
 
       <div className="flex flex-col md:flex-row gap-2 mb-4 text-sm">
         <label className="flex-1">
-          <span className="block text-xs text-salon-stone mb-1">Location</span>
+          <span className="block text-xs text-muted-foreground mb-1">Location</span>
           <select
             value={locationId}
             onChange={(e) => setLocationId(e.target.value)}
-            className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50"
+            className="w-full border border-border rounded-xl px-3 py-2 bg-muted/40"
           >
             <option value="">All</option>
             {locations.map((loc) => (
@@ -165,28 +168,28 @@ export default function ExpensesPage() {
           </select>
         </label>
         <label className="flex-1">
-          <span className="block text-xs text-salon-stone mb-1">From</span>
+          <span className="block text-xs text-muted-foreground mb-1">From</span>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50"
+            className="w-full border border-border rounded-xl px-3 py-2 bg-muted/40"
           />
         </label>
         <label className="flex-1">
-          <span className="block text-xs text-salon-stone mb-1">To</span>
+          <span className="block text-xs text-muted-foreground mb-1">To</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50"
+            className="w-full border border-border rounded-xl px-3 py-2 bg-muted/40"
           />
         </label>
         <div className="flex items-end">
           <button
             type="button"
             onClick={loadExpenses}
-            className="px-4 py-2 rounded-xl bg-salon-espresso text-white text-sm font-semibold hover:bg-salon-bark"
+            className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
           >
             Apply
           </button>
@@ -198,30 +201,30 @@ export default function ExpensesPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-salon-sand/60">
-          <thead className="bg-salon-sand/30">
+      <div className="elite-panel overflow-hidden">
+        <table className="min-w-full">
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Category</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Amount</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-salon-sand/60">
+          <tbody>
             {expenses.map((e) => (
               <tr key={e.id}>
-                <td className="px-4 py-3 text-sm text-salon-stone">{e.expense_date}</td>
-                <td className="px-4 py-3 text-sm text-salon-espresso">{e.category}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{Number(e.amount).toFixed(2)}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{e.description ?? '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{e.expense_date}</td>
+                <td className="px-4 py-3 text-sm text-foreground">{e.category}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{Number(e.amount).toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{e.description ?? '—'}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => startEdit(e)}
-                      className="text-salon-gold font-medium hover:text-salon-goldLight transition-colors"
+                      className="text-primary font-medium hover:text-primaryLight transition-colors"
                     >
                       Edit
                     </button>
@@ -239,22 +242,22 @@ export default function ExpensesPage() {
           </tbody>
         </table>
         {expenses.length === 0 && (
-          <p className="p-6 text-salon-stone text-center">No expenses found.</p>
+          <p className="p-6 text-muted-foreground text-center">No expenses found.</p>
         )}
       </div>
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAdd(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
-              <h2 className="font-display text-xl font-semibold text-salon-espresso">
+              <h2 className="font-display text-xl font-semibold text-foreground">
                 {editing ? 'Edit expense' : 'Add expense'}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowAdd(false)}
                 disabled={saving}
-                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors disabled:opacity-50"
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -266,11 +269,11 @@ export default function ExpensesPage() {
             )}
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Category</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Category</label>
                 <select
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -281,31 +284,31 @@ export default function ExpensesPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-salon-stone mb-1">Amount</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount</label>
                   <input
                     type="number"
                     step="0.01"
                     value={form.amount}
                     onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                    className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                    className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-salon-stone mb-1">Date</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Date</label>
                   <input
                     type="date"
                     value={form.expense_date}
                     onChange={(e) => setForm((f) => ({ ...f, expense_date: e.target.value }))}
-                    className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                    className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Description</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Description</label>
                 <input
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 bg-white text-salon-espresso"
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
                   placeholder="Optional"
                 />
               </div>
@@ -315,7 +318,7 @@ export default function ExpensesPage() {
                 type="button"
                 onClick={() => setShowAdd(false)}
                 disabled={saving}
-                className="px-4 py-2 rounded-xl border border-salon-sand/60 text-salon-espresso hover:bg-salon-sand/30"
+                className="px-4 py-2 rounded-xl border border-border text-foreground hover:bg-accent"
               >
                 Cancel
               </button>
@@ -323,7 +326,7 @@ export default function ExpensesPage() {
                 type="button"
                 onClick={submitExpense}
                 disabled={saving}
-                className="px-4 py-2 rounded-xl bg-salon-gold text-white font-semibold hover:bg-salon-goldLight disabled:opacity-40"
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 disabled:opacity-40"
               >
                 {saving ? 'Saving…' : 'Save expense'}
               </button>

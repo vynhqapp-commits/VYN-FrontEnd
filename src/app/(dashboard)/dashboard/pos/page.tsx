@@ -6,6 +6,7 @@ import { locationsApi, type Location } from '@/lib/api';
 import { Combobox } from '@/components/ui/combobox';
 import { Skeleton } from '@/components/ui/skeleton';
 import SaleCheckoutForm from '@/components/pos/SaleCheckoutForm';
+import FlowTopbar from '@/components/layout/FlowTopbar';
 
 export default function PosPage() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -47,23 +48,24 @@ export default function PosPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
+      <FlowTopbar />
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">POS checkout</h1>
-          <p className="text-salon-stone text-sm mt-1">
+          <h1 className="font-display text-2xl font-semibold elite-title">POS checkout</h1>
+          <p className="elite-subtle text-sm mt-1">
             Create a sale with multiple payments. Any remaining amount will be recorded as client debt.
           </p>
           <Link
             href="/dashboard/transactions"
-            className="inline-flex mt-2 text-sm font-medium text-salon-gold hover:text-salon-goldLight transition-colors"
+            className="inline-flex mt-2 text-sm font-medium text-[var(--elite-orange)] hover:opacity-80 transition-colors"
           >
             ← Back to POS / Sales
           </Link>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <div className="w-full sm:w-56">
-            <p className="text-xs font-semibold text-salon-stone mb-1">Location</p>
+            <p className="text-xs font-semibold elite-subtle mb-1">Location</p>
             <Combobox
               value={locationId}
               onValueChange={setLocationId}

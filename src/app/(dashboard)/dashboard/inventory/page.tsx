@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Boxes, X } from 'lucide-react';
 import { inventoryApi, locationsApi, productsApi, type Inventory, type Location, type Product } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -111,19 +112,20 @@ export default function InventoryPage() {
   if (error) return <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl">{error}</div>;
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Inventory</h1>
-          <p className="text-salon-stone text-sm mt-1">Track stock per location and keep an audit trail of changes.</p>
-        </div>
-        <div className="flex gap-2 items-end">
-          <label className="text-xs font-semibold text-salon-stone">
+    <div className="elite-shell">
+      <DashboardPageHeader
+        className="mb-4"
+        title="Inventory"
+        description="Track stock per location and keep an audit trail of changes."
+        icon={<Boxes className="w-5 h-5" />}
+        rightSlot={
+          <div className="flex gap-2 items-end">
+          <label className="text-xs font-semibold elite-subtle">
             Location
             <select
               value={locationId}
               onChange={(e) => setLocationId(e.target.value)}
-              className="mt-1 w-56 bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-sm text-salon-espresso"
+              className="mt-1 w-56 elite-input rounded-lg px-3 py-2 text-sm"
             >
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -135,19 +137,20 @@ export default function InventoryPage() {
           <button
             type="button"
             onClick={() => { setShowAdjust(true); setAdjustError(null); }}
-            className="px-4 py-2 rounded-full bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight transition-colors"
+            className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-colors"
           >
             Adjust stock
           </button>
           <button
             type="button"
             onClick={loadLowStock}
-            className="px-4 py-2 rounded-full border border-salon-sand/60 text-salon-espresso text-sm font-semibold hover:bg-salon-sand/30 transition-colors"
+            className="px-4 py-2 rounded-full border border-border text-foreground text-sm font-semibold hover:bg-accent transition-colors"
           >
             {lowStockLoading ? 'Loading…' : 'Low stock'}
           </button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {lowStock.length > 0 && (
         <div className="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900">
@@ -163,49 +166,49 @@ export default function InventoryPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-salon-sand/60">
-          <thead className="bg-salon-sand/30">
+      <div className="elite-panel overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Location</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Product</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Quantity</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Low stock</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Product</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quantity</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Low stock</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-salon-sand/60">
+          <tbody>
             {inventory.map((inv) => (
               <tr key={inv.id}>
-                <td className="px-4 py-3 text-sm text-salon-espresso">{inv.Location?.name ?? inv.location_id}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{inv.Product?.name ?? inv.product_id}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{Number(inv.quantity)}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{inv.low_stock_threshold != null ? Number(inv.low_stock_threshold) : '—'}</td>
+                <td className="px-4 py-3 text-sm">{inv.Location?.name ?? inv.location_id}</td>
+                <td className="px-4 py-3 text-sm">{inv.Product?.name ?? inv.product_id}</td>
+                <td className="px-4 py-3 text-sm">{Number(inv.quantity)}</td>
+                <td className="px-4 py-3 text-sm">{inv.low_stock_threshold != null ? Number(inv.low_stock_threshold) : '—'}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {inventory.length === 0 && (
-          <p className="p-6 text-salon-stone text-center">No inventory records.</p>
+          <p className="p-6 text-muted-foreground text-center">No inventory records.</p>
         )}
       </div>
 
       {showAdjust && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAdjust(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
-              <h2 className="font-display text-xl font-semibold text-salon-espresso">Adjust stock</h2>
+              <h2 className="font-display text-xl font-semibold text-foreground">Adjust stock</h2>
               <button
                 type="button"
                 onClick={() => setShowAdjust(false)}
                 disabled={saving}
-                className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors disabled:opacity-50"
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">Product</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Product</label>
                 <Combobox
                   value={adjustForm.product_id}
                   onValueChange={(v) => setAdjustForm((f) => ({ ...f, product_id: v }))}
@@ -219,7 +222,7 @@ export default function InventoryPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-salon-stone mb-1">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
                   Quantity change (use negative to reduce)
                 </label>
                 <Input

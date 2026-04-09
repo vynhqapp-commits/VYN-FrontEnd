@@ -115,7 +115,7 @@ function TenantUsersPanel({
       <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Drawer — wider to avoid email truncation */}
-      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-2xl bg-white shadow-2xl border-l border-gray-100">
+      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-2xl bg-card shadow-2xl border-l border-gray-100">
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gray-50/60 shrink-0">
@@ -138,7 +138,7 @@ function TenantUsersPanel({
               type="button"
               onClick={() => setShowInvite(true)}
               disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-salon-gold text-white text-xs font-semibold hover:bg-salon-goldLight transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-salon-gold text-white text-xs font-semibold hover:opacity-90 transition-colors shadow-sm disabled:opacity-50"
             >
               <UserPlus className="w-3.5 h-3.5" />
               Invite user
@@ -162,7 +162,7 @@ function TenantUsersPanel({
             </div>
           ) : rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-              <div className="w-14 h-14 rounded-2xl bg-salon-sand/30 flex items-center justify-center mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
                 <Users className="w-7 h-7 text-salon-stone/40" />
               </div>
               <p className="font-medium text-salon-espresso text-sm">No users yet</p>
@@ -170,7 +170,7 @@ function TenantUsersPanel({
               <button
                 type="button"
                 onClick={() => setShowInvite(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-salon-gold text-white text-xs font-semibold hover:bg-salon-goldLight transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-salon-gold text-white text-xs font-semibold hover:opacity-90 transition-colors"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 Invite first user
@@ -224,7 +224,7 @@ function TenantUsersPanel({
           onClick={() => setShowInvite(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 overflow-hidden"
+            className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
@@ -276,7 +276,7 @@ function TenantUsersPanel({
                     <select
                       value={inviteForm.watch('role')}
                       onChange={(e) => inviteForm.setValue('role', e.target.value as InviteValues['role'])}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-salon-espresso
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-card text-sm text-salon-espresso
                         focus:outline-none focus:ring-2 focus:ring-salon-gold/30 focus:border-salon-gold/60 transition-colors"
                       disabled={actionLoading}
                     >
@@ -300,7 +300,7 @@ function TenantUsersPanel({
                     <Button
                       type="submit"
                       disabled={actionLoading}
-                      className="rounded-xl bg-salon-gold hover:bg-salon-goldLight"
+                      className="rounded-xl bg-salon-gold hover:opacity-90"
                     >
                       {actionLoading
                         ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Inviting…</>
@@ -465,17 +465,17 @@ export default function AdminTenantsPage() {
           <p className="text-salon-stone text-sm mt-1">All salon tenants onboarded to the platform.</p>
         </div>
         <div className="flex gap-3">
-          <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm">
+          <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm">
             <p className="text-salon-stone">Total salons</p>
             <p className="font-display text-lg font-semibold text-salon-espresso">{total}</p>
           </div>
-          <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm hidden sm:block">
+          <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm hidden sm:block">
             <p className="text-salon-stone">Active</p>
             <p className="font-display text-lg font-semibold text-salon-espresso">
               {activeCount} <span className="text-xs text-salon-stone">/ {total}</span>
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm hidden sm:block">
+          <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 text-sm hidden sm:block">
             <p className="text-salon-stone">Suspended</p>
             <p className="font-display text-lg font-semibold text-salon-espresso">{suspendedCount}</p>
           </div>
@@ -483,7 +483,7 @@ export default function AdminTenantsPage() {
       </div>
 
       {/* Search + actions bar */}
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
             <label className="block text-xs font-semibold text-salon-stone mb-1">Search salons</label>
@@ -499,7 +499,7 @@ export default function AdminTenantsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="w-full sm:w-40 bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-sm text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
+              className="w-full sm:w-40 bg-muted/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-sm text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
             >
               <option value="all">All</option>
               <option value="active">Active</option>
@@ -517,7 +517,7 @@ export default function AdminTenantsPage() {
           </button>
           <button
             type="button"
-            className="px-3 py-2 rounded-lg bg-salon-gold text-white text-sm font-medium hover:bg-salon-goldLight transition-colors"
+            className="px-3 py-2 rounded-lg bg-salon-gold text-white text-sm font-medium hover:opacity-90 transition-colors"
             onClick={() => setShowCreate(true)}
           >
             New salon
@@ -526,12 +526,12 @@ export default function AdminTenantsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
         {filtered.length === 0 ? (
           <p className="p-6 text-salon-stone text-center text-sm">No tenants match your search.</p>
         ) : (
-          <table className="min-w-full divide-y divide-salon-sand/60 hidden md:table">
-            <thead className="bg-salon-sand/30">
+          <table className="min-w-full divide-y divide-border hidden md:table">
+            <thead className="bg-muted/40">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Slug</th>
@@ -540,7 +540,7 @@ export default function AdminTenantsPage() {
                 <th className="px-4 py-3 text-right text-xs font-semibold text-salon-stone uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-salon-sand/60">
+            <tbody className="divide-y divide-border">
               {filtered.map((t) => (
                 <tr key={t.id}>
                   <td className="px-4 py-3 text-sm font-medium text-salon-espresso">{t.name}</td>
@@ -563,7 +563,7 @@ export default function AdminTenantsPage() {
                       <button
                         type="button"
                         onClick={() => setUsersTenant(t)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-salon-sand/60 bg-white text-salon-espresso text-xs font-medium hover:bg-salon-sand/30 transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-salon-sand/60 bg-card text-salon-espresso text-xs font-medium hover:bg-muted/40 transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" />
                         Users
@@ -599,7 +599,7 @@ export default function AdminTenantsPage() {
 
         {/* Mobile cards */}
         {filtered.length > 0 && (
-          <div className="md:hidden divide-y divide-salon-sand/60">
+          <div className="md:hidden divide-y divide-border">
             {filtered.map((t) => (
               <div key={t.id} className="p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
@@ -619,7 +619,7 @@ export default function AdminTenantsPage() {
                   <button
                     type="button"
                     onClick={() => setUsersTenant(t)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-salon-sand/60 bg-white text-salon-espresso text-xs font-medium hover:bg-salon-sand/30 transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-salon-sand/60 bg-card text-salon-espresso text-xs font-medium hover:bg-muted/40 transition-colors"
                   >
                     <Users className="w-3.5 h-3.5" />
                     Users
@@ -657,7 +657,7 @@ export default function AdminTenantsPage() {
     {/* Create tenant modal — outside space-y-6 so fixed overlay gets no margin from parent */}
     {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-salon-sand/40">
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-2xl border border-salon-sand/40">
             <div className="p-5 border-b border-salon-sand/40 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-display text-xl font-semibold text-salon-espresso">Create tenant</h2>

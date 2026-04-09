@@ -14,7 +14,7 @@ export function getRedirectForRole(role: string): string {
     case 'customer':
       return '/my-bookings';
     default:
-      return '/dashboard';
+      return '/login';
   }
 }
 

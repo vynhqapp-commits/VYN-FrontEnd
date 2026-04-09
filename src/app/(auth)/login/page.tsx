@@ -72,11 +72,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-salon-cream">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--elite-bg)] text-[var(--elite-text)]">
       <div className="lg:w-1/2 relative min-h-[220px] lg:min-h-screen flex-shrink-0">
         {imgError ? (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#d5e8e4] via-salon-cream to-salon-sand flex items-center justify-center p-8">
-            <span className="font-display text-salon-espresso text-xl font-semibold text-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--elite-surface)] via-[var(--elite-card)] to-[var(--elite-card-2)] flex items-center justify-center p-8">
+            <span className="font-display text-[var(--elite-text)] text-xl font-semibold text-center">
               {APP_FULL_NAME}
             </span>
           </div>
@@ -93,35 +93,35 @@ export default function LoginPage() {
             />
           </div>
         )}
-        <div className="absolute inset-0 bg-salon-espresso/20 lg:bg-salon-espresso/30 pointer-events-none" aria-hidden />
+        <div className="absolute inset-0 bg-black/35 lg:bg-black/45 pointer-events-none" aria-hidden />
       </div>
 
-      <div className="flex-1 flex flex-col bg-salon-cream">
-        <header className="border-b border-salon-sand/60 bg-white/80 backdrop-blur-sm flex-shrink-0">
-          <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="font-display text-lg font-semibold text-salon-espresso hover:text-salon-bark transition-colors">
+      <div className="flex-1 flex flex-col bg-[var(--elite-bg)]">
+        <header className="flex-shrink-0 border-b border-[var(--elite-border)] bg-[var(--elite-card)]/70 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-3xl items-center px-4 py-4 ps-14">
+            <Link
+              href="/"
+              className="font-display text-lg font-semibold text-[var(--elite-text)] transition-colors hover:text-primary"
+            >
               {APP_NAME}
-            </Link>
-            <Link href="/register" className="text-sm text-salon-stone hover:text-salon-espresso">
-              {t("dontHaveAccount")}
             </Link>
           </div>
         </header>
         <main className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md">
-            <h1 className="font-display text-3xl font-semibold text-salon-espresso mb-2">
+            <h1 className="font-display text-3xl font-semibold text-[var(--elite-text)] mb-2">
               {t("loginHeading")}
             </h1>
-            <p className="text-salon-stone text-sm mb-6">
+            <p className="text-[var(--elite-muted)] text-sm mb-6">
               {t("loginSubheading")}
             </p>
-            <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-6">
+            <div className="bg-[var(--elite-card)] rounded-2xl border border-[var(--elite-border)] shadow-sm p-6">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(handleSubmit, (e) => {
                     toastError(e?.email?.message || e?.password?.message || t("checkHighlightedFields"));
                   })}
-                  className="space-y-4"
+                  className="space-y-4 [&_label]:text-[var(--elite-muted)] [&_label]:font-medium [&_input]:bg-[var(--elite-surface)] [&_input]:border-[var(--elite-border-2)] [&_input]:text-[var(--elite-text)] [&_input]:placeholder:text-[var(--elite-muted)] [&_input]:rounded-xl [&_input:focus]:border-[var(--elite-orange)] [&_input:focus]:ring-1 [&_input:focus]:ring-[var(--elite-orange-dim)]"
                   autoComplete="off"
                 >
                   <RHFTextField
@@ -143,14 +143,18 @@ export default function LoginPage() {
                     disabled={loading}
                   />
                   <div className="flex gap-3 pt-1">
-                    <Button type="submit" disabled={loading} className="flex-1 h-11 rounded-xl font-semibold">
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="h-11 flex-1 rounded-xl bg-primary font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:opacity-90"
+                    >
                       {loading ? t("signingIn") : t("logIn")}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleSendOtp}
-                      className="h-11 rounded-xl"
+                      className="h-11 rounded-xl bg-[var(--elite-surface)] border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)]"
                       disabled={loading}
                     >
                       {t("sendOtp")}
@@ -159,8 +163,20 @@ export default function LoginPage() {
                 </form>
               </Form>
             </div>
-            <p className="mt-6 text-center">
-              <Link href="/" className="text-salon-stone text-sm hover:text-salon-espresso transition-colors">
+            <p className="mt-6 text-center text-sm text-[var(--elite-muted)]">
+              {t("dontHaveAccountLead")}{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-primary underline-offset-4 hover:text-primary hover:underline"
+              >
+                {t("signUp")}
+              </Link>
+            </p>
+            <p className="mt-4 text-center">
+              <Link
+                href="/"
+                className="text-sm text-[var(--elite-muted)] transition-colors hover:text-[var(--elite-text)]"
+              >
                 {t("backToHome")}
               </Link>
             </p>

@@ -236,7 +236,7 @@ export default function MyBookingsPage() {
         <Link
           href="/book"
           className="flex items-center gap-1.5 px-4 py-2.5 bg-salon-gold text-white text-sm font-semibold
-            rounded-xl hover:bg-salon-goldLight transition-colors shadow-sm shrink-0"
+            rounded-xl hover:opacity-90 transition-colors shadow-sm shrink-0"
         >
           <Plus className="w-4 h-4" />
           {t("bookNew")}
@@ -244,7 +244,7 @@ export default function MyBookingsPage() {
       </div>
 
       {favorites.length > 0 && (
-        <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="mb-6 bg-card rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
             {t("favoritesSectionTitle")}
           </p>
@@ -497,7 +497,7 @@ function BookingCard({
       : "—";
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 transition-shadow hover:shadow-md">
+    <div className="bg-card rounded-2xl border border-gray-100 shadow-sm p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -712,7 +712,7 @@ function BookingCard({
 
 function EmptyState({ t }: { t: (k: PublicI18nKey) => string }) {
   return (
-    <div className="text-center py-16 px-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+    <div className="text-center py-16 px-6 bg-card rounded-2xl border border-gray-100 shadow-sm">
       <div className="w-14 h-14 rounded-full bg-salon-gold/10 flex items-center justify-center mx-auto mb-4">
         <AlertCircle className="w-6 h-6 text-salon-gold" />
       </div>
@@ -725,7 +725,7 @@ function EmptyState({ t }: { t: (k: PublicI18nKey) => string }) {
       <Link
         href="/book"
         className="inline-flex items-center gap-1.5 px-5 py-3 bg-salon-gold text-white text-sm font-semibold
-          rounded-xl hover:bg-salon-goldLight transition-colors shadow-sm"
+          rounded-xl hover:opacity-90 transition-colors shadow-sm"
       >
         <Plus className="w-4 h-4" />
         {t("bookAVisitCta")}

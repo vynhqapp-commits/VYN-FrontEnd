@@ -141,7 +141,7 @@ export default function RegisterPage() {
       </div>
 
       <div className="flex-1 flex flex-col bg-salon-cream">
-        <header className="border-b border-salon-sand/60 bg-white/80 backdrop-blur-sm flex-shrink-0">
+        <header className="border-b border-salon-sand/60 bg-card/80 backdrop-blur-sm flex-shrink-0">
           <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link href="/" className="font-display text-lg font-semibold text-salon-espresso hover:text-salon-bark transition-colors">
               {APP_NAME}
@@ -178,7 +178,7 @@ export default function RegisterPage() {
               </button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-6">
+            <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-6">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(step === 'form' ? handleSendOtp : handleSubmit, () =>

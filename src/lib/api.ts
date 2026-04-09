@@ -206,7 +206,9 @@ export const authApi = {
       body: JSON.stringify({ email, code, ...(purpose ? { purpose } : {}) }),
     }),
   me: async () => {
-    const res = await api<AuthUser>("/api/me");
+    const res = await api<AuthUser>("/api/me", {
+      signal: AbortSignal.timeout(8000),
+    });
     return res.data != null
       ? { data: { user: res.data } }
       : { error: res.error };

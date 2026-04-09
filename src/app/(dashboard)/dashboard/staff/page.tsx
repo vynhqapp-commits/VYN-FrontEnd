@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 /* ─── constants ─────────────────────────────────────────────────────── */
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -206,32 +207,30 @@ export default function StaffPage() {
     );
   };
 
-  const inputCls = 'border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 w-full';
+  const inputCls = 'elite-input rounded-xl px-3 py-2 text-sm w-full';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 elite-shell">
       {/* ── header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso flex items-center gap-2">
-            <UserCog className="w-6 h-6 text-salon-gold" />
-            Staff
-          </h1>
-          <p className="text-sm text-salon-stone mt-0.5">Manage your team and set their weekly schedules.</p>
-        </div>
-        <Button onClick={openAdd} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add staff member
-        </Button>
-      </div>
+      <DashboardPageHeader
+        title="Staff"
+        description="Manage your team and set their weekly schedules."
+        icon={<UserCog className="w-5 h-5" />}
+        rightSlot={
+          <Button onClick={openAdd} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add staff member
+          </Button>
+        }
+      />
 
       {/* ── filter ── */}
       <div className="flex flex-wrap gap-3 items-center">
         <div>
-          <label className="block text-xs text-salon-stone mb-1">Filter by branch</label>
+          <label className="block text-xs elite-subtle mb-1">Filter by branch</label>
           <select
             value={filterBranch}
             onChange={(e) => setFilterBranch(e.target.value)}
-            className="border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm min-w-[160px]"
+            className="elite-input rounded-xl px-3 py-2 text-sm min-w-[160px]"
           >
             <option value="">All branches</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -243,7 +242,7 @@ export default function StaffPage() {
       <div className="flex gap-4 items-start">
         {/* Staff table — hidden on small screens when form is open */}
         <div className={`flex-1 min-w-0 transition-all ${panelOpen ? 'hidden xl:block' : ''}`}>
-          <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+          <div className="elite-panel overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -257,28 +256,28 @@ export default function StaffPage() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-salon-stone">Loading…</TableCell>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading…</TableCell>
                   </TableRow>
                 )}
                 {!loading && staffList.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-salon-stone">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No staff members found. Add your first team member.
                     </TableCell>
                   </TableRow>
                 )}
                 {staffList.map((s) => (
-                  <TableRow key={s.id} className="hover:bg-salon-cream/20">
+                  <TableRow key={s.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-salon-gold/20 flex items-center justify-center text-salon-gold font-semibold text-sm shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[var(--elite-orange-dim)] flex items-center justify-center text-[var(--elite-orange)] font-semibold text-sm shrink-0">
                           {s.name[0]?.toUpperCase()}
                         </div>
-                        <span className="font-medium text-salon-espresso">{s.name}</span>
+                        <span className="font-medium text-[var(--elite-text-strong)]">{s.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-salon-stone">{s.specialization || '—'}</TableCell>
-                    <TableCell className="text-salon-stone">{s.branch?.name || '—'}</TableCell>
+                    <TableCell>{s.specialization || '—'}</TableCell>
+                    <TableCell>{s.branch?.name || '—'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {s.is_active ? 'Active' : 'Inactive'}
@@ -289,14 +288,14 @@ export default function StaffPage() {
                         <button
                           title="Edit schedule"
                           onClick={() => openSchedule(s)}
-                          className="p-1.5 rounded-lg text-salon-stone hover:text-salon-espresso hover:bg-salon-cream transition-colors"
+                          className="p-1.5 rounded-lg elite-subtle hover:text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
                         >
                           <CalendarDays className="w-4 h-4" />
                         </button>
                         <button
                           title="Edit staff"
                           onClick={() => openEdit(s)}
-                          className="p-1.5 rounded-lg text-salon-stone hover:text-salon-espresso hover:bg-salon-cream transition-colors"
+                          className="p-1.5 rounded-lg elite-subtle hover:text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -304,7 +303,7 @@ export default function StaffPage() {
                           title="Deactivate"
                           onClick={() => handleDelete(s.id)}
                           disabled={deletingId === s.id}
-                          className="p-1.5 rounded-lg text-salon-stone hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          className="p-1.5 rounded-lg elite-subtle hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -319,13 +318,13 @@ export default function StaffPage() {
 
         {/* ── Add / Edit Staff panel (inline on xl+, full-width on smaller) ── */}
         {panelOpen && (
-          <div className="w-full xl:w-96 shrink-0 bg-white rounded-xl border border-salon-sand/40 shadow-sm p-5 space-y-4">
+          <div className="w-full xl:w-96 shrink-0 bg-[var(--elite-card)] rounded-xl border border-[var(--elite-border)] shadow-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-semibold text-salon-espresso">
+              <h2 className="font-display text-base font-semibold elite-title">
                 {editing ? 'Edit staff member' : 'Add staff member'}
               </h2>
-              <button onClick={() => setPanelOpen(false)} className="p-1 rounded-lg hover:bg-salon-cream transition-colors">
-                <X className="w-4 h-4 text-salon-stone" />
+              <button onClick={() => setPanelOpen(false)} className="p-1 rounded-lg hover:bg-[var(--elite-card-2)] transition-colors">
+                <X className="w-4 h-4 elite-subtle" />
               </button>
             </div>
 
@@ -336,7 +335,7 @@ export default function StaffPage() {
                 <RHFTextField control={form.control} name="specialization" label="Specialization" placeholder="Hair, Nails, Skin…" />
 
                 <div>
-                  <label className="block text-xs font-medium text-salon-espresso mb-1.5">Branch</label>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">Branch</label>
                   <select {...form.register('branch_id')} className={inputCls}>
                     <option value="">Select branch</option>
                     {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -351,15 +350,15 @@ export default function StaffPage() {
 
                 {editing && (
                   <div className="flex items-center gap-3">
-                    <label className="text-xs font-medium text-salon-espresso">Active</label>
+                    <label className="text-xs font-medium text-foreground">Active</label>
                     <button
                       type="button"
                       onClick={() => form.setValue('is_active', !form.watch('is_active'))}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${form.watch('is_active') ? 'bg-green-500' : 'bg-salon-stone/30'}`}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${form.watch('is_active') ? 'bg-green-500' : 'bg-muted'}`}
                     >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${form.watch('is_active') ? 'left-5' : 'left-0.5'}`} />
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-card shadow transition-all ${form.watch('is_active') ? 'left-5' : 'left-0.5'}`} />
                     </button>
-                    <span className="text-xs text-salon-stone">{form.watch('is_active') ? 'Active' : 'Inactive'}</span>
+                    <span className="text-xs text-muted-foreground">{form.watch('is_active') ? 'Active' : 'Inactive'}</span>
                   </div>
                 )}
 
@@ -375,16 +374,16 @@ export default function StaffPage() {
             </Form>
 
             {editing && (
-              <div className="pt-2 border-t border-salon-sand/40">
+              <div className="pt-2 border-t border-border">
                 <button
                   onClick={() => openSchedule(editing)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-salon-cream/70 hover:bg-salon-cream transition-colors text-sm text-salon-espresso"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm text-foreground"
                 >
                   <span className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-salon-gold" />
+                    <CalendarDays className="w-4 h-4 text-primary" />
                     Edit weekly schedule
                   </span>
-                  <ChevronRight className="w-4 h-4 text-salon-stone" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
             )}
@@ -404,35 +403,35 @@ export default function StaffPage() {
           {/* Modal */}
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
             <div
-              className="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl border border-salon-sand/40 flex flex-col max-h-[90vh]"
+              className="pointer-events-auto w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border flex flex-col max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-salon-sand/30 shrink-0">
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
                 <div>
-                  <h2 className="font-display text-base font-semibold text-salon-espresso">Weekly schedule</h2>
-                  <p className="text-xs text-salon-stone mt-0.5">{scheduleStaff.name}</p>
+                  <h2 className="font-display text-base font-semibold text-foreground">Weekly schedule</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{scheduleStaff.name}</p>
                 </div>
                 <button
                   onClick={() => setScheduleOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-salon-cream transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                 >
-                  <X className="w-4 h-4 text-salon-stone" />
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
                 {scheduleLoading ? (
-                  <p className="text-sm text-salon-stone text-center py-6">Loading schedule…</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">Loading schedule…</p>
                 ) : (
                   <div className="space-y-2">
                     {/* Column headers — match grid exactly */}
                     <div className="grid items-center gap-2 px-1" style={{ gridTemplateColumns: '52px 1fr 1fr 36px' }}>
-                      <span className="text-xs font-medium text-salon-stone">Day</span>
-                      <span className="text-xs font-medium text-salon-stone">Start</span>
-                      <span className="text-xs font-medium text-salon-stone">End</span>
-                      <span className="text-xs font-medium text-salon-stone text-center">On</span>
+                      <span className="text-xs font-medium text-muted-foreground">Day</span>
+                      <span className="text-xs font-medium text-muted-foreground">Start</span>
+                      <span className="text-xs font-medium text-muted-foreground">End</span>
+                      <span className="text-xs font-medium text-muted-foreground text-center">On</span>
                     </div>
 
                     {schedule.map((row, idx) => (
@@ -440,13 +439,13 @@ export default function StaffPage() {
                         key={row.day_of_week}
                         className={`grid items-center gap-2 px-2 py-2 rounded-xl border transition-colors ${
                           row.is_day_off
-                            ? 'border-salon-sand/25 bg-salon-cream/20'
-                            : 'border-salon-sand/50 bg-white'
+                            ? 'border-border bg-muted/20'
+                            : 'border-border bg-card'
                         }`}
                         style={{ gridTemplateColumns: '52px 1fr 1fr 36px' }}
                       >
                         {/* Day label */}
-                        <span className={`text-sm font-medium truncate ${row.is_day_off ? 'text-salon-stone/60' : 'text-salon-espresso'}`}>
+                        <span className={`text-sm font-medium truncate ${row.is_day_off ? 'text-muted-foreground/60' : 'text-foreground'}`}>
                           {DAY_SHORT[row.day_of_week]}
                         </span>
 
@@ -456,10 +455,10 @@ export default function StaffPage() {
                           value={row.start_time}
                           onChange={(e) => updateTime(idx, 'start_time', e.target.value)}
                           disabled={row.is_day_off}
-                          className={`w-full min-w-0 border rounded-lg px-2 py-1.5 text-sm bg-salon-cream/50
-                            focus:outline-none focus:ring-2 focus:ring-salon-gold/40
+                          className={`w-full min-w-0 border rounded-lg px-2 py-1.5 text-sm bg-muted/40
+                            focus:outline-none focus:ring-2 focus:ring-ring/40
                             disabled:opacity-35 disabled:cursor-not-allowed
-                            ${row.is_day_off ? 'border-salon-sand/30' : 'border-salon-sand/60'}`}
+                            ${row.is_day_off ? 'border-border' : 'border-border'}`}
                         />
 
                         {/* End time */}
@@ -468,10 +467,10 @@ export default function StaffPage() {
                           value={row.end_time}
                           onChange={(e) => updateTime(idx, 'end_time', e.target.value)}
                           disabled={row.is_day_off}
-                          className={`w-full min-w-0 border rounded-lg px-2 py-1.5 text-sm bg-salon-cream/50
-                            focus:outline-none focus:ring-2 focus:ring-salon-gold/40
+                          className={`w-full min-w-0 border rounded-lg px-2 py-1.5 text-sm bg-muted/40
+                            focus:outline-none focus:ring-2 focus:ring-ring/40
                             disabled:opacity-35 disabled:cursor-not-allowed
-                            ${row.is_day_off ? 'border-salon-sand/30' : 'border-salon-sand/60'}`}
+                            ${row.is_day_off ? 'border-border' : 'border-border'}`}
                         />
 
                         {/* Working toggle */}
@@ -481,7 +480,7 @@ export default function StaffPage() {
                           title={row.is_day_off ? 'Mark as working' : 'Mark as day off'}
                           className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors
                             ${row.is_day_off
-                              ? 'bg-salon-sand/30 text-salon-stone hover:bg-salon-sand/50'
+                              ? 'bg-muted/40 text-muted-foreground hover:bg-muted/50'
                               : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
                         >
@@ -494,7 +493,7 @@ export default function StaffPage() {
                     ))}
 
                     {/* Legend */}
-                    <div className="flex items-center gap-4 pt-1 text-xs text-salon-stone">
+                    <div className="flex items-center gap-4 pt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <span className="w-4 h-4 rounded bg-green-100 flex items-center justify-center">
                           <Check className="w-2.5 h-2.5 text-green-700" />
@@ -502,8 +501,8 @@ export default function StaffPage() {
                         Working
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-4 h-4 rounded bg-salon-sand/30 flex items-center justify-center">
-                          <X className="w-2.5 h-2.5 text-salon-stone" />
+                        <span className="w-4 h-4 rounded bg-muted/40 flex items-center justify-center">
+                          <X className="w-2.5 h-2.5 text-muted-foreground" />
                         </span>
                         Day off
                       </span>
@@ -513,7 +512,7 @@ export default function StaffPage() {
               </div>
 
               {/* Footer */}
-              <div className="flex gap-2 px-5 pb-5 pt-3 border-t border-salon-sand/30 shrink-0">
+              <div className="flex gap-2 px-5 pb-5 pt-3 border-t border-border shrink-0">
                 <Button onClick={saveSchedule} disabled={scheduleSaving || scheduleLoading} className="flex-1">
                   {scheduleSaving ? 'Saving…' : 'Save schedule'}
                 </Button>

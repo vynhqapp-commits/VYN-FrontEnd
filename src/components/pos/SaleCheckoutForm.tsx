@@ -410,17 +410,17 @@ export default function SaleCheckoutForm({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)] elite-shell">
       <div className="space-y-4">
         {!hideAppointmentPicker && (
-          <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-2">
-            <h2 className="font-display text-sm font-semibold text-salon-espresso">
+          <div className="elite-panel p-4 space-y-2">
+            <h2 className="font-display text-sm font-semibold elite-title">
               Booking link (optional)
             </h2>
             <select
               value={appointmentId}
               onChange={(e) => pickAppointment(e.target.value)}
-              className="w-full bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-sm text-salon-espresso"
+              className="w-full elite-input rounded-lg px-3 py-2 text-sm"
             >
               <option value="">No appointment</option>
               {appointments.map((a) => (
@@ -433,8 +433,8 @@ export default function SaleCheckoutForm({
           </div>
         )}
 
-        <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
-          <h2 className="font-display text-sm font-semibold text-salon-espresso">
+        <div className="elite-panel p-4 space-y-3">
+          <h2 className="font-display text-sm font-semibold elite-title">
             Client
           </h2>
           <Combobox
@@ -446,9 +446,9 @@ export default function SaleCheckoutForm({
           />
         </div>
 
-        <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
+        <div className="elite-panel p-4 space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-sm font-semibold text-salon-espresso">
+            <h2 className="font-display text-sm font-semibold elite-title">
               Items
             </h2>
             <div className="flex gap-2">
@@ -459,7 +459,7 @@ export default function SaleCheckoutForm({
                       (e.target.value = ""))
                     : undefined
                 }
-                className="bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-1.5 text-xs text-salon-espresso"
+                className="elite-input rounded-lg px-3 py-1.5 text-xs"
                 defaultValue=""
               >
                 <option value="">+ Add service</option>
@@ -476,7 +476,7 @@ export default function SaleCheckoutForm({
                       (e.target.value = ""))
                     : undefined
                 }
-                className="bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-1.5 text-xs text-salon-espresso"
+                className="elite-input rounded-lg px-3 py-1.5 text-xs"
                 defaultValue=""
               >
                 <option value="">+ Add product</option>
@@ -489,7 +489,7 @@ export default function SaleCheckoutForm({
             </div>
           </div>
           {lines.length === 0 ? (
-            <p className="text-salon-stone text-xs">
+            <p className="elite-subtle text-xs">
               No items yet. Add a service or product to start.
             </p>
           ) : (
@@ -500,10 +500,10 @@ export default function SaleCheckoutForm({
                   className="grid grid-cols-[minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] gap-2 items-center"
                 >
                   <div>
-                    <p className="text-sm font-medium text-salon-espresso truncate">
+                    <p className="text-sm font-medium elite-title truncate">
                       {line.name}
                     </p>
-                    <p className="text-[11px] uppercase tracking-wide text-salon-stone">
+                    <p className="text-[11px] uppercase tracking-wide elite-subtle">
                       {line.type === "service" ? "Service" : "Product"}
                     </p>
                   </div>
@@ -543,12 +543,12 @@ export default function SaleCheckoutForm({
       </div>
 
       <div className="space-y-4">
-        <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
-          <h2 className="font-display text-sm font-semibold text-salon-espresso">
+        <div className="elite-panel p-4 space-y-3">
+          <h2 className="font-display text-sm font-semibold elite-title">
             Summary
           </h2>
-          <div className="space-y-2 rounded-lg border border-salon-sand/60 bg-salon-cream/30 p-2">
-            <p className="text-[11px] font-medium text-salon-stone">Discount code</p>
+          <div className="space-y-2 rounded-lg border border-[var(--elite-border)] bg-[var(--elite-surface)] p-2">
+            <p className="text-[11px] font-medium elite-subtle">Discount code</p>
             <Input
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value)}
@@ -560,7 +560,7 @@ export default function SaleCheckoutForm({
                 onChange={(e) =>
                   setDiscountType(e.target.value as "flat" | "percent")
                 }
-                className="w-full bg-white border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso"
+                className="w-full bg-card border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso"
               >
                 <option value="flat">Flat</option>
                 <option value="percent">Percent %</option>
@@ -575,7 +575,7 @@ export default function SaleCheckoutForm({
                 }
               />
             </div>
-            <p className="text-[11px] font-medium text-salon-stone">Tip amount</p>
+            <p className="text-[11px] font-medium elite-subtle">Tip amount</p>
             <Input
               type="number"
               min={0}
@@ -586,11 +586,11 @@ export default function SaleCheckoutForm({
               }
               placeholder="Enter tip amount"
             />
-            <p className="text-[11px] font-medium text-salon-stone">Tip allocation</p>
+            <p className="text-[11px] font-medium elite-subtle">Tip allocation</p>
             <select
               value={tipMode}
               onChange={(e) => setTipMode(e.target.value as TipMode)}
-              className="w-full bg-white border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso"
+                className="w-full elite-input rounded-lg px-3 py-2 text-xs"
             >
               <option value="single">Single staff</option>
               <option value="equal_split">Equal split</option>
@@ -612,7 +612,7 @@ export default function SaleCheckoutForm({
                       ),
                     )
                   }
-                  className="w-full bg-white border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso"
+                  className="w-full elite-input rounded-lg px-3 py-2 text-xs"
                 >
                   <option value="">Select staff</option>
                   {staff.map((s) => (
@@ -656,23 +656,23 @@ export default function SaleCheckoutForm({
               </div>
             ))}
           </div>
-          <div className="flex justify-between text-sm text-salon-stone">
+          <div className="flex justify-between text-sm elite-subtle">
             <span>Total</span>
-            <span className="font-display text-xl font-semibold text-salon-espresso">
+            <span className="font-display text-xl font-semibold elite-title">
               {grandTotal.toFixed(2)}
             </span>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 space-y-3">
+        <div className="elite-panel p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-sm font-semibold text-salon-espresso">
+            <h2 className="font-display text-sm font-semibold elite-title">
               Payments
             </h2>
             <button
               type="button"
               onClick={addPaymentRow}
-              className="text-xs font-medium text-salon-gold hover:text-salon-goldLight"
+              className="text-xs font-medium text-[var(--elite-orange)] hover:opacity-80"
             >
               + Add payment
             </button>
@@ -687,7 +687,7 @@ export default function SaleCheckoutForm({
                 onChange={(e) =>
                   updatePayment(p.id, { method: e.target.value })
                 }
-                className="w-full bg-salon-cream/40 border border-salon-sand/60 rounded-lg px-3 py-2 text-xs text-salon-espresso"
+                className="w-full elite-input rounded-lg px-3 py-2 text-xs"
               >
                 {paymentMethods.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -715,8 +715,8 @@ export default function SaleCheckoutForm({
               </button>
             </div>
           ))}
-          <div className="text-xs text-salon-stone space-y-1">
-            <div className="rounded-lg border border-salon-sand/50 bg-salon-cream/30 px-2 py-1.5">
+          <div className="text-xs elite-subtle space-y-1">
+            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-surface)] px-2 py-1.5">
               <div className="flex justify-between">
                 <span>Cash drawer session</span>
                 <span className={hasOpenDrawer ? "text-emerald-700 font-medium" : "text-amber-700 font-medium"}>
@@ -726,7 +726,7 @@ export default function SaleCheckoutForm({
               {!hasOpenDrawer && (
                 <p className="mt-1">
                   Open session from{" "}
-                  <Link href="/dashboard/cash-drawer" className="text-salon-gold font-medium hover:text-salon-goldLight">
+                  <Link href="/dashboard/cash-drawer" className="text-[var(--elite-orange)] font-medium hover:opacity-80">
                     Cash drawer
                   </Link>{" "}
                   to accept cash in checkout.
@@ -768,7 +768,7 @@ export default function SaleCheckoutForm({
             type="button"
             disabled={submitting}
             onClick={handleSubmit}
-            className="mt-2 w-full h-11 rounded-xl text-sm font-semibold"
+            className="mt-2 w-full h-11 rounded-xl text-sm font-semibold elite-btn-primary"
           >
             {submitting ? "Processing..." : "Complete sale"}
           </Button>

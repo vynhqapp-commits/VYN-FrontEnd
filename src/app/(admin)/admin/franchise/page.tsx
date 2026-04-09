@@ -56,7 +56,7 @@ export default function AdminFranchiseKpisPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-3 items-end">
         <label className="flex flex-col gap-1 text-xs font-medium text-salon-stone">
           From
           <input
@@ -79,7 +79,7 @@ export default function AdminFranchiseKpisPage() {
           type="button"
           onClick={load}
           disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 bg-salon-gold text-white text-sm font-semibold rounded-xl hover:bg-salon-goldLight transition-colors disabled:opacity-50 shadow-sm"
+          className="flex items-center gap-1.5 px-4 py-2 bg-salon-gold text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 shadow-sm"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Loading…' : 'Refresh'}
@@ -102,13 +102,13 @@ export default function AdminFranchiseKpisPage() {
           <Spinner size="lg" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-12 text-center">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-12 text-center">
           <Building2 className="w-10 h-10 text-salon-sand mx-auto mb-3" />
           <p className="text-salon-stone text-sm">No tenant data for the selected period.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-salon-sand/30">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-salon-gold" />
               <h2 className="text-sm font-semibold text-salon-espresso">All Tenants</h2>
@@ -139,9 +139,9 @@ export default function AdminFranchiseKpisPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-salon-sand/30">
+              <tbody className="divide-y divide-border">
                 {rows.map((r) => (
-                  <tr key={r.tenant_id} className="hover:bg-salon-cream/30 transition-colors">
+                  <tr key={r.tenant_id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-5 py-3 font-medium text-salon-espresso">{r.tenant_name}</td>
                     <td className="px-4 py-3 text-salon-stone capitalize">{r.plan ?? '—'}</td>
                     <td className="px-4 py-3">

@@ -161,7 +161,7 @@ function TimeColumnDroppable({
   return (
     <div
       ref={setNodeRef}
-      className={`relative border-b border-salon-sand/30 ${staffColumnLayout ? 'border-l border-salon-sand/20' : ''} ${isOver ? 'bg-salon-gold/5' : ''}`}
+      className={`relative border-b border-border ${staffColumnLayout ? 'border-l border-salon-sand/20' : ''} ${isOver ? 'bg-salon-gold/5' : ''}`}
       style={{ height }}
     >
       {children}
@@ -305,7 +305,7 @@ export default function CalendarGrid({
 
   const staffColorMeta = (staffId: string | undefined | null) => {
     const id = staffId ? String(staffId) : '';
-    if (!id) return { bg: 'bg-salon-sand/30', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+    if (!id) return { bg: 'bg-muted/40', border: 'border-salon-sand/60', text: 'text-salon-stone' };
     const idx = staffHash(id) % staffPalette.length;
     return staffPalette[idx];
   };
@@ -468,17 +468,17 @@ export default function CalendarGrid({
 
     return (
       <DndContext sensors={sensors} onDragEnd={handleMonthDragEnd}>
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-salon-sand/30">
-            <span className="text-salon-gold font-display font-semibold">{copy.monthTitle}</span>
-            <span className="text-xs text-salon-stone">{copy.monthHelp}</span>
+        <div className="elite-panel overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-[var(--elite-border)]">
+            <span className="text-[var(--elite-orange)] font-display font-semibold">{copy.monthTitle}</span>
+            <span className="text-xs elite-subtle">{copy.monthHelp}</span>
           </div>
 
           <div className="overflow-x-auto">
             <div className="min-w-[760px]">
-              <div className="grid grid-cols-7 border-b border-salon-sand/30 bg-salon-cream/60">
+              <div className="grid grid-cols-7 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]">
                 {dowLabels.map((h) => (
-                  <div key={h} className="px-3 py-2 text-xs font-semibold text-salon-stone">
+                  <div key={h} className="px-3 py-2 text-xs font-semibold elite-subtle">
                     {h}
                   </div>
                 ))}
@@ -500,8 +500,8 @@ export default function CalendarGrid({
                         key={idx}
                         id={`month-cell-${dk}`}
                         day={d}
-                        className={`p-2 text-left border-r border-b border-salon-sand/30 hover:bg-salon-cream/20 transition-colors cursor-pointer ${
-                          inMonth ? 'bg-white' : 'bg-salon-cream/20'
+                        className={`p-2 text-left border-r border-b border-border hover:bg-muted/20 transition-colors cursor-pointer ${
+                          inMonth ? 'bg-card' : 'bg-muted/20'
                         }`}
                         title={fmtMonthDay(d)}
                         onPointerClick={() => onDayClick?.(d)}
@@ -516,7 +516,7 @@ export default function CalendarGrid({
                             {d.getDate()}
                           </span>
                           {dayAppointments.length > 0 && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-salon-gold/10 text-salon-gold border border-salon-gold/20">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--elite-orange-dim)] text-[var(--elite-orange)] border border-[var(--elite-orange)]/30">
                               {dayAppointments.length}
                             </span>
                           )}
@@ -534,14 +534,14 @@ export default function CalendarGrid({
                                 disabled={!draggable}
                                 ariaLabel={aria}
                                 onOpen={() => onAppointmentClick?.(a.id)}
-                                className={`w-full text-left rounded-md border px-2 py-1 text-[10px] truncate ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                            className={`w-full text-left rounded-md border px-2 py-1 text-[10px] truncate ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
                               >
                                 {clientName(a)}
                               </MonthDraggableChip>
                             );
                           })}
                           {more > 0 && (
-                            <div className="text-[10px] text-salon-stone/70">
+                            <div className="text-[10px] elite-subtle">
                               {copy.moreAppointments.replace('{count}', String(more))}
                             </div>
                           )}
@@ -555,6 +555,102 @@ export default function CalendarGrid({
           </div>
         </div>
       </DndContext>
+    );
+  }
+
+  if (view === 'day') {
+    const hours = ['09', '10', '11', '12', '13', '14', '15', '16', '17'];
+    const focusKey = dateKeyLocal(focusDate);
+    const dayAppointments = appointments
+      .filter((a) => {
+        const s = parseStart(a);
+        return s ? dateKeyLocal(s) === focusKey : false;
+      })
+      .sort((a, b) => {
+        const sa = parseStart(a)?.getTime() ?? 0;
+        const sb = parseStart(b)?.getTime() ?? 0;
+        return sa - sb;
+      });
+
+    const byHour = new Map<string, Appointment[]>();
+    for (const h of hours) byHour.set(h, []);
+    for (const appt of dayAppointments) {
+      const s = parseStart(appt);
+      if (!s) continue;
+      const key = pad2(s.getHours());
+      if (byHour.has(key)) byHour.get(key)!.push(appt);
+    }
+
+    return (
+      <div className="elite-panel overflow-hidden">
+        <div className="border-b border-[var(--elite-border)] px-4 py-3">
+          <p className="text-xs elite-subtle">{copy.weekSubtitle}</p>
+        </div>
+        <div>
+          {hours.map((hour) => (
+            <div key={hour} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border-b border-[var(--elite-border)] px-4 py-3">
+              <div className="pt-1 text-right text-[11px] elite-subtle">{hour}:00</div>
+              <div className="space-y-2">
+                {(byHour.get(hour) ?? []).length === 0 ? (
+                  <div className="h-5" />
+                ) : (
+                  (byHour.get(hour) ?? []).map((a) => {
+                    const st = statusMeta(a.status);
+                    const staffMeta = staffColorMeta(getStaffId(a));
+                    const start = parseStart(a);
+                    const timeText = start ? `${pad2(start.getHours())}:${pad2(start.getMinutes())}` : '--:--';
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-[var(--elite-border-2)] bg-[var(--elite-card-2)] p-3"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="w-12 shrink-0 text-xs elite-subtle">{timeText}</div>
+                          <div className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}>
+                            {(clientName(a) || '--')
+                              .split(' ')
+                              .map((x) => x[0])
+                              .join('')
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => onAppointmentClick?.(a.id)}
+                              className="block truncate text-left text-sm font-semibold elite-title hover:opacity-80"
+                            >
+                              {clientName(a)}
+                            </button>
+                            <p className="truncate text-xs elite-subtle">{serviceName(a)}</p>
+                            <p className="truncate text-[11px] elite-subtle">
+                              {staffName(a)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${st.bg} ${st.text}`}>
+                            {st.label}
+                          </span>
+                          {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && (
+                            <button
+                              type="button"
+                              onClick={() => onAppointmentCheckout(a.id)}
+                              className="rounded-md bg-[var(--elite-orange)] px-3 py-1 text-[11px] font-semibold text-white"
+                            >
+                              {copy.checkout}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -667,7 +763,7 @@ export default function CalendarGrid({
                 e.stopPropagation();
                 onAppointmentCheckout(a.id);
               }}
-              className="text-[10px] px-2 py-0.5 rounded border bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+              className="text-[10px] px-2 py-0.5 rounded border bg-salon-gold text-white border-salon-gold hover:opacity-90"
             >
               {copy.checkout}
             </button>
@@ -679,7 +775,7 @@ export default function CalendarGrid({
 
   const anyVisible = visibleAppointments.length > 0;
 
-  const dayViewStaffMode = view === 'day';
+  const dayViewStaffMode = false;
   const singleDay = days[0];
   const dayAppointmentsForStaff = singleDay ? appointmentsForDay(singleDay) : [];
   const staffColumns = dayViewStaffMode ? buildStaffColumnsForDay(dayAppointmentsForStaff) : [];
@@ -695,10 +791,10 @@ export default function CalendarGrid({
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleTimeDragEnd}>
-      <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
-        <div className="flex flex-col gap-1 px-5 py-4 border-b border-salon-sand/30 sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-salon-gold font-display font-semibold capitalize">{view}</span>
-          <span className="text-xs text-salon-stone">
+      <div className="elite-panel overflow-hidden">
+        <div className="flex flex-col gap-1 px-5 py-4 border-b border-[var(--elite-border)] sm:flex-row sm:items-center sm:gap-2">
+          <span className="text-[var(--elite-orange)] font-display font-semibold capitalize">{view}</span>
+          <span className="text-xs elite-subtle">
             {dayViewStaffMode ? copy.dayStaffSubtitle : copy.weekSubtitle}
           </span>
         </div>
@@ -715,11 +811,11 @@ export default function CalendarGrid({
                     const chipMeta =
                       col.staffId && col.staffId !== '__none__'
                         ? staffColorMeta(col.staffId)
-                        : { bg: 'bg-salon-sand/50', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+                        : { bg: 'bg-muted/50', border: 'border-salon-sand/60', text: 'text-salon-stone' };
                     return (
                       <div
                         key={col.key}
-                        className="px-2 py-3 text-left border-b border-salon-sand/30 bg-salon-cream/60"
+                        className="px-2 py-3 text-left border-b border-border bg-muted/50"
                       >
                         <p className="text-[10px] font-medium text-salon-stone/80 mb-1">
                           {singleDay.toLocaleDateString(undefined, {
@@ -741,17 +837,17 @@ export default function CalendarGrid({
                 : days.map((d) => (
                     <div
                       key={d.toISOString()}
-                      className="px-3 py-3 text-left text-xs font-semibold text-salon-stone border-b border-salon-sand/30 bg-salon-cream/60"
+                    className="px-3 py-3 text-left text-xs font-semibold elite-subtle border-b border-[var(--elite-border)] bg-[var(--elite-surface)]"
                     >
                       {d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </div>
                   ))}
 
-              <div className="bg-salon-cream/60" style={{ height: totalHeight }}>
+              <div className="bg-muted/50" style={{ height: totalHeight }}>
                 {hours.map((h) => (
                   <div
                     key={h}
-                    className="h-[64px] border-b border-salon-sand/30 flex items-start justify-end pr-2 pt-2 text-[10px] text-salon-stone"
+                    className="h-[64px] border-b border-[var(--elite-border)] flex items-start justify-end pr-2 pt-2 text-[10px] elite-subtle"
                   >
                     {h}:00
                   </div>
@@ -773,7 +869,7 @@ export default function CalendarGrid({
                         {hours.map((h, i) => (
                           <div
                             key={h}
-                            className="absolute left-0 right-0 border-t border-salon-sand/30"
+                            className="absolute left-0 right-0 border-t border-border"
                             style={{ top: i * HOUR_HEIGHT }}
                           />
                         ))}
@@ -795,7 +891,7 @@ export default function CalendarGrid({
                         {hours.map((h, i) => (
                           <div
                             key={h}
-                            className="absolute left-0 right-0 border-t border-salon-sand/30"
+                            className="absolute left-0 right-0 border-t border-border"
                             style={{ top: i * HOUR_HEIGHT }}
                           />
                         ))}
@@ -808,7 +904,7 @@ export default function CalendarGrid({
         </div>
 
         {!anyVisible && (
-          <div className="px-6 py-12 text-center text-salon-stone">{copy.emptyRange}</div>
+          <div className="px-6 py-12 text-center elite-subtle">{copy.emptyRange}</div>
         )}
       </div>
     </DndContext>

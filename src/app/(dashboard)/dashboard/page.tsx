@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CalendarDays, CreditCard, Users, UserCheck } from 'lucide-react';
+import { CalendarDays, CreditCard, LayoutDashboard, Users, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import {
   type StaffMember,
   type Transaction,
 } from '@/lib/api';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 type ApptRow = {
   id: string;
@@ -449,13 +450,12 @@ export default function DashboardPage() {
 
   if (!branchLoading && noBranches) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Metrics and activity are shown per location. Add a branch under Locations to get started.
-          </p>
-        </div>
+      <div className="space-y-6 elite-shell">
+        <DashboardPageHeader
+          title="Dashboard"
+          description="Metrics and activity are shown per location. Add a branch under Locations to get started."
+          icon={<LayoutDashboard className="w-5 h-5" />}
+        />
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             No locations found for this salon.
@@ -466,45 +466,36 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Today’s overview for this branch — bookings, clients, staff, and revenue.
-            {branchFilter && branchFilter !== '' ? (
-              <>
-                {' '}
-                <span className="text-foreground/80" key={String(branchFilter)}>
-                  Location: {locationScopeLabel || '…'}.
-                </span>
-              </>
-            ) : null}
-          </p>
-        </div>
-        <div className="flex flex-col gap-1 sm:items-end">
-          <label htmlFor="dashboard-branch" className="text-xs text-muted-foreground">
-            Branch
-          </label>
-          <select
-            id="dashboard-branch"
-            value={branchFilter != null && branchFilter !== '' ? String(branchFilter) : ''}
-            onChange={(e) => setBranchFilter(e.target.value)}
-            disabled={branchLoading || locations.length === 0}
-            className="h-9 w-full min-w-[12rem] rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-auto"
-          >
-            {locations.map((loc) => (
-              <option key={String(loc.id)} value={String(loc.id)}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+    <div className="space-y-6 elite-shell">
+      <DashboardPageHeader
+        title="Dashboard"
+        description={`Today’s overview for this branch — bookings, clients, staff, and revenue.${branchFilter && branchFilter !== '' ? ` Location: ${locationScopeLabel || '…'}.` : ''}`}
+        icon={<LayoutDashboard className="w-5 h-5" />}
+        rightSlot={
+          <div className="flex flex-col gap-1 sm:items-end">
+            <label htmlFor="dashboard-branch" className="text-xs elite-subtle">
+              Branch
+            </label>
+            <select
+              id="dashboard-branch"
+              value={branchFilter != null && branchFilter !== '' ? String(branchFilter) : ''}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              disabled={branchLoading || locations.length === 0}
+              className="elite-input h-9 w-full min-w-[12rem] px-3 text-sm sm:w-auto"
+            >
+              {locations.map((loc) => (
+                <option key={String(loc.id)} value={String(loc.id)}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        }
+      />
 
       {/* KPI row */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="elite-panel">
           <CardHeader className="pb-2">
             <CardDescription>Today’s Revenue</CardDescription>
             <CardTitle className="text-2xl">
@@ -520,10 +511,10 @@ export default function DashboardPage() {
                 {stats.revenueDeltaPct.toFixed(1)}% vs yesterday
               </span>
             )}
-            <CreditCard className="text-muted-foreground" />
+            <CreditCard className="text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="elite-panel">
           <CardHeader className="pb-2">
             <CardDescription>Total Bookings</CardDescription>
             <CardTitle className="text-2xl">
@@ -536,10 +527,10 @@ export default function DashboardPage() {
             ) : (
               <span className="text-xs text-muted-foreground">{stats.upcomingBookings} upcoming</span>
             )}
-            <CalendarDays className="text-muted-foreground" />
+            <CalendarDays className="text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="elite-panel">
           <CardHeader className="pb-2">
             <CardDescription>Active Clients</CardDescription>
             <CardTitle className="text-2xl">
@@ -548,10 +539,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Live customer records</span>
-            <Users className="text-muted-foreground" />
+            <Users className="text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="elite-panel">
           <CardHeader className="pb-2">
             <CardDescription>
               {dataPending ? 'Staff' : stats.staffCardMode === 'schedule' ? 'On duty now' : 'Active staff'}
@@ -566,14 +557,14 @@ export default function DashboardPage() {
             ) : (
               <span className="text-xs text-muted-foreground leading-snug">{stats.staffSub}</span>
             )}
-            <UserCheck className="shrink-0 text-muted-foreground" />
+            <UserCheck className="shrink-0 text-[var(--elite-orange)]" />
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* Appointments table */}
-        <Card>
+        <Card className="elite-panel">
           <CardHeader className="space-y-1">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -587,7 +578,7 @@ export default function DashboardPage() {
                   placeholder="Search…"
                   className="w-full sm:w-56"
                 />
-                <Button variant="outline">Filters</Button>
+                <Button variant="outline" className="border-[var(--elite-border-2)]">Filters</Button>
               </div>
             </div>
           </CardHeader>
@@ -656,7 +647,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Activity feed */}
-        <Card>
+        <Card className="elite-panel">
           <CardHeader>
             <CardTitle>Activity</CardTitle>
             <CardDescription>
@@ -688,7 +679,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue chart */}
-      <Card>
+      <Card className="elite-panel">
         <CardHeader>
           <CardTitle>Revenue</CardTitle>
           <CardDescription>Last 7 days.</CardDescription>

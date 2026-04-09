@@ -54,7 +54,7 @@ export default function AdminGlobalReportsPage() {
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">{error}</div>
       )}
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-3 items-end">
         <label className="text-xs font-medium text-salon-stone">
           From
           <input value={from} onChange={(e) => setFrom(e.target.value)} type="date" className="mt-1 border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm" />
@@ -78,22 +78,22 @@ export default function AdminGlobalReportsPage() {
 
       {/* KPI cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4">
           <p className="text-xs font-semibold text-salon-stone uppercase tracking-wide">Tenants</p>
           <p className="font-display text-2xl font-semibold text-salon-espresso mt-1">{kpis?.total_tenants ?? '—'}</p>
           <p className="text-[11px] text-salon-stone">{kpis?.active_tenants ?? 0} active · {kpis?.suspended_tenants ?? 0} suspended</p>
         </div>
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4">
           <p className="text-xs font-semibold text-salon-stone uppercase tracking-wide">Users</p>
           <p className="font-display text-2xl font-semibold text-salon-espresso mt-1">{kpis?.total_users ?? '—'}</p>
           <p className="text-[11px] text-salon-stone">All accounts</p>
         </div>
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4">
           <p className="text-xs font-semibold text-salon-stone uppercase tracking-wide">Revenue</p>
           <p className="font-display text-2xl font-semibold text-salon-espresso mt-1">{revenueTotal.toFixed(2)}</p>
           <p className="text-[11px] text-salon-stone">From ledger (range)</p>
         </div>
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4">
           <p className="text-xs font-semibold text-salon-stone uppercase tracking-wide">Profit</p>
           <p className="font-display text-2xl font-semibold text-salon-espresso mt-1">{profit.toFixed(2)}</p>
           <p className="text-[11px] text-salon-stone">Revenue - expenses</p>
@@ -101,7 +101,7 @@ export default function AdminGlobalReportsPage() {
       </div>
 
       {/* Breakdown table */}
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-5 text-sm text-salon-stone">
+      <div className="bg-card rounded-xl border border-salon-sand/40 shadow-sm p-5 text-sm text-salon-stone">
         {financial.length === 0 ? (
           <p>No financial rows for selected range.</p>
         ) : (
@@ -114,7 +114,7 @@ export default function AdminGlobalReportsPage() {
                   <th className="py-2 text-right font-medium">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-salon-sand/30">
+              <tbody className="divide-y divide-border">
                 {financial.map((r) => (
                   <tr key={`${r.type}-${r.category}`}>
                     <td className="py-2 text-salon-espresso">{r.type}</td>

@@ -60,7 +60,7 @@ export function LoadingWithHero() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-salon-cream p-6">
       <div className="flex flex-col items-center gap-8">
         <div className="relative w-16 h-16">
-          <div className="absolute inset-0 rounded-full border-2 border-salon-sand/30" />
+          <div className="absolute inset-0 rounded-full border-2 border-border" />
           <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-salon-gold border-r-salon-gold/60 animate-spin" style={{ animationDuration: '0.8s' }} />
         </div>
         <div className="text-center">

@@ -97,6 +97,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     [nav],
   );
 
+  const salonRoles = ["salon_owner", "manager", "receptionist", "staff"];
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -111,13 +113,16 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/my-bookings");
       return;
     }
+    if (!salonRoles.includes(user.role)) {
+      router.replace("/login");
+      return;
+    }
     if (!isRouteAllowed(user.role, pathname)) {
       router.replace(getRedirectForRole(user.role));
       return;
     }
   }, [user, loading, router, pathname]);
 
-  const salonRoles = ["salon_owner", "manager", "receptionist", "staff"];
   if (loading || !user || !salonRoles.includes(user.role))
     return <LoadingWithHero />;
 

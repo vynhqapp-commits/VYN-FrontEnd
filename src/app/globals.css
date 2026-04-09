@@ -6,35 +6,117 @@
   :root {
     --radius: 12px;
 
-    --background: 0 0% 100%;
-    --foreground: 222.2 47.4% 11.2%;
+    /* Light — salon cream / paper */
+    --background: 40 33% 98%;
+    --foreground: 24 10% 18%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
+    --card: 40 30% 99%;
+    --card-foreground: 24 10% 18%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
+    --popover: 40 30% 99%;
+    --popover-foreground: 24 10% 18%;
 
-    /* Brand accent: salon-gold (#b8860b) */
-    --primary: 43 89% 38%;
+    --primary: 21 100% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 35 18% 92%;
+    --secondary-foreground: 24 10% 22%;
+
+    --muted: 35 14% 93%;
+    --muted-foreground: 24 6% 42%;
+
+    --accent: 35 18% 92%;
+    --accent-foreground: 24 10% 22%;
+
+    --destructive: 346 85% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 12% 88%;
+    --input: 30 12% 88%;
+    --ring: 21 100% 51%;
+
+    --elite-bg: #f6f3ee;
+    --elite-surface: #faf8f5;
+    --elite-card: #ffffff;
+    --elite-card-2: #f0ebe3;
+    --elite-border: #e5ddd4;
+    --elite-border-2: #d8cfc4;
+    --elite-text: #3d3935;
+    --elite-text-strong: #2c2825;
+    --elite-muted: #6b6560;
+    --elite-muted-2: #8b8680;
+    --elite-orange: #ff5b04;
+    --elite-orange-dim: rgba(255, 91, 4, 0.14);
+    --elite-green: #1fa86a;
+    --elite-green-dim: rgba(31, 168, 106, 0.14);
+    --elite-red: #d9364e;
+    --elite-red-dim: rgba(217, 54, 78, 0.12);
+    --elite-yellow: #c98f12;
+    --elite-yellow-dim: rgba(201, 143, 18, 0.14);
+    --elite-blue: #2563eb;
+    --elite-blue-dim: rgba(37, 99, 235, 0.12);
+    --elite-teal: #0d9488;
+    --elite-teal-dim: rgba(13, 148, 136, 0.12);
+    --elite-purple: #7c3aed;
+    --elite-purple-dim: rgba(124, 58, 237, 0.12);
+    --sidebar-nav-text: var(--elite-text-strong);
+  }
+
+  .dark {
+    --background: 222 45% 7%;
+    --foreground: 210 40% 96%;
+
+    --card: 222 35% 10%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 35% 10%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 21 100% 51%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217 28% 15%;
+    --secondary-foreground: 210 40% 96%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 217 28% 15%;
+    /* Slightly lighter for readable body/nav/footer copy on dark surfaces */
+    --muted-foreground: 215 18% 74%;
 
-    /* Subtle gold-tinted surface for active/hover states */
-    --accent: 43 80% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 217 28% 15%;
+    --accent-foreground: 210 40% 96%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 346 85% 56%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 43 89% 38%;
+    --border: 216 30% 22%;
+    --input: 216 30% 22%;
+    --ring: 21 100% 51%;
+
+    --elite-bg: #07090d;
+    --elite-surface: #0c1018;
+    --elite-card: #111820;
+    --elite-card-2: #161f2c;
+    --elite-border: #1c2a3a;
+    --elite-border-2: #243547;
+    --elite-text: #e4eefb;
+    --elite-text-strong: #eef5ff;
+    --elite-muted: #4a6880;
+    --elite-muted-2: #2a3f54;
+    --elite-orange: #ff5b04;
+    --elite-orange-dim: rgba(255, 91, 4, 0.12);
+    --elite-green: #2ecc7a;
+    --elite-green-dim: rgba(46, 204, 122, 0.12);
+    --elite-red: #f0405a;
+    --elite-red-dim: rgba(240, 64, 90, 0.12);
+    --elite-yellow: #f5b432;
+    --elite-yellow-dim: rgba(245, 180, 50, 0.12);
+    --elite-blue: #4d9fff;
+    --elite-blue-dim: rgba(77, 159, 255, 0.12);
+    --elite-teal: #26c8b9;
+    --elite-teal-dim: rgba(38, 200, 185, 0.1);
+    --elite-purple: #a855f7;
+    --elite-purple-dim: rgba(168, 85, 247, 0.12);
+    --sidebar-nav-text: var(--elite-text-strong);
   }
 
   html {
@@ -49,5 +131,151 @@
 @layer base {
   * {
     @apply border-border;
+  }
+}
+
+@layer components {
+  .elite-shell {
+    background: transparent;
+    color: var(--elite-text);
+  }
+
+  .elite-panel {
+    background: var(--elite-card);
+    border: 1px solid var(--elite-border);
+    border-radius: 12px;
+  }
+
+  .elite-panel-soft {
+    background: var(--elite-surface);
+    border: 1px solid var(--elite-border);
+    border-radius: 12px;
+  }
+
+  .elite-title {
+    color: var(--elite-text);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .elite-subtle {
+    color: var(--elite-muted);
+  }
+
+  .elite-input {
+    background: var(--elite-surface);
+    border: 1px solid var(--elite-border-2);
+    color: var(--elite-text);
+    border-radius: 10px;
+  }
+
+  .elite-input:focus {
+    outline: none;
+    border-color: var(--elite-orange);
+    box-shadow: 0 0 0 1px var(--elite-orange-dim);
+  }
+
+  .elite-btn-primary {
+    background: var(--elite-orange);
+    color: #fff;
+    border: 1px solid var(--elite-orange);
+    border-radius: 10px;
+  }
+
+  .elite-btn-primary:hover {
+    filter: brightness(0.95);
+  }
+
+  .elite-btn-ghost {
+    background: transparent;
+    color: var(--elite-muted);
+    border: 1px solid var(--elite-border-2);
+    border-radius: 10px;
+  }
+
+  .elite-btn-ghost:hover {
+    color: var(--elite-text);
+    border-color: var(--elite-border);
+    background: var(--elite-card);
+  }
+
+  /* Dashboard page titles: always visible and consistent */
+  main h1.font-display,
+  .elite-shell h1.font-display {
+    color: var(--elite-text) !important;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* Section titles inside dashboard pages */
+  main h2.font-display,
+  .elite-shell h2.font-display {
+    color: var(--elite-text) !important;
+  }
+
+  /* Global dashboard table parity: same UI/color/text everywhere */
+  .elite-shell table,
+  main table {
+    background: var(--elite-card) !important;
+    color: var(--sidebar-nav-text) !important;
+    border-color: var(--elite-border) !important;
+  }
+
+  .elite-shell thead,
+  main thead {
+    background: var(--elite-orange) !important;
+  }
+
+  .elite-shell th,
+  main th {
+    color: #ffffff !important;
+    border-color: var(--elite-border) !important;
+  }
+
+  .elite-shell td,
+  main td {
+    color: var(--elite-text-strong) !important;
+    border-color: var(--elite-border) !important;
+  }
+
+  .elite-shell tbody tr,
+  main tbody tr {
+    border-color: var(--elite-border) !important;
+  }
+
+  .elite-shell tbody tr:hover,
+  main tbody tr:hover {
+    background: color-mix(in srgb, var(--elite-card-2) 70%, transparent) !important;
+  }
+
+  /* Keep table action controls readable and consistent */
+  .elite-shell table a,
+  .elite-shell table button,
+  main table a,
+  main table button {
+    color: var(--elite-text) !important;
+    border-color: var(--elite-border-2) !important;
+  }
+
+  /* Neutralize legacy gold utility classes project-wide */
+  .bg-salon-gold,
+  .hover\:bg-salon-goldLight:hover {
+    background: var(--elite-orange) !important;
+    color: #ffffff !important;
+  }
+
+  .text-salon-gold,
+  .hover\:text-salon-goldLight:hover {
+    color: var(--elite-orange) !important;
+  }
+
+  .border-salon-gold,
+  .hover\:border-salon-gold:hover {
+    border-color: var(--elite-orange) !important;
+  }
+
+  .focus\:ring-salon-gold\/30:focus,
+  .focus\:ring-salon-gold\/40:focus {
+    --tw-ring-color: color-mix(in srgb, var(--elite-orange) 30%, transparent) !important;
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { Pencil, Trash2, X } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +19,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Pagination } from '@/components/data/Pagination';
 import { type PaginationMeta } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -376,22 +377,21 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Services</h1>
-          <p className="text-salon-stone text-sm mt-1">
-            Create and manage services offered by your salon.
-          </p>
-        </div>
-        <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>
-          New service
-        </Button>
-      </div>
+    <div className="space-y-4 elite-shell">
+      <DashboardPageHeader
+        title="Services"
+        description="Create and manage services offered by your salon."
+        icon={<Pencil className="w-5 h-5" />}
+        rightSlot={
+          <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>
+            New service
+          </Button>
+        }
+      />
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <div className="elite-panel p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex-1">
-          <label className="block text-xs font-semibold text-salon-stone mb-1">Search</label>
+          <label className="block text-xs font-semibold elite-subtle mb-1">Search</label>
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -399,11 +399,11 @@ export default function ServicesPage() {
           />
         </div>
         <div className="w-full sm:w-44">
-          <label className="block text-xs font-semibold text-salon-stone mb-1">Status</label>
+          <label className="block text-xs font-semibold elite-subtle mb-1">Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as any)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="elite-input flex h-9 w-full px-3 py-1 text-sm"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -412,9 +412,9 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+      <div className="elite-panel overflow-hidden">
         {services.length === 0 ? (
-          <p className="p-6 text-salon-stone text-center">No services found.</p>
+          <p className="p-6 text-muted-foreground text-center">No services found.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -454,7 +454,7 @@ export default function ServicesPage() {
                       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
                         s.is_active
                           ? 'bg-green-50 text-emerald-700 border-emerald-200'
-                          : 'bg-salon-sand/30 text-salon-espresso border-salon-sand/60'
+                          : 'bg-muted/40 text-foreground border-border'
                       }`}
                     >
                       {s.is_active ? 'Active' : 'Inactive'}
@@ -462,13 +462,8 @@ export default function ServicesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        className="h-9 rounded-xl"
-                        onClick={() => openEdit(s)}
-                        disabled={saving}
-                      >
-                        Edit
+                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(s)} disabled={saving} title="Edit">
+                        <Pencil className="size-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -478,21 +473,11 @@ export default function ServicesPage() {
                       >
                         Availability
                       </Button>
-                      <Button
-                        variant="secondary"
-                        className="h-9 rounded-xl"
-                        onClick={() => toggleActive(s)}
-                        disabled={saving}
-                      >
+                      <Button variant="secondary" className="h-9 rounded-xl" onClick={() => toggleActive(s)} disabled={saving}>
                         {s.is_active ? 'Disable' : 'Enable'}
                       </Button>
-                      <Button
-                        variant="destructive"
-                        className="h-9 rounded-xl"
-                        onClick={() => onDelete(s)}
-                        disabled={saving}
-                      >
-                        Delete
+                      <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => onDelete(s)} disabled={saving} title="Delete">
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -506,13 +491,13 @@ export default function ServicesPage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-salon-sand/40">
-            <div className="p-5 border-b border-salon-sand/40 flex items-start justify-between gap-3">
+          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-2xl border border-[var(--elite-border)]">
+            <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="font-display text-xl font-semibold text-salon-espresso">
+                <h2 className="font-display text-xl font-semibold elite-title">
                   {editing ? 'Edit service' : 'New service'}
                 </h2>
-                <p className="text-xs text-salon-stone mt-1">
+                <p className="text-xs elite-subtle mt-1">
                   {editing ? 'Update service details.' : 'Create a new service for your salon.'}
                 </p>
               </div>
@@ -625,13 +610,13 @@ export default function ServicesPage() {
 
       {availabilityOpen && availabilityService ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl border border-salon-sand/40 overflow-hidden">
-            <div className="p-5 border-b border-salon-sand/40 flex items-start justify-between gap-3">
+          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-4xl border border-[var(--elite-border)] overflow-hidden">
+            <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="font-display text-xl font-semibold text-salon-espresso truncate">
+                <h2 className="font-display text-xl font-semibold elite-title truncate">
                   Availability · {availabilityService.name}
                 </h2>
-                <p className="text-xs text-salon-stone mt-1">
+                <p className="text-xs elite-subtle mt-1">
                   Configure weekly schedule and date overrides per branch.
                 </p>
               </div>
@@ -649,7 +634,7 @@ export default function ServicesPage() {
             <div className="p-5 space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs font-semibold text-salon-stone mb-1">Branch</p>
+                  <p className="text-xs font-semibold elite-subtle mb-1">Branch</p>
                   <Combobox
                     value={availabilityBranchId}
                     onValueChange={setAvailabilityBranchId}
@@ -685,7 +670,7 @@ export default function ServicesPage() {
                 </div>
               ) : availabilityTab === 'weekly' ? (
                 <div className="space-y-3">
-                  <div className="bg-salon-sand/20 rounded-xl border border-salon-sand/40 p-4">
+                  <div className="elite-panel-soft p-4">
                     <Form {...availabilityForm}>
                       <form
                         onSubmit={availabilityForm.handleSubmit(addAvailability, () =>
@@ -738,9 +723,9 @@ export default function ServicesPage() {
                     </Form>
                   </div>
 
-                  <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+                  <div className="elite-panel overflow-hidden">
                     {availabilities.length === 0 ? (
-                      <p className="p-6 text-salon-stone text-center text-sm">
+                      <p className="p-6 text-muted-foreground text-center text-sm">
                         No weekly availability yet.
                       </p>
                     ) : (
@@ -784,18 +769,18 @@ export default function ServicesPage() {
                 <div className="space-y-3">
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div>
-                      <label className="block text-xs font-semibold text-salon-stone mb-1">
+                      <label className="block text-xs font-semibold elite-subtle mb-1">
                         From
                       </label>
                       <Input value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-salon-stone mb-1">To</label>
+                      <label className="block text-xs font-semibold elite-subtle mb-1">To</label>
                       <Input value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} />
                     </div>
                   </div>
 
-                  <div className="bg-salon-sand/20 rounded-xl border border-salon-sand/40 p-4">
+                  <div className="elite-panel-soft p-4">
                     <Form {...overrideForm}>
                       <form
                         onSubmit={overrideForm.handleSubmit(addOverride, () =>
@@ -843,9 +828,9 @@ export default function ServicesPage() {
                     </Form>
                   </div>
 
-                  <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+                  <div className="elite-panel overflow-hidden">
                     {overrides.length === 0 ? (
-                      <p className="p-6 text-salon-stone text-center text-sm">
+                      <p className="p-6 text-muted-foreground text-center text-sm">
                         No overrides in this date range.
                       </p>
                     ) : (

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { invoicesApi, InvoiceData } from '@/lib/api';
 import { toast } from 'sonner';
 import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt } from 'lucide-react';
+import FlowTopbar from '@/components/layout/FlowTopbar';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -73,39 +75,39 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="relative bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[var(--elite-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-salon-sand/40 sticky top-0 bg-white rounded-t-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--elite-border)] sticky top-0 bg-[var(--elite-card)] rounded-t-2xl">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-salon-gold/10 flex items-center justify-center">
-              <Receipt className="size-4 text-salon-gold" />
+            <div className="size-8 rounded-lg bg-[var(--elite-orange-dim)] flex items-center justify-center">
+              <Receipt className="size-4 text-[var(--elite-orange)]" />
             </div>
             <div>
-              <h2 className="font-display text-base font-semibold text-salon-espresso">
+              <h2 className="font-display text-base font-semibold elite-title">
                 {loading ? 'Loading…' : invoice?.invoice_number ?? 'Invoice'}
               </h2>
-              {invoice && <p className="text-xs text-salon-stone">{new Date(invoice.created_at ?? '').toLocaleDateString()}</p>}
+              {invoice && <p className="text-xs elite-subtle">{new Date(invoice.created_at ?? '').toLocaleDateString()}</p>}
             </div>
           </div>
-          <button onClick={onClose} className="size-7 flex items-center justify-center rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors">
+          <button onClick={onClose} className="size-7 flex items-center justify-center rounded-lg elite-subtle hover:bg-[var(--elite-card-2)] transition-colors">
             <X className="size-4" />
           </button>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-salon-stone text-sm">Loading…</div>
+          <div className="py-16 text-center text-muted-foreground text-sm">Loading…</div>
         ) : invoice ? (
           <div className="p-6 space-y-4">
             {/* Summary */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-xs text-salon-stone">Customer</p>
-                <p className="font-medium text-salon-espresso">{invoice.customer?.name ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">Customer</p>
+                <p className="font-medium text-foreground">{invoice.customer?.name ?? '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-salon-stone">Status</p>
+                <p className="text-xs text-muted-foreground">Status</p>
                 <div className="mt-0.5">{statusBadge(invoice.status)}</div>
               </div>
             </div>
@@ -113,10 +115,10 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
             {/* Line items */}
             {Array.isArray(invoice.items) && invoice.items.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-salon-stone mb-2">Items</p>
-                <div className="rounded-xl border border-salon-sand/40 overflow-hidden">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Items</p>
+                <div className="rounded-xl border border-border overflow-hidden">
                   <table className="min-w-full text-xs">
-                    <thead className="bg-salon-cream/60 text-salon-stone">
+                    <thead className="bg-muted/50 text-muted-foreground">
                       <tr>
                         <th className="py-2 px-3 text-left font-medium">Description</th>
                         <th className="py-2 px-3 text-right font-medium">Qty</th>
@@ -124,12 +126,12 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
                         <th className="py-2 px-3 text-right font-medium">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-salon-sand/30">
+                    <tbody className="divide-y divide-border">
                       {(invoice.items as InvoiceLineItem[]).map((item, i) => (
                         <tr key={item.id ?? i}>
-                          <td className="py-2 px-3 text-salon-espresso">
+                          <td className="py-2 px-3 text-foreground">
                             <div className="font-medium">{lineItemName(item)}</div>
-                            <div className="text-[11px] text-salon-stone">
+                            <div className="text-[11px] text-muted-foreground">
                               {item.description?.trim() || '—'}
                             </div>
                           </td>
@@ -145,19 +147,19 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
             )}
 
             {/* Totals */}
-            <div className="rounded-xl bg-salon-cream/50 border border-salon-sand/40 p-4 space-y-1.5 text-sm">
-              <div className="flex justify-between text-salon-stone">
+            <div className="rounded-xl bg-muted/40 border border-border p-4 space-y-1.5 text-sm">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span><span>${fmt(invoice.subtotal)}</span>
               </div>
               {invoice.discount > 0 && (
-                <div className="flex justify-between text-salon-stone">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Discount</span><span>-${fmt(invoice.discount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-salon-stone">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Tax</span><span>${fmt(invoice.tax)}</span>
               </div>
-              <div className="flex justify-between font-semibold text-salon-espresso border-t border-salon-sand/40 pt-1.5 mt-1.5">
+              <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1.5 mt-1.5">
                 <span>Total</span><span>${fmt(invoice.total)}</span>
               </div>
               <div className="flex justify-between text-emerald-700 text-xs">
@@ -220,33 +222,35 @@ export default function InvoicesPage() {
 
   return (
     <>
-      <div className="space-y-5">
+      <div className="space-y-5 elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
+        <FlowTopbar />
         {/* Header */}
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Invoices</h1>
-          <p className="text-salon-stone text-sm mt-0.5">View and manage all invoices generated from POS sales.</p>
-        </div>
+        <DashboardPageHeader
+          title="Invoices"
+          description="View and manage all invoices generated from POS sales."
+          icon={<Receipt className="w-5 h-5" />}
+        />
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-wrap gap-2 items-end">
+        <div className="elite-panel p-4 flex flex-wrap gap-2 items-end">
           <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-[200px]">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-salon-stone/60" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/60" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search invoice # or customer…"
-                className="w-full pl-8 pr-3 py-2 border border-salon-sand/60 rounded-xl text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+                className="w-full pl-8 pr-3 py-2 elite-input rounded-xl text-sm"
               />
             </div>
-            <button type="submit" className="px-3 py-2 rounded-xl border border-salon-sand/60 text-salon-espresso text-sm hover:bg-salon-sand/30 transition-colors">
+            <button type="submit" className="px-3 py-2 rounded-xl elite-btn-ghost text-sm transition-colors">
               Search
             </button>
           </form>
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); load({ status: e.target.value || undefined }); }}
-            className="border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+            className="elite-input rounded-xl px-3 py-2 text-sm"
           >
             <option value="">All statuses</option>
             <option value="paid">Paid</option>
@@ -258,23 +262,23 @@ export default function InvoicesPage() {
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+            className="elite-input rounded-xl px-3 py-2 text-sm"
             placeholder="From"
           />
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+            className="elite-input rounded-xl px-3 py-2 text-sm"
             placeholder="To"
           />
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
+        <div className="elite-panel overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-salon-cream/60 text-xs text-salon-stone">
+              <thead className="text-xs">
                 <tr>
                   <th className="py-3 px-4 text-left font-medium">Invoice #</th>
                   <th className="py-3 px-4 text-left font-medium">Date</th>
@@ -285,17 +289,17 @@ export default function InvoicesPage() {
                   <th className="py-3 px-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-salon-sand/30">
+              <tbody>
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-salon-cream/30 transition-colors">
+                  <tr key={inv.id}>
                     <td className="py-3 px-4">
-                      <span className="font-mono text-salon-espresso text-xs font-medium">{inv.invoice_number ?? '—'}</span>
+                      <span className="font-mono text-[var(--elite-text-strong)] text-xs font-medium">{inv.invoice_number ?? '—'}</span>
                     </td>
-                    <td className="py-3 px-4 text-salon-stone text-xs">
+                    <td className="py-3 px-4 elite-subtle text-xs">
                       {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : '—'}
                     </td>
-                    <td className="py-3 px-4 text-salon-espresso">{inv.customer?.name ?? '—'}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-salon-espresso tabular-nums">
+                    <td className="py-3 px-4">{inv.customer?.name ?? '—'}</td>
+                    <td className="py-3 px-4 text-right font-semibold tabular-nums">
                       ${fmt(inv.total)}
                     </td>
                     <td className="py-3 px-4 text-right text-emerald-700 tabular-nums text-xs">
@@ -305,10 +309,11 @@ export default function InvoicesPage() {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => setDetailId(inv.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-salon-stone border border-salon-sand/60 hover:bg-salon-sand/30 transition-colors"
+                        aria-label="View invoice details"
+                        title="View invoice details"
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
                       >
-                        <Eye className="size-3" />
-                        View
+                        <Eye className="size-4" />
                       </button>
                     </td>
                   </tr>
@@ -317,7 +322,7 @@ export default function InvoicesPage() {
                 {!invoices.length && !loading && (
                   <tr>
                     <td colSpan={7} className="py-12 text-center">
-                      <div className="flex flex-col items-center gap-2 text-salon-stone">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <FileText className="size-8 opacity-30" />
                         <p className="text-sm">No invoices found.</p>
                       </div>
@@ -326,7 +331,7 @@ export default function InvoicesPage() {
                 )}
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-salon-stone text-sm">Loading…</td>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">Loading…</td>
                   </tr>
                 )}
               </tbody>

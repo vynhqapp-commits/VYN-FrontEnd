@@ -31,41 +31,41 @@ export default function TransactionsPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h1 className="font-display text-2xl font-semibold text-salon-espresso">POS / Sales</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">POS / Sales</h1>
         <Link
           href="/dashboard/pos"
-          className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-salon-gold text-white text-sm font-semibold hover:bg-salon-goldLight transition-colors"
+          className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-colors"
         >
           New sale (POS)
         </Link>
       </div>
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-salon-sand/60">
-          <thead className="bg-salon-sand/30">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Location</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Total</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">Receipt</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Receipt</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-salon-sand/60">
+          <tbody className="divide-y divide-border">
             {transactions.map((t) => (
               <tr key={t.id}>
-                <td className="px-4 py-3 text-sm text-salon-stone">{t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
-                <td className="px-4 py-3 text-sm text-salon-espresso">{t.Location?.name ?? t.location_id}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{Number(t.total).toFixed(2)}</td>
-                <td className="px-4 py-3 text-sm text-salon-stone">{t.status}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
+                <td className="px-4 py-3 text-sm text-foreground">{t.Location?.name ?? t.location_id}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{Number(t.total).toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{t.status}</td>
                 <td className="px-4 py-3 text-sm">
-                  <Link href={`/dashboard/transactions/${t.id}/receipt`} className="text-salon-gold font-medium hover:text-salon-goldLight transition-colors">Receipt</Link>
+                  <Link href={`/dashboard/transactions/${t.id}/receipt`} className="text-primary font-medium hover:text-primaryLight transition-colors">Receipt</Link>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {transactions.length === 0 && (
-          <p className="p-6 text-salon-stone text-center">No transactions found.</p>
+          <p className="p-6 text-muted-foreground text-center">No transactions found.</p>
         )}
       </div>
     </div>

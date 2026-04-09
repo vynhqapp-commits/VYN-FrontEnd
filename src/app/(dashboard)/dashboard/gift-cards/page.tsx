@@ -4,17 +4,18 @@ import { useEffect, useState } from 'react';
 import { giftCardsApi, GiftCard } from '@/lib/api';
 import { toast } from 'sonner';
 import { Gift, Plus, Search, X, Ban, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function statusBadge(status: string) {
   const map: Record<string, { label: string; cls: string }> = {
-    active:    { label: 'Active',    cls: 'bg-emerald-100 text-emerald-700' },
-    exhausted: { label: 'Exhausted', cls: 'bg-gray-100   text-gray-600'    },
-    expired:   { label: 'Expired',   cls: 'bg-amber-100  text-amber-700'   },
-    void:      { label: 'Void',      cls: 'bg-red-100    text-red-600'     },
+    active:    { label: 'Active',    cls: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200' },
+    exhausted: { label: 'Exhausted', cls: 'bg-muted text-muted-foreground' },
+    expired:   { label: 'Expired',   cls: 'bg-amber-500/15 text-amber-900 dark:text-amber-200' },
+    void:      { label: 'Void',      cls: 'bg-red-500/15 text-red-800 dark:text-red-200' },
   };
-  const s = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' };
+  const s = map[status] ?? { label: status, cls: 'bg-muted text-muted-foreground' };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
       {status === 'active'    && <CheckCircle2 className="size-3" />}
@@ -70,21 +71,21 @@ function IssueModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
       <div className="absolute inset-0 bg-black/40" />
       <form
         onSubmit={submit}
-        className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+        className="relative bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 border border-[var(--elite-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-salon-gold/10 flex items-center justify-center">
-              <Gift className="size-4 text-salon-gold" />
+            <div className="size-8 rounded-lg bg-[var(--elite-orange-dim)] flex items-center justify-center">
+              <Gift className="size-4 text-[var(--elite-orange)]" />
             </div>
-            <h2 className="font-display text-lg font-semibold text-salon-espresso">Issue gift card</h2>
+            <h2 className="font-display text-lg font-semibold elite-title">Issue gift card</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="size-7 flex items-center justify-center rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
+            className="size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors"
           >
             <X className="size-4" />
           </button>
@@ -92,7 +93,7 @@ function IssueModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
 
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 sm:col-span-1">
-            <label className="block text-xs font-medium text-salon-stone mb-1">Amount <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Amount <span className="text-destructive">*</span></label>
             <input
               type="number"
               min="0.01"
@@ -100,17 +101,17 @@ function IssueModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
               required
             />
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <label className="block text-xs font-medium text-salon-stone mb-1">Currency</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Currency</label>
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
             >
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
@@ -121,24 +122,24 @@ function IssueModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
           </div>
 
           <div className="col-span-2">
-            <label className="block text-xs font-medium text-salon-stone mb-1">Expires at <span className="text-salon-stone/60">(optional)</span></label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Expires at <span className="text-muted-foreground/70">(optional)</span></label>
             <input
               type="date"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
             />
           </div>
 
           <div className="col-span-2">
-            <label className="block text-xs font-medium text-salon-stone mb-1">Custom code <span className="text-salon-stone/60">(optional — auto-generated if blank)</span></label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Custom code <span className="text-muted-foreground/70">(optional — auto-generated if blank)</span></label>
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="e.g. GIFT-XMAS"
               maxLength={64}
-              className="w-full border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 font-mono focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
             />
           </div>
         </div>
@@ -147,14 +148,14 @@ function IssueModal({ onClose, onCreated }: { onClose: () => void; onCreated: ()
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-salon-sand/60 text-salon-espresso text-sm hover:bg-salon-sand/30 transition-colors"
+            className="rounded-xl border border-border px-4 py-2 text-sm text-foreground transition-colors hover:bg-accent"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-medium hover:bg-salon-gold/90 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 rounded-xl bg-[var(--elite-orange)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Issuing…' : 'Issue gift card'}
           </button>
@@ -185,41 +186,41 @@ function VerifySection() {
   };
 
   return (
-    <section className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-5 space-y-3">
+    <section className="elite-panel p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <Search className="size-4 text-salon-gold" />
-        <h2 className="font-display text-base font-semibold text-salon-espresso">Verify a card</h2>
+        <Search className="size-4 text-[var(--elite-orange)]" />
+        <h2 className="font-display text-base font-semibold elite-title">Verify a card</h2>
       </div>
       <form onSubmit={verify} className="flex gap-2">
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Enter gift card code…"
-          className="flex-1 border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 font-mono focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+          className="flex-1 rounded-xl border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
         />
         <button
           type="submit"
           disabled={!code.trim() || checking}
-          className="px-4 py-2 rounded-xl bg-salon-espresso text-white text-sm font-medium disabled:opacity-50 hover:bg-salon-espresso/90 transition-colors"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {checking ? 'Checking…' : 'Verify'}
         </button>
       </form>
 
       {err && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
           <AlertCircle className="size-4 shrink-0" />
           {err}
         </div>
       )}
 
       {result && (
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 space-y-1.5">
+        <div className="space-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-700 font-mono">{result.code}</span>
+            <span className="font-mono text-xs font-medium text-emerald-900 dark:text-emerald-200">{result.code}</span>
             {statusBadge(result.status)}
           </div>
-          <div className="grid grid-cols-2 gap-1 text-xs text-emerald-800">
+          <div className="grid grid-cols-2 gap-1 text-xs text-emerald-900 dark:text-emerald-200">
             <span>Initial balance: <strong>{fmt(result.initial_balance)} {result.currency}</strong></span>
             <span>Remaining: <strong>{fmt(result.current_balance ?? result.remaining_balance)} {result.currency}</strong></span>
             {result.expires_at && (
@@ -274,42 +275,43 @@ export default function GiftCardsPage() {
 
   return (
     <>
-      <div className="space-y-5">
+      <div className="space-y-5 elite-shell">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-salon-espresso">Gift Cards</h1>
-            <p className="text-salon-stone text-sm mt-0.5">Issue, track, and manage gift cards for your clients.</p>
-          </div>
-          <button
-            onClick={() => setShowIssue(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-salon-gold text-white text-sm font-medium hover:bg-salon-gold/90 transition-colors shadow-sm"
-          >
-            <Plus className="size-4" />
-            Issue gift card
-          </button>
-        </div>
+        <DashboardPageHeader
+          title="Gift Cards"
+          description="Issue, track, and manage gift cards for your clients."
+          icon={<Gift className="w-5 h-5" />}
+          rightSlot={
+            <button
+              onClick={() => setShowIssue(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--elite-orange)] text-white text-sm font-medium hover:opacity-90 transition-colors shadow-sm"
+            >
+              <Plus className="size-4" />
+              Issue gift card
+            </button>
+          }
+        />
 
         {/* Verify section */}
         <VerifySection />
 
         {/* Filters + table */}
-        <section className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
+        <section className="elite-panel overflow-hidden">
           {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-2 p-4 border-b border-salon-sand/40">
+          <div className="flex flex-col sm:flex-row gap-2 p-4 border-b border-[var(--elite-border)]">
             <form onSubmit={handleSearch} className="flex gap-2 flex-1">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-salon-stone/60" />
+                <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by code…"
-                  className="w-full pl-8 pr-3 py-2 border border-salon-sand/60 rounded-xl text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+                  className="w-full rounded-xl border border-border bg-muted/40 py-2 pl-8 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                 />
               </div>
               <button
                 type="submit"
-                className="px-3 py-2 rounded-xl border border-salon-sand/60 text-salon-espresso text-sm hover:bg-salon-sand/30 transition-colors"
+                className="rounded-xl border border-border px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent"
               >
                 Search
               </button>
@@ -317,7 +319,7 @@ export default function GiftCardsPage() {
             <select
               value={filterStatus}
               onChange={(e) => { setFilterStatus(e.target.value); loadCards(search, e.target.value); }}
-              className="border border-salon-sand/60 rounded-xl px-3 py-2 text-sm bg-salon-cream/50 focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
             >
               <option value="">All statuses</option>
               <option value="active">Active</option>
@@ -330,7 +332,7 @@ export default function GiftCardsPage() {
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-salon-cream/60 text-salon-stone text-xs">
+              <thead className="text-xs">
                 <tr>
                   <th className="py-3 px-4 text-left font-medium">Code</th>
                   <th className="py-3 px-4 text-right font-medium">Initial</th>
@@ -341,36 +343,37 @@ export default function GiftCardsPage() {
                   <th className="py-3 px-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-salon-sand/30">
+              <tbody>
                 {cards.map((card) => (
-                  <tr key={card.id} className="hover:bg-salon-cream/30 transition-colors">
+                  <tr key={card.id}>
                     <td className="py-3 px-4">
-                      <span className="font-mono text-salon-espresso font-medium tracking-wide">{card.code}</span>
+                      <span className="font-mono font-medium tracking-wide">{card.code}</span>
                     </td>
-                    <td className="py-3 px-4 text-right text-salon-espresso tabular-nums">
+                    <td className="py-3 px-4 text-right tabular-nums">
                       {fmt(card.initial_balance)}
                     </td>
                     <td className="py-3 px-4 text-right tabular-nums">
-                      <span className={Number(card.current_balance ?? card.remaining_balance) <= 0 ? 'text-salon-stone' : 'text-salon-espresso font-medium'}>
+                      <span className={Number(card.current_balance ?? card.remaining_balance) <= 0 ? 'text-muted-foreground' : 'font-medium'}>
                         {fmt(card.current_balance ?? card.remaining_balance)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-salon-stone text-xs">{card.currency}</td>
+                    <td className="py-3 px-4 text-xs text-muted-foreground">{card.currency}</td>
                     <td className="py-3 px-4">{statusBadge(card.status)}</td>
-                    <td className="py-3 px-4 text-salon-stone text-xs">
+                    <td className="py-3 px-4 text-xs text-muted-foreground">
                       {card.expires_at
                         ? new Date(card.expires_at).toLocaleDateString()
-                        : <span className="text-salon-stone/50">No expiry</span>}
+                        : <span className="text-muted-foreground/60">No expiry</span>}
                     </td>
                     <td className="py-3 px-4 text-right">
                       {card.status === 'active' && (
                         <button
                           onClick={() => handleVoid(card)}
                           disabled={voidingId === card.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                          aria-label="Void gift card"
+                          title="Void gift card"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-red-500 border border-red-400/50 hover:bg-red-500/10 disabled:opacity-50 transition-colors"
                         >
-                          <Ban className="size-3" />
-                          {voidingId === card.id ? 'Voiding…' : 'Void'}
+                          <Ban className="size-4" />
                         </button>
                       )}
                     </td>
@@ -380,12 +383,12 @@ export default function GiftCardsPage() {
                 {!cards.length && !loading && (
                   <tr>
                     <td colSpan={7} className="py-12 text-center">
-                      <div className="flex flex-col items-center gap-2 text-salon-stone">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Gift className="size-8 opacity-30" />
                         <p className="text-sm">No gift cards found.</p>
                         <button
                           onClick={() => setShowIssue(true)}
-                          className="mt-1 text-xs text-salon-gold hover:underline"
+                          className="mt-1 text-xs text-[var(--elite-orange)] hover:underline"
                         >
                           Issue your first gift card
                         </button>
@@ -396,7 +399,7 @@ export default function GiftCardsPage() {
 
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-salon-stone text-sm">
+                    <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                       Loading…
                     </td>
                   </tr>

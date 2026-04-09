@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { franchiseApi, type FranchiseLocationKpi, type FranchiseSummary } from '@/lib/api';
 import { Spinner } from '@/components/ui';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,22 +59,22 @@ function KpiCard({
 }) {
   const bg =
     accent === 'warning'
-      ? 'bg-red-50 border-red-100'
+      ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
       : accent === 'success'
-      ? 'bg-green-50 border-green-100'
-      : 'bg-white border-salon-sand/40';
+      ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30'
+      : 'border-border bg-card';
   const textColor =
     accent === 'warning'
-      ? 'text-red-700'
+      ? 'text-red-800 dark:text-red-200'
       : accent === 'success'
-      ? 'text-green-700'
-      : 'text-salon-espresso';
+      ? 'text-emerald-800 dark:text-emerald-200'
+      : 'text-foreground';
 
   return (
     <div className={`rounded-2xl border shadow-sm p-5 flex items-start gap-4 ${bg}`}>
       <div className={`mt-0.5 ${textColor}`}>{icon}</div>
       <div>
-        <p className="text-xs text-salon-stone font-medium">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <p className={`text-2xl font-semibold mt-0.5 ${textColor}`}>{value}</p>
       </div>
     </div>
@@ -85,10 +86,10 @@ function UtilizationBar({ value }: { value: number }) {
     value >= 80 ? 'bg-green-500' : value >= 50 ? 'bg-amber-400' : 'bg-red-400';
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
       </div>
-      <span className="text-xs text-salon-stone w-10 text-right">{pct(value)}</span>
+      <span className="w-10 text-right text-xs text-muted-foreground">{pct(value)}</span>
     </div>
   );
 }
@@ -122,43 +123,40 @@ export default function FranchisePage() {
   const totalBookings = locations.reduce((s, l) => s + (l.booking_volume ?? 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 elite-shell">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">
-            Franchise Dashboard
-          </h1>
-          <p className="text-salon-stone text-sm mt-1">
-            Cross-location performance comparison and KPI monitoring.
-          </p>
-        </div>
+        <DashboardPageHeader
+          title="Franchise Dashboard"
+          description="Cross-location performance comparison and KPI monitoring."
+          icon={<Building2 className="w-5 h-5" />}
+        />
 
         {/* Date range filter */}
-        <div className="flex flex-wrap items-end gap-2 bg-white border border-salon-sand/40 rounded-2xl shadow-sm px-4 py-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-salon-stone">
+        <div className="flex flex-wrap items-end gap-2 elite-panel px-4 py-3">
+          <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
             From
             <input
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="elite-input rounded-xl px-3 py-2 text-sm"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-salon-stone">
+          <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
             To
             <input
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="border border-salon-sand/60 rounded-xl px-3 py-2 bg-salon-cream/50 text-sm text-salon-espresso focus:outline-none focus:ring-2 focus:ring-salon-gold/30"
+              className="elite-input rounded-xl px-3 py-2 text-sm"
             />
           </label>
           <button
             type="button"
             onClick={load}
             disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2 bg-salon-gold text-white text-sm font-semibold rounded-xl hover:bg-salon-goldLight transition-colors disabled:opacity-50 shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -168,7 +166,7 @@ export default function FranchisePage() {
 
       {/* ── Error ── */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl text-sm flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {error}
         </div>
@@ -227,19 +225,19 @@ export default function FranchisePage() {
           )}
 
           {locations.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-12 text-center">
-              <Building2 className="w-10 h-10 text-salon-sand mx-auto mb-3" />
-              <p className="text-salon-stone text-sm">
+            <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-sm">
+              <Building2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
                 No branch data for the selected period. Add branches and complete transactions to see KPIs.
               </p>
             </div>
           ) : (
             <>
               {/* ── Revenue Bar Chart ── */}
-              <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-5">
-                <div className="flex items-center gap-2 mb-5">
-                  <BarChart2 className="w-4 h-4 text-salon-gold" />
-                  <h2 className="text-sm font-semibold text-salon-espresso">Revenue by Branch</h2>
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <div className="mb-5 flex items-center gap-2">
+                  <BarChart2 className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">Revenue by Branch</h2>
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart
@@ -273,57 +271,61 @@ export default function FranchisePage() {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-                <p className="text-xs text-salon-stone mt-2 text-center">
+                <p className="mt-2 text-center text-xs text-muted-foreground">
                   Red bars indicate underperforming branches (below 70% of average).
                 </p>
               </div>
 
               {/* ── Branch Comparison Table ── */}
-              <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-salon-sand/30">
-                  <h2 className="text-sm font-semibold text-salon-espresso">Branch Comparison</h2>
-                  <span className="text-xs text-salon-stone">
+              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <h2 className="text-sm font-semibold text-foreground">Branch Comparison</h2>
+                  <span className="text-xs text-muted-foreground">
                     {locations.length} branch{locations.length !== 1 ? 'es' : ''}
                   </span>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-salon-sand/40 text-sm">
-                    <thead className="bg-salon-sand/20">
+                  <table className="min-w-full divide-y divide-border text-sm">
+                    <thead className="bg-muted/40">
                       <tr>
-                        <th className="px-5 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Branch
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Revenue
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Bookings
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Completed
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Avg Ticket
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-salon-stone uppercase tracking-wider min-w-[140px]">
+                        <th className="min-w-[140px] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Utilization
                         </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-salon-sand/30">
+                    <tbody className="divide-y divide-border">
                       {locations.map((loc) => (
                         <tr
                           key={loc.id}
-                          className={loc.is_underperforming ? 'bg-red-50/40' : 'hover:bg-salon-cream/30 transition-colors'}
+                          className={
+                            loc.is_underperforming
+                              ? 'bg-red-500/10 dark:bg-red-950/25'
+                              : 'transition-colors hover:bg-muted/30'
+                          }
                         >
                           {/* Branch name + flag */}
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2">
                               <div className={`w-2 h-2 rounded-full shrink-0 ${loc.status === 'active' ? 'bg-green-400' : 'bg-gray-300'}`} />
-                              <span className="font-medium text-salon-espresso">{loc.name}</span>
+                              <span className="font-medium text-foreground">{loc.name}</span>
                               {loc.is_underperforming && (
                                 <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium shrink-0">
                                   Low
@@ -332,11 +334,11 @@ export default function FranchisePage() {
                             </div>
                           </td>
 
-                          <td className="px-4 py-3 text-right font-semibold text-salon-espresso">
+                          <td className="px-4 py-3 text-right font-semibold text-foreground">
                             ${fmt(loc.revenue)}
                           </td>
 
-                          <td className="px-4 py-3 text-right text-salon-stone">
+                          <td className="px-4 py-3 text-right text-muted-foreground">
                             {loc.booking_volume ?? 0}
                           </td>
 
@@ -347,7 +349,7 @@ export default function FranchisePage() {
                             </span>
                           </td>
 
-                          <td className="px-4 py-3 text-right text-salon-stone">
+                          <td className="px-4 py-3 text-right text-muted-foreground">
                             ${fmt(loc.avg_ticket ?? 0)}
                           </td>
 
@@ -372,21 +374,21 @@ export default function FranchisePage() {
 
                     {/* Footer with totals */}
                     {summary && (
-                      <tfoot className="bg-salon-sand/20 border-t border-salon-sand/40">
+                      <tfoot className="border-t border-border bg-muted/40">
                         <tr>
-                          <td className="px-5 py-3 text-xs font-semibold text-salon-stone uppercase tracking-wider">
+                          <td className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                             Total / Average
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-salon-espresso">
+                          <td className="px-4 py-3 text-right font-bold text-foreground">
                             ${fmt(summary.total_revenue)}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-salon-espresso">
+                          <td className="px-4 py-3 text-right font-semibold text-foreground">
                             {totalBookings}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-green-700">
+                          <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
                             {locations.reduce((s, l) => s + (l.completed_appointments ?? 0), 0)}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-salon-espresso">
+                          <td className="px-4 py-3 text-right font-semibold text-foreground">
                             ${fmt(summary.average_per_location)}
                           </td>
                           <td className="px-4 py-3" />

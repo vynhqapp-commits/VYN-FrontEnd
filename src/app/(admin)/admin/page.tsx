@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Welcome + headline cards row */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-6 flex flex-col justify-center">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-6 flex flex-col justify-center">
           <p className="text-sm text-salon-gold font-semibold uppercase tracking-[0.2em] mb-2">
             Platform overview
           </p>
@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-col gap-2">
+          <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-salon-stone uppercase tracking-wide">
                 Tenants
@@ -96,7 +96,7 @@ export default function AdminDashboardPage() {
               {kpiActive} active · {kpiSuspended} suspended
             </p>
           </div>
-          <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-col gap-2">
+          <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-salon-stone uppercase tracking-wide">
                 Platform users
@@ -110,7 +110,7 @@ export default function AdminDashboardPage() {
             </p>
             <p className="text-[11px] text-salon-stone">Accounts across all tenants</p>
           </div>
-          <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-col gap-2">
+          <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-salon-stone uppercase tracking-wide">
                 Activity
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
 
       {/* Plans breakdown */}
       {tenantsByPlan.length > 0 && (
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-5">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-display text-lg font-semibold text-salon-espresso">Tenants by plan</h2>
             <Link href="/admin/subscriptions" className="text-sm text-salon-gold hover:text-salon-goldLight">
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link
               href="/admin/tenants"
-              className="group flex items-center gap-4 p-5 bg-white rounded-xl border border-salon-sand/40 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all"
+              className="group flex items-center gap-4 p-5 bg-card rounded-xl border border-salon-sand/40 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all"
             >
               <div className="w-12 h-12 rounded-xl bg-salon-gold/10 flex items-center justify-center text-salon-gold group-hover:bg-salon-gold/20 transition-colors">
                 {icon.tenants}
@@ -182,9 +182,9 @@ export default function AdminDashboardPage() {
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-4 p-5 bg-white rounded-xl border border-salon-sand/40 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all"
+              className="group flex items-center gap-4 p-5 bg-card rounded-xl border border-salon-sand/40 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all"
             >
-              <div className="w-12 h-12 rounded-xl bg-salon-sand/30 flex items-center justify-center text-salon-espresso group-hover:bg-salon-sand/50 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center text-salon-espresso group-hover:bg-muted/50 transition-colors">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -201,7 +201,7 @@ export default function AdminDashboardPage() {
             </a>
             <Link
               href="/admin/reports"
-              className="group flex items-center gap-4 p-5 bg-white rounded-xl border border-salon-sand/40 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all"
+              className="group flex items-center gap-4 p-5 bg-card rounded-xl border border-salon-sand/40 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all"
             >
               <div className="w-12 h-12 rounded-xl bg-salon-sage/20 flex items-center justify-center text-salon-espresso group-hover:bg-salon-sage/30 transition-colors">
                 {icon.activity}
@@ -219,7 +219,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-salon-sand/40 shadow-sm p-5 flex flex-col gap-3">
+        <div className="bg-card rounded-2xl border border-salon-sand/40 shadow-sm p-5 flex flex-col gap-3">
           <h2 className="font-display text-lg font-semibold text-salon-espresso">Admin snapshot</h2>
           <p className="text-salon-stone text-sm">
             Logged in as <span className="font-medium text-salon-espresso">{user?.email}</span> (Admin).

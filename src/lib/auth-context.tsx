@@ -1,12 +1,39 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { api, authApi, setTenantId, type AuthUser } from './api';
+
+const Toaster = dynamic(
+  () => import('sonner').then((mod) => mod.Toaster),
+  { ssr: false },
+);
+
+export type AppTheme = 'light' | 'dark';
+
+const THEME_KEY = 'salon_theme';
+const THEME_COOKIE = 'salon_theme';
+const THEME_MAX_AGE = 60 * 60 * 24 * 365;
+
+function writeThemeCookie(value: AppTheme) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${THEME_COOKIE}=${encodeURIComponent(value)};path=/;max-age=${THEME_MAX_AGE};SameSite=Lax`;
+}
+
+function applyThemeToDocument(theme: AppTheme) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+}
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   loading: boolean;
+  theme: AppTheme;
+  setTheme: (t: AppTheme) => void;
+  toggleTheme: () => void;
   login: (email: string, password: string) => Promise<{ user: AuthUser } | { error: string }>;
   loginWithOtp: (email: string, code: string) => Promise<{ user: AuthUser } | { error: string }>;
   sendOtp: (email: string, locale?: string) => Promise<string | null>;
@@ -19,10 +46,44 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function readStoredTheme(): AppTheme {
+  if (typeof window === 'undefined') return 'dark';
+  const s = localStorage.getItem(THEME_KEY);
+  return s === 'light' ? 'light' : 'dark';
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  /** Start false so guests are not blocked on a full-screen loader until after first paint. */
+  const [loading, setLoading] = useState(false);
+  const [theme, setThemeState] = useState<AppTheme>('dark');
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (localStorage.getItem('salon_token')) setLoading(true);
+  }, []);
+
+  const setTheme = useCallback((t: AppTheme) => {
+    setThemeState(t);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(THEME_KEY, t);
+      writeThemeCookie(t);
+      applyThemeToDocument(t);
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev: AppTheme) => {
+      const next: AppTheme = prev === 'dark' ? 'light' : 'dark';
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(THEME_KEY, next);
+        writeThemeCookie(next);
+        applyThemeToDocument(next);
+      }
+      return next;
+    });
+  }, []);
 
   const setToken = (t: string | null) => {
     setTokenState(t);
@@ -33,22 +94,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    const t = readStoredTheme();
+    setThemeState(t);
+    applyThemeToDocument(t);
+    writeThemeCookie(t);
+  }, []);
+
+  useEffect(() => {
     const t = typeof window !== 'undefined' ? localStorage.getItem('salon_token') : null;
     if (!t) {
       setLoading(false);
       return;
     }
     setTokenState(t);
-    authApi.me().then(({ data }) => {
-      if (data?.user) {
-        setUser(data.user);
-        setTenantId(data.user.tenantId != null ? String(data.user.tenantId) : null);
-      } else setToken(null);
-      setLoading(false);
-    }).catch(() => {
+
+    const AUTH_ME_MS = 9000;
+    let done = false;
+    const timeoutId = window.setTimeout(() => {
+      if (done) return;
+      done = true;
       setToken(null);
+      setUser(null);
+      setTenantId(null);
       setLoading(false);
-    });
+    }, AUTH_ME_MS);
+
+    authApi
+      .me()
+      .then(({ data }) => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timeoutId);
+        if (data?.user) {
+          setUser(data.user);
+          setTenantId(data.user.tenantId != null ? String(data.user.tenantId) : null);
+        } else setToken(null);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timeoutId);
+        setToken(null);
+        setLoading(false);
+      });
+
+    return () => {
+      done = true;
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -78,11 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    // Fire-and-forget: invalidate JWT on the server (don't block UI on this)
     api('/api/logout', { method: 'POST' }).catch(() => {});
-    // Clear all persisted session data
-    setToken(null);       // removes salon_token from localStorage
-    setTenantId(null);    // removes salon_tenant_id from localStorage
+    setToken(null);
+    setTenantId(null);
     setUser(null);
   };
 
@@ -117,6 +209,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         loading,
+        theme,
+        setTheme,
+        toggleTheme,
         login,
         sendOtp,
         loginWithOtp,
@@ -128,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
     </AuthContext.Provider>
   );
 }
@@ -136,4 +232,23 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
+}
+
+/** Use inside AuthProvider only. */
+export function ThemeToggle({ className }: { className?: string }) {
+  const { theme, toggleTheme } = useAuth();
+  const isDark = theme === 'dark';
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className={cn(
+        'inline-flex items-center justify-center size-9 rounded-lg border border-border bg-background/80 text-foreground shadow-sm transition-colors hover:bg-accent',
+        className,
+      )}
+    >
+      {isDark ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+    </button>
+  );
 }

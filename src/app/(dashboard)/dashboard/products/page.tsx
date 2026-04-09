@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Pencil, Trash2, X } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +16,7 @@ import { RHFTextareaField } from '@/components/fields/RHFTextareaField';
 import { Pagination } from '@/components/data/Pagination';
 import { type PaginationMeta } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -159,28 +160,25 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso">Products</h1>
-          <p className="text-salon-stone text-sm mt-1">
-            Manage product catalog and stock quantity.
-          </p>
-        </div>
-        <Button onClick={openCreate} className="rounded-xl h-11">New product</Button>
-      </div>
+    <div className="space-y-4 elite-shell">
+      <DashboardPageHeader
+        title="Products"
+        description="Manage product catalog and stock quantity."
+        icon={<Pencil className="w-5 h-5" />}
+        rightSlot={<Button onClick={openCreate} className="rounded-xl h-11">New product</Button>}
+      />
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm p-4 grid gap-3 sm:grid-cols-2">
+      <div className="elite-panel p-4 grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="block text-xs font-semibold text-salon-stone mb-1">Search</label>
+          <label className="block text-xs font-semibold elite-subtle mb-1">Search</label>
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, SKU..." />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-salon-stone mb-1">Status</label>
+          <label className="block text-xs font-semibold elite-subtle mb-1">Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as any)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="elite-input flex h-9 w-full px-3 py-1 text-sm"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -189,9 +187,9 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-salon-sand/40 shadow-sm overflow-hidden">
+      <div className="elite-panel overflow-hidden">
         {products.length === 0 ? (
-          <p className="p-6 text-salon-stone text-center">No products found.</p>
+          <p className="p-6 text-muted-foreground text-center">No products found.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -217,8 +215,26 @@ export default function ProductsPage() {
                   <TableCell className="text-muted-foreground">{p.is_active ? 'Active' : 'Inactive'}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
-                      <Button variant="outline" className="h-9 rounded-xl" onClick={() => openEdit(p)}>Edit</Button>
-                      <Button variant="destructive" className="h-9 rounded-xl" onClick={() => onDelete(p)}>Delete</Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg"
+                        onClick={() => openEdit(p)}
+                        aria-label="Edit product"
+                        title="Edit product"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg"
+                        onClick={() => onDelete(p)}
+                        aria-label="Delete product"
+                        title="Delete product"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -231,12 +247,12 @@ export default function ProductsPage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl border border-salon-sand/40">
-            <div className="p-5 border-b border-salon-sand/40 flex items-start justify-between gap-3">
-              <h2 className="font-display text-xl font-semibold text-salon-espresso">
+          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-3xl border border-[var(--elite-border)]">
+            <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
+              <h2 className="font-display text-xl font-semibold elite-title">
                 {editing ? 'Edit product' : 'New product'}
               </h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"><X className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg elite-subtle hover:bg-[var(--elite-card-2)] transition-colors"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-5">
               <Form {...form}>

@@ -68,20 +68,20 @@ export default function AppointmentDetailPanel({
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
-        className="relative ml-auto w-full max-w-md bg-white h-full shadow-xl border-l border-salon-sand/40"
+        className="relative ml-auto w-full max-w-md h-full shadow-xl border-l border-[var(--elite-border)] elite-shell"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-salon-sand/30">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--elite-border)]">
           <div>
-            <h2 className="font-display text-base font-semibold text-salon-espresso">{labels.title}</h2>
-            <p className="text-xs text-salon-stone mt-1">
+            <h2 className="font-display text-base font-semibold elite-title">{labels.title}</h2>
+            <p className="text-xs elite-subtle mt-1">
               {labels.statusPrefix} {statusLabel}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="size-8 rounded-lg flex items-center justify-center text-salon-stone hover:bg-salon-sand/40 transition-colors"
+            className="size-8 rounded-lg flex items-center justify-center elite-subtle hover:bg-[var(--elite-card)] transition-colors"
             aria-label={labels.close}
           >
             <X className="size-4" />
@@ -91,26 +91,26 @@ export default function AppointmentDetailPanel({
         <div className="p-5 space-y-4">
           <div className="space-y-2 text-sm">
             <div>
-              <p className="text-xs text-salon-stone">{labels.client}</p>
-              <p className="font-medium text-salon-espresso">{clientName}</p>
+              <p className="text-xs elite-subtle">{labels.client}</p>
+              <p className="font-medium elite-title">{clientName}</p>
             </div>
             <div>
-              <p className="text-xs text-salon-stone">{labels.service}</p>
-              <p className="font-medium text-salon-espresso">{serviceName}</p>
+              <p className="text-xs elite-subtle">{labels.service}</p>
+              <p className="font-medium elite-title">{serviceName}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-xs text-salon-stone">{labels.staff}</p>
-                <p className="text-sm text-salon-espresso mt-1">{staffName}</p>
+                <p className="text-xs elite-subtle">{labels.staff}</p>
+                <p className="text-sm elite-title mt-1">{staffName}</p>
               </div>
               <div>
-                <p className="text-xs text-salon-stone">{labels.location}</p>
-                <p className="text-sm text-salon-espresso mt-1">{locationName}</p>
+                <p className="text-xs elite-subtle">{labels.location}</p>
+                <p className="text-sm elite-title mt-1">{locationName}</p>
               </div>
             </div>
             <div>
-              <p className="text-xs text-salon-stone">{labels.time}</p>
-              <p className="text-sm text-salon-espresso mt-1">
+              <p className="text-xs elite-subtle">{labels.time}</p>
+              <p className="text-sm elite-title mt-1">
                 {start && !Number.isNaN(start.getTime()) ? start.toLocaleString() : '—'}
                 {end && !Number.isNaN(end.getTime()) ? ` - ${end.toLocaleTimeString()}` : ''}
               </p>
@@ -118,11 +118,11 @@ export default function AppointmentDetailPanel({
           </div>
 
           {onCheckout && (appointment.status === 'scheduled' || appointment.status === 'checked_in') && (
-            <div className="rounded-2xl border border-salon-sand/40 bg-salon-cream/30 p-4">
+            <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-4">
               <button
                 type="button"
                 onClick={() => onCheckout(appointment.id)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold border transition-colors bg-salon-gold text-white border-salon-gold hover:bg-salon-goldLight"
+                className="px-4 py-2 rounded-xl text-xs font-semibold border transition-colors elite-btn-primary"
               >
                 {labels.checkout}
               </button>
@@ -131,10 +131,10 @@ export default function AppointmentDetailPanel({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-salon-espresso">{labels.updateStatus}</p>
-              <p className="text-xs text-salon-stone">{changingId === appointment.id ? labels.updating : ''}</p>
+              <p className="text-sm font-semibold elite-title">{labels.updateStatus}</p>
+              <p className="text-xs elite-subtle">{changingId === appointment.id ? labels.updating : ''}</p>
             </div>
-            <div className="rounded-2xl border border-salon-sand/40 bg-salon-cream/30 p-4">
+            <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-4">
               <div className="flex flex-wrap gap-2">
                 {statuses.map((st) => (
                   <button
@@ -144,8 +144,8 @@ export default function AppointmentDetailPanel({
                     onClick={() => onStatusChange(appointment.id, st)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                       appointment.status === st
-                        ? 'bg-salon-gold text-white border-salon-gold'
-                        : 'bg-white text-salon-stone border-salon-sand/60 hover:border-salon-gold'
+                        ? 'elite-btn-primary'
+                        : 'elite-btn-ghost'
                     }`}
                   >
                     {st.replace('_', ' ')}
@@ -155,7 +155,7 @@ export default function AppointmentDetailPanel({
             </div>
           </div>
 
-          <div className="text-xs text-salon-stone">{labels.tip}</div>
+          <div className="text-xs elite-subtle">{labels.tip}</div>
         </div>
       </div>
     </div>

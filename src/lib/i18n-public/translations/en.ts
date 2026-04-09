@@ -167,6 +167,8 @@ export const publicTranslationsEn = {
   loginHeading: "Log in",
   loginSubheading: "Sign in with your salon or platform account. You'll be taken to the right place based on your role.",
   dontHaveAccount: "Don't have an account? Sign up",
+  dontHaveAccountLead: "Don't have an account?",
+  signUp: "Sign up",
   password: "Password",
   sendOtp: "Send OTP",
   signingIn: "Signing in...",

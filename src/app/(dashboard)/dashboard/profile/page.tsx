@@ -10,6 +10,7 @@ import { toastError, toastSuccess } from '@/lib/toast';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
 import { Skeleton } from '@/components/ui/skeleton';
+import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 const TIMEZONES = [
   'UTC', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait', 'Asia/Bahrain',
@@ -95,25 +96,17 @@ export default function SalonProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4 pb-2">
-        <div className="w-14 h-14 rounded-full bg-salon-gold/10 flex items-center justify-center shrink-0 border-2 border-salon-gold/20">
-          <Building2 className="w-7 h-7 text-salon-gold" />
-        </div>
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-salon-espresso leading-tight">
-            {salon?.name ?? 'Salon Profile'}
-          </h1>
-          <p className="text-salon-stone text-sm mt-0.5">
-            Update your salon's public details, currency, and timezone.
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        className="pb-2"
+        title={salon?.name ?? 'Salon Profile'}
+        description="Update your salon's public details, currency, and timezone."
+        icon={<Building2 className="w-5 h-5" />}
+      />
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-salon-espresso text-sm">Salon Details</h2>
-          <p className="text-xs text-salon-stone mt-0.5">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="border-b border-border px-6 py-4">
+          <h2 className="text-sm font-semibold text-foreground">Salon Details</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             This information is shown to customers on the booking page.
           </p>
         </div>
@@ -130,14 +123,13 @@ export default function SalonProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Currency */}
                 <div>
-                  <label className="block text-xs font-semibold text-salon-stone uppercase tracking-wide mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Currency
                   </label>
                   <select
                     {...form.register('currency')}
                     disabled={saving}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-salon-sand/60 text-sm text-salon-espresso bg-white
-                      focus:outline-none focus:ring-2 focus:ring-salon-gold/30 disabled:opacity-60"
+                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                   >
                     {CURRENCIES.map((c) => (
                       <option key={c.code} value={c.code}>{c.label}</option>
@@ -150,14 +142,13 @@ export default function SalonProfilePage() {
 
                 {/* Timezone */}
                 <div>
-                  <label className="block text-xs font-semibold text-salon-stone uppercase tracking-wide mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Timezone
                   </label>
                   <select
                     {...form.register('timezone')}
                     disabled={saving}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-salon-sand/60 text-sm text-salon-espresso bg-white
-                      focus:outline-none focus:ring-2 focus:ring-salon-gold/30 disabled:opacity-60"
+                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                   >
                     {TIMEZONES.map((tz) => (
                       <option key={tz} value={tz}>{tz}</option>
@@ -178,9 +169,7 @@ export default function SalonProfilePage() {
                 <button
                   type="submit"
                   disabled={saving || !form.formState.isDirty}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-salon-gold text-white
-                    text-sm font-semibold rounded-xl hover:bg-salon-goldLight transition-colors
-                    shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {saving ? 'Saving…' : 'Save changes'}
@@ -193,21 +182,21 @@ export default function SalonProfilePage() {
 
       {/* Read-only info */}
       {salon && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-salon-espresso text-sm">Account Info</h2>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-6 py-4">
+            <h2 className="text-sm font-semibold text-foreground">Account Info</h2>
           </div>
-          <div className="px-6 py-5 space-y-3 text-sm">
+          <div className="space-y-3 px-6 py-5 text-sm">
             <div className="flex justify-between gap-4">
-              <span className="text-gray-400">Slug</span>
-              <span className="text-salon-espresso font-medium font-mono">{salon.slug}</span>
+              <span className="text-muted-foreground">Slug</span>
+              <span className="font-mono font-medium text-foreground">{salon.slug}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-gray-400">Plan</span>
-              <span className="text-salon-espresso font-medium capitalize">{salon.plan ?? '—'}</span>
+              <span className="text-muted-foreground">Plan</span>
+              <span className="font-medium capitalize text-foreground">{salon.plan ?? '—'}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-gray-400">Status</span>
+              <span className="text-muted-foreground">Status</span>
               <span className={`font-medium capitalize ${salon.subscription_status === 'active' ? 'text-green-600' : 'text-red-500'}`}>
                 {salon.subscription_status ?? '—'}
               </span>

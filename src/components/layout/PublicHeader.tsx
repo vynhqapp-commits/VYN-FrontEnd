@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarCheck, UserCircle, LayoutDashboard, UserRound } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, ThemeToggle } from "@/lib/auth-context";
 import { getRedirectForRole } from "@/lib/role-redirect";
 import { APP_NAME } from "@/lib/app-name";
 import { getPublicT } from "@/lib/i18n-public";
 import { useLocale } from "@/components/LocaleProvider";
+import { cn } from "@/lib/utils";
 
 /**
  * Shared public-facing header.
@@ -38,14 +39,14 @@ export default function PublicHeader() {
     user && ["salon_owner", "manager", "staff", "super_admin"].includes(user.role);
 
   return (
-    <header className="bg-white/90 backdrop-blur-sm border-b border-gray-100 shadow-sm sticky top-0 z-20">
+    <header className="bg-background/90 backdrop-blur-sm border-b border-border shadow-sm sticky top-0 z-20">
       <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
 
         {/* ── Left: Logo + (customer) nav links ── */}
         <div className="flex items-center gap-6 min-w-0">
           <Link
             href="/"
-            className="font-display text-base font-semibold text-salon-espresso hover:text-salon-gold transition-colors shrink-0"
+            className="font-display text-base font-semibold text-foreground hover:text-primary transition-colors shrink-0"
           >
             {APP_NAME}
           </Link>
@@ -68,11 +69,13 @@ export default function PublicHeader() {
 
         {/* ── Right: Auth state ── */}
         <div className="flex items-center gap-3 shrink-0">
+          <ThemeToggle className="size-8 border-border/80" />
+
           {user ? (
             <>
               {/* User name */}
-              <span className="hidden sm:flex items-center gap-1.5 text-sm text-salon-espresso font-medium">
-                <UserCircle className="w-4 h-4 text-salon-gold" />
+              <span className="hidden sm:flex items-center gap-1.5 text-sm text-foreground font-medium">
+                <UserCircle className="w-4 h-4 text-primary" />
                 {user.fullName ?? user.name ?? user.email}
               </span>
 
@@ -81,15 +84,15 @@ export default function PublicHeader() {
                 <>
                   <Link
                     href="/profile"
-                    className="flex items-center justify-center size-8 rounded-lg text-salon-stone hover:bg-salon-sand/40 transition-colors"
+                    className="flex items-center justify-center size-8 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
                     title={t("profile")}
                   >
                     <UserRound className="w-4 h-4" />
                   </Link>
                   <Link
                     href="/my-bookings"
-                    className="flex items-center gap-1.5 text-sm font-medium text-white
-                      bg-salon-gold hover:bg-salon-goldLight px-3 py-1.5 rounded-lg
+                    className="flex items-center gap-1.5 text-sm font-medium text-primary-foreground
+                      bg-primary hover:opacity-90 px-3 py-1.5 rounded-lg
                       transition-colors shadow-sm"
                   >
                     <CalendarCheck className="w-3.5 h-3.5" />
@@ -102,8 +105,8 @@ export default function PublicHeader() {
               {isSalonRole && (
                 <Link
                   href={getRedirectForRole(user.role)}
-                  className="flex items-center gap-1.5 text-sm font-medium text-white
-                    bg-salon-espresso hover:bg-salon-bark px-3 py-1.5 rounded-lg
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary-foreground
+                    bg-primary hover:opacity-90 px-3 py-1.5 rounded-lg
                     transition-colors shadow-sm"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
@@ -115,7 +118,7 @@ export default function PublicHeader() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-sm text-gray-400 hover:text-salon-espresso transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {t("logOut")}
               </button>
@@ -124,14 +127,14 @@ export default function PublicHeader() {
             <>
               <Link
                 href="/register"
-                className="hidden sm:block text-sm text-gray-500 hover:text-salon-espresso transition-colors"
+                className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {t("register")}
               </Link>
               <Link
                 href="/login"
-                className="text-sm font-medium text-white bg-salon-espresso
-                  hover:bg-salon-bark px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                className="text-sm font-medium text-primary-foreground bg-primary
+                  hover:opacity-90 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
               >
                 {t("logIn")}
               </Link>
@@ -157,11 +160,10 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`text-sm font-medium transition-colors ${
-        active
-          ? "text-salon-gold"
-          : "text-gray-500 hover:text-salon-espresso"
-      }`}
+      className={cn(
+        "text-sm font-medium transition-colors",
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+      )}
     >
       {children}
     </Link>

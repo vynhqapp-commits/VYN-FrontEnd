@@ -34,7 +34,7 @@ function TextInput({
   return (
     <input
       {...props}
-      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-salon-espresso bg-white
+      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-salon-espresso bg-card
         focus:outline-none focus:ring-2 focus:ring-salon-gold/30 transition-colors
         placeholder:text-gray-300
         ${error ? "border-red-300 bg-red-50/30" : "border-salon-sand/60 hover:border-salon-sand"}
@@ -54,7 +54,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-card rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
           {icon}
@@ -153,7 +153,7 @@ function PersonalDetailsSection() {
             type="submit"
             disabled={saving || !isDirty}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-salon-gold text-white
-              text-sm font-semibold rounded-xl hover:bg-salon-goldLight transition-colors
+              text-sm font-semibold rounded-xl hover:opacity-90 transition-colors
               shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
