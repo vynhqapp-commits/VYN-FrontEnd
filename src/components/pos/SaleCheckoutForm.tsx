@@ -445,10 +445,7 @@ export default function SaleCheckoutForm({
       payments: apiPayments,
     };
     if (!body.items.length && !body.package_template_id && !body.membership_plan_id) {
-      return toastError("Add at least one service or product item.");
-    }
-    if (!body.items.length) {
-      body.items = [{ type: "service" as const, quantity: 1, unit_price: 0 } as any];
+      return toastError("Add at least one item to the sale.");
     }
     const { data, error: err } = await transactionsApi.create(body);
     setSubmitting(false);

@@ -1255,6 +1255,8 @@ export const transactionsApi = {
     tips_amount?: number;
     tip_allocation_mode?: "single" | "equal_split" | "custom";
     tip_allocations?: { staff_id: string; amount?: number }[];
+    package_template_id?: string;
+    membership_plan_id?: string;
     items: {
       type: "service" | "product";
       service_id?: string;
@@ -1265,11 +1267,10 @@ export const transactionsApi = {
     }[];
     payments: { method: string; amount: number; reference?: string }[];
   }) => {
-    const total = body.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const paymentMethod = (body.payments?.[0]?.method ?? "cash")
       .toLowerCase()
       .replace(/\s+/g, "_");
-    const items = body.items.map((i) => ({
+    const items = (body.items ?? []).map((i) => ({
       item_name: i.type === "service" ? "Service" : "Product",
       service_id: i.service_id ?? null,
       product_id: i.product_id ?? null,
@@ -1298,6 +1299,8 @@ export const transactionsApi = {
           amount: r.amount ?? null,
         })),
         appointment_id: body.appointment_id ?? null,
+        package_template_id: body.package_template_id ?? null,
+        membership_plan_id: body.membership_plan_id ?? null,
         payment_method:
           paymentMethod === "card"
             ? "card"
