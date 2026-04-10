@@ -64,6 +64,7 @@ function appointmentDragId(id: string) {
 
 type DropMonthData = { kind: 'month'; day: Date };
 type DropTimeData = { kind: 'time'; day: Date; timeStart: number; timeEnd: number; hourHeight: number };
+type DropDayHourData = { kind: 'day-hour'; day: Date; hour: number };
 
 function MonthDayDroppable({
   id,
@@ -218,6 +219,66 @@ function TimeDraggableBlock({
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && !isDragging) onOpen();
       }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DayHourDroppable({
+  id,
+  data,
+  children,
+  className,
+}: {
+  id: string;
+  data: DropDayHourData;
+  children: React.ReactNode;
+  className: string;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id, data });
+  return (
+    <div ref={setNodeRef} className={`${className} ${isOver ? 'bg-salon-gold/10' : ''}`}>
+      {children}
+    </div>
+  );
+}
+
+function DayDraggableCard({
+  appt,
+  disabled,
+  className,
+  onOpen,
+  children,
+}: {
+  appt: Appointment;
+  disabled: boolean;
+  className: string;
+  onOpen: () => void;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: appointmentDragId(appt.id),
+    disabled,
+    data: { appointment: appt },
+  });
+  const style: React.CSSProperties = {
+    transform: transform ? CSS.Translate.toString(transform) : undefined,
+    zIndex: isDragging ? 40 : undefined,
+    opacity: isDragging ? 0.8 : undefined,
+    cursor: disabled ? 'default' : 'grab',
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      role="button"
+      tabIndex={0}
+      className={className}
+      onClick={() => { if (!isDragging) onOpen(); }}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isDragging) onOpen(); }}
     >
       {children}
     </div>
@@ -454,6 +515,32 @@ export default function CalendarGrid({
     [onReschedule],
   );
 
+  const handleDayDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      if (!onReschedule) return;
+      const { active, over } = event;
+      if (!over) return;
+      const appt = active.data.current?.appointment as Appointment | undefined;
+      if (!appt) return;
+      const drop = over.data.current as DropDayHourData | undefined;
+      if (!drop || drop.kind !== 'day-hour') return;
+
+      const draggedStart = parseStart(appt);
+      if (!draggedStart) return;
+      const draggedEnd = parseEnd(appt, draggedStart);
+      const durationMs = draggedEnd.getTime() - draggedStart.getTime();
+
+      const newStart = new Date(drop.day);
+      newStart.setHours(drop.hour, draggedStart.getMinutes(), 0, 0);
+      const newEnd = new Date(newStart.getTime() + durationMs);
+
+      if (newStart.getTime() === draggedStart.getTime()) return;
+
+      void onReschedule(appt.id, newStart, newEnd);
+    },
+    [onReschedule],
+  );
+
   if (view === 'month') {
     const year = focusDate.getFullYear();
     const month = focusDate.getMonth();
@@ -601,78 +688,88 @@ export default function CalendarGrid({
     }
 
     return (
-      <div className="elite-panel overflow-hidden">
-        <div className="border-b border-[var(--elite-border)] px-4 py-3">
-          <p className="text-xs elite-subtle">{copy.weekSubtitle}</p>
-        </div>
-        <div>
-          {hours.map((hour) => (
-            <div key={hour} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border-b border-[var(--elite-border)] px-4 py-3">
-              <div className="pt-1 text-right text-[11px] elite-subtle">{hour}:00</div>
-              <div className="space-y-2">
-                {(byHour.get(hour) ?? []).length === 0 ? (
-                  <div className="h-5" />
-                ) : (
-                  (byHour.get(hour) ?? []).map((a) => {
-                    const st = statusMeta(a.status);
-                    const staffMeta = staffColorMeta(getStaffId(a));
-                    const start = parseStart(a);
-                    const timeText = start ? `${pad2(start.getHours())}:${pad2(start.getMinutes())}` : '--:--';
-                    return (
-                      <div
-                        key={a.id}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-[var(--elite-border-2)] bg-[var(--elite-card-2)] p-3"
-                      >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="w-12 shrink-0 text-xs elite-subtle">{timeText}</div>
-                          <div
-                            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
-                            style={staffMeta.style}
-                          >
-                            {(clientName(a) || '--')
-                              .split(' ')
-                              .map((x) => x[0])
-                              .join('')
-                              .slice(0, 2)
-                              .toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <button
-                              type="button"
-                              onClick={() => onAppointmentClick?.(a.id)}
-                              className="block truncate text-left text-sm font-semibold elite-title hover:opacity-80"
+      <DndContext sensors={sensors} onDragEnd={handleDayDragEnd}>
+        <div className="elite-panel overflow-hidden">
+          <div className="border-b border-[var(--elite-border)] px-4 py-3">
+            <p className="text-xs elite-subtle">{copy.dayStaffSubtitle}</p>
+          </div>
+          <div>
+            {hours.map((hour) => (
+              <DayHourDroppable
+                key={hour}
+                id={`day-hour-${hour}`}
+                data={{ kind: 'day-hour', day: focusDate, hour: parseInt(hour, 10) }}
+                className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border-b border-[var(--elite-border)] px-4 py-3 transition-colors"
+              >
+                <div className="pt-1 text-right text-[11px] elite-subtle">{hour}:00</div>
+                <div className="space-y-2">
+                  {(byHour.get(hour) ?? []).length === 0 ? (
+                    <div className="h-5" />
+                  ) : (
+                    (byHour.get(hour) ?? []).map((a) => {
+                      const st = statusMeta(a.status);
+                      const staffMeta = staffColorMeta(getStaffId(a));
+                      const start = parseStart(a);
+                      const timeText = start ? `${pad2(start.getHours())}:${pad2(start.getMinutes())}` : '--:--';
+                      const draggable = isActiveStatus(a.status) && changingId !== a.id;
+                      return (
+                        <DayDraggableCard
+                          key={a.id}
+                          appt={a}
+                          disabled={!draggable}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-[var(--elite-border-2)] bg-[var(--elite-card-2)] p-3 touch-none"
+                          onOpen={() => onAppointmentClick?.(a.id)}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="w-12 shrink-0 text-xs elite-subtle">{timeText}</div>
+                            <div
+                              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                              style={staffMeta.style}
                             >
-                              {clientName(a)}
-                            </button>
-                            <p className="truncate text-xs elite-subtle">{serviceName(a)}</p>
-                            <p className="truncate text-[11px] elite-subtle">
-                              {staffName(a)}
-                            </p>
+                              {(clientName(a) || '--')
+                                .split(' ')
+                                .map((x) => x[0])
+                                .join('')
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="block truncate text-left text-sm font-semibold elite-title">
+                                {clientName(a)}
+                              </p>
+                              <p className="truncate text-xs elite-subtle">{serviceName(a)}</p>
+                              <p className="truncate text-[11px] elite-subtle">
+                                {staffName(a)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${st.bg} ${st.text}`}>
-                            {st.label}
-                          </span>
-                          {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && (
-                            <button
-                              type="button"
-                              onClick={() => onAppointmentCheckout(a.id)}
-                              className="rounded-md bg-[var(--elite-orange)] px-3 py-1 text-[11px] font-semibold text-white"
-                            >
-                              {copy.checkout}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          ))}
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${st.bg} ${st.text}`}>
+                              {st.label}
+                            </span>
+                            {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAppointmentCheckout(a.id);
+                                }}
+                                className="rounded-md bg-[var(--elite-orange)] px-3 py-1 text-[11px] font-semibold text-white"
+                              >
+                                {copy.checkout}
+                              </button>
+                            )}
+                          </div>
+                        </DayDraggableCard>
+                      );
+                    })
+                  )}
+                </div>
+              </DayHourDroppable>
+            ))}
+          </div>
         </div>
-      </div>
+      </DndContext>
     );
   }
 

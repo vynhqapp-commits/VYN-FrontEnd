@@ -486,8 +486,10 @@ export default function AppointmentsPage() {
           <span className="ml-1 sm:ml-2 text-sm font-medium elite-subtle">{navLabel()}</span>
         </div>
 
-        <div className="flex gap-2">
-          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode !== 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Timeline</button>
+        <div className="flex gap-1">
+          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Day</button>
+          <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Week</button>
+          <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'month' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Month</button>
           <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>List</button>
         </div>
 
