@@ -1047,6 +1047,20 @@ export default function BookPage() {
                 label={t("summaryPrice")}
                 value={formatPublicCurrency(Number(selectedService?.price ?? 0), detail.salon.currency, locale)}
               />
+              {selectedService?.deposit_amount && Number(selectedService.deposit_amount) > 0 && (
+                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                  <p className="font-semibold">{t("depositRequired")}</p>
+                  <p className="mt-0.5">
+                    {t("depositMessage")
+                      .replace("{deposit}", formatPublicCurrency(Number(selectedService.deposit_amount), detail.salon.currency, locale))
+                      .replace("{remaining}", formatPublicCurrency(
+                        Math.max(0, Number(selectedService.price) - Number(selectedService.deposit_amount)),
+                        detail.salon.currency,
+                        locale,
+                      ))}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* When logged in: show read-only identity card + editable phone */}

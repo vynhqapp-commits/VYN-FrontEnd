@@ -30,6 +30,12 @@ const CURRENCIES = [
   { code: 'GBP', label: 'GBP — British Pound' },
 ];
 
+const POLICY_MODES = [
+  { value: 'soft', label: 'Allow with warning' },
+  { value: 'hard', label: 'Block cancellation / reschedule' },
+  { value: 'none', label: 'No restriction' },
+] as const;
+
 const schema = z.object({
   name:     z.string().min(1, 'Salon name is required').max(255),
   phone:    z.string().max(30).optional().or(z.literal('')),
@@ -37,6 +43,8 @@ const schema = z.object({
   timezone: z.string().optional(),
   currency: z.string().length(3, 'Must be a 3-letter currency code').optional().or(z.literal('')),
   logo:     z.string().max(500).optional().or(z.literal('')),
+  cancellation_window_hours: z.coerce.number().int().min(0).max(168).optional(),
+  cancellation_policy_mode:  z.enum(['soft', 'hard', 'none']).optional(),
 });
 type Values = z.infer<typeof schema>;
 
@@ -47,7 +55,7 @@ export default function SalonProfilePage() {
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', phone: '', address: '', timezone: 'UTC', currency: 'USD', logo: '' },
+    defaultValues: { name: '', phone: '', address: '', timezone: 'UTC', currency: 'USD', logo: '', cancellation_window_hours: 24, cancellation_policy_mode: 'soft' as const },
   });
 
   useEffect(() => {
@@ -64,6 +72,8 @@ export default function SalonProfilePage() {
         timezone: s.timezone ?? 'UTC',
         currency: s.currency ?? 'USD',
         logo:     s.logo ?? '',
+        cancellation_window_hours: s.cancellation_window_hours ?? 24,
+        cancellation_policy_mode:  (s.cancellation_policy_mode ?? 'soft') as 'soft' | 'hard' | 'none',
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,6 +88,8 @@ export default function SalonProfilePage() {
       timezone: values.timezone || undefined,
       currency: values.currency || undefined,
       logo:     values.logo || undefined,
+      cancellation_window_hours: values.cancellation_window_hours,
+      cancellation_policy_mode:  values.cancellation_policy_mode,
     });
     setSaving(false);
     if ('error' in res) { toastError(res.error ?? 'Failed to save'); return; }
@@ -164,6 +176,52 @@ export default function SalonProfilePage() {
                 placeholder="https://example.com/logo.png"
                 disabled={saving}
               />
+
+              {/* Booking Policies */}
+              <div className="pt-4 mt-4 border-t border-border">
+                <h3 className="text-sm font-semibold text-foreground mb-1">Booking Policies</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Configure how customers can cancel or reschedule their bookings.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Cancellation Window (hours)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={168}
+                      {...form.register('cancellation_window_hours', { valueAsNumber: true })}
+                      disabled={saving}
+                      className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      How many hours before the appointment the policy applies. Set 0 to apply no window.
+                    </p>
+                    {form.formState.errors.cancellation_window_hours && (
+                      <p className="text-xs text-red-500 mt-1">{form.formState.errors.cancellation_window_hours.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Policy Mode
+                    </label>
+                    <select
+                      {...form.register('cancellation_policy_mode')}
+                      disabled={saving}
+                      className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                    >
+                      {POLICY_MODES.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      &quot;Allow with warning&quot; lets customers proceed with a notice. &quot;Block&quot; prevents changes inside the window.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div className="pt-2">
                 <button

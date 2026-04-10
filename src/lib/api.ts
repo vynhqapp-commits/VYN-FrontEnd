@@ -271,6 +271,8 @@ export const salonProfileApi = {
     timezone?: string;
     currency?: string;
     logo?: string;
+    cancellation_window_hours?: number;
+    cancellation_policy_mode?: "soft" | "hard" | "none";
   }) =>
     api<Tenant>("/api/salon/profile", {
       method: "PATCH",
@@ -2105,6 +2107,8 @@ export interface Tenant {
   average_rating?: number | string | null;
   /** Salon / listing gender targeting */
   gender_preference?: "ladies" | "gents" | "unisex" | null;
+  cancellation_window_hours?: number;
+  cancellation_policy_mode?: "soft" | "hard" | "none";
   branch_count?: number;
   service_count?: number;
   created_at?: string;

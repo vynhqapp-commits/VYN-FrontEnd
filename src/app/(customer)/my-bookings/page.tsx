@@ -58,8 +58,6 @@ const CANCELLABLE = ["scheduled", "confirmed", "pending"];
 const RESCHEDULABLE = ["scheduled", "confirmed", "pending"];
 const QUICK_REBOOK_STATUSES = ["completed", "cancelled", "no_show"];
 
-const POLICY_WINDOW_HOURS = 24;
-
 type AvailabilitySlot = { start: string; end: string; staff_id: string };
 
 export default function MyBookingsPage() {
@@ -398,7 +396,7 @@ export default function MyBookingsPage() {
                   onSelectRescheduleSlot={setSelectedRescheduleSlot}
                   rescheduleManualAt={rescheduleManualAt}
                   onRescheduleManualChange={setRescheduleManualAt}
-                  policyWindowHours={POLICY_WINDOW_HOURS}
+                  policyWindowHours={24}
                   reviewOpen={reviewBookingId === b.id}
                   reviewRating={reviewRating}
                   reviewComment={reviewComment}
@@ -643,7 +641,7 @@ function BookingCard({
   onSelectRescheduleSlot,
   rescheduleManualAt,
   onRescheduleManualChange,
-  policyWindowHours = POLICY_WINDOW_HOURS,
+  policyWindowHours = 24,
   reviewOpen,
   reviewRating,
   reviewComment,

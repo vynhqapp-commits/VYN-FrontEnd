@@ -48,6 +48,8 @@ export const publicTranslationsAr = {
   summaryTime: "الوقت",
   summaryDuration: "المدة",
   summaryPrice: "السعر",
+  depositRequired: "يتطلب دفع عربون",
+  depositMessage: "يتطلب دفع عربون بقيمة {deposit} عند الحجز. المبلغ المتبقي {remaining} يُدفع عند الدفع النهائي.",
   summaryOf: "من",
 
   minutes: "دقيقة",

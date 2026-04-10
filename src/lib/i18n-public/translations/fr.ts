@@ -48,6 +48,8 @@ export const publicTranslationsFr = {
   summaryTime: "Heure",
   summaryDuration: "Durée",
   summaryPrice: "Prix",
+  depositRequired: "Acompte requis",
+  depositMessage: "Un acompte de {deposit} est requis à la réservation. Le solde de {remaining} est dû lors du passage en caisse.",
   summaryOf: "sur",
 
   minutes: "min",

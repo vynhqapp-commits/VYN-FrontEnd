@@ -48,6 +48,8 @@ export const publicTranslationsEn = {
   summaryTime: "Time",
   summaryDuration: "Duration",
   summaryPrice: "Price",
+  depositRequired: "Deposit required",
+  depositMessage: "A deposit of {deposit} is required at booking. The remaining {remaining} is due at checkout.",
   summaryOf: "of",
 
   minutes: "min",
