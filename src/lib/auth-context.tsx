@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api, authApi, setTenantId, type AuthUser } from './api';
@@ -56,14 +56,8 @@ function readStoredTheme(): AppTheme {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
-  /** Start false so guests are not blocked on a full-screen loader until after first paint. */
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [theme, setThemeState] = useState<AppTheme>('dark');
-
-  useLayoutEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (localStorage.getItem('salon_token')) setLoading(true);
-  }, []);
 
   const setTheme = useCallback((t: AppTheme) => {
     setThemeState(t);
