@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, X } from 'lucide-react';
+import { Pencil, Trash2, X, Package, CreditCard } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { locationsApi, servicesApi, type Location, type Service } from '@/lib/api';
-import { salonProfileApi } from '@/lib/api';
+import { locationsApi, servicesApi, salonProfileApi, catalogApi, type Location, type Service, type PackageTemplate, type MembershipPlanTemplate } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +55,23 @@ export default function ServicesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
   const [saving, setSaving] = useState(false);
+
+  /* ── Top-level tab ── */
+  const [activeTab, setActiveTab] = useState<'services' | 'packages' | 'memberships'>('services');
+
+  /* ── Packages state ── */
+  const [packages, setPackages] = useState<PackageTemplate[]>([]);
+  const [pkgLoading, setPkgLoading] = useState(false);
+  const [pkgModalOpen, setPkgModalOpen] = useState(false);
+  const [editingPkg, setEditingPkg] = useState<PackageTemplate | null>(null);
+  const [pkgSaving, setPkgSaving] = useState(false);
+
+  /* ── Memberships state ── */
+  const [memberships, setMemberships] = useState<MembershipPlanTemplate[]>([]);
+  const [memLoading, setMemLoading] = useState(false);
+  const [memModalOpen, setMemModalOpen] = useState(false);
+  const [editingMem, setEditingMem] = useState<MembershipPlanTemplate | null>(null);
+  const [memSaving, setMemSaving] = useState(false);
 
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availabilityService, setAvailabilityService] = useState<Service | null>(null);
@@ -225,6 +241,86 @@ export default function ServicesPage() {
     }
   };
 
+  /* ── Package CRUD helpers ── */
+  const loadPackages = async () => {
+    setPkgLoading(true);
+    const res = await catalogApi.listPackages();
+    setPkgLoading(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else setPackages((res as any).data?.packages ?? []);
+  };
+
+  const savePkg = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const body = {
+      name: String(fd.get('name') ?? ''),
+      description: String(fd.get('description') ?? '') || undefined,
+      price: Number(fd.get('price') ?? 0),
+      total_sessions: Number(fd.get('total_sessions') ?? 1),
+      validity_days: fd.get('validity_days') ? Number(fd.get('validity_days')) : null,
+      is_active: fd.get('is_active') === 'on',
+    };
+    if (!body.name) { toastError('Name is required'); return; }
+    setPkgSaving(true);
+    const res = editingPkg
+      ? await catalogApi.updatePackage(editingPkg.id, body)
+      : await catalogApi.createPackage(body as any);
+    setPkgSaving(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess(editingPkg ? 'Package updated.' : 'Package created.'); setPkgModalOpen(false); loadPackages(); }
+  };
+
+  const deletePkg = async (p: PackageTemplate) => {
+    if (!window.confirm(`Delete package "${p.name}"?`)) return;
+    const res = await catalogApi.deletePackage(p.id);
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess('Package deleted.'); loadPackages(); }
+  };
+
+  /* ── Membership CRUD helpers ── */
+  const loadMemberships = async () => {
+    setMemLoading(true);
+    const res = await catalogApi.listMemberships();
+    setMemLoading(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else setMemberships((res as any).data?.memberships ?? []);
+  };
+
+  const saveMem = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const body = {
+      name: String(fd.get('name') ?? ''),
+      description: String(fd.get('description') ?? '') || undefined,
+      price: Number(fd.get('price') ?? 0),
+      interval_months: Number(fd.get('interval_months') ?? 1),
+      credits_per_renewal: Number(fd.get('credits_per_renewal') ?? 0),
+      is_active: fd.get('is_active') === 'on',
+    };
+    if (!body.name) { toastError('Name is required'); return; }
+    setMemSaving(true);
+    const res = editingMem
+      ? await catalogApi.updateMembership(editingMem.id, body)
+      : await catalogApi.createMembership(body as any);
+    setMemSaving(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess(editingMem ? 'Membership updated.' : 'Membership created.'); setMemModalOpen(false); loadMemberships(); }
+  };
+
+  const deleteMem = async (m: MembershipPlanTemplate) => {
+    if (!window.confirm(`Delete membership "${m.name}"?`)) return;
+    const res = await catalogApi.deleteMembership(m.id);
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess('Membership deleted.'); loadMemberships(); }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'packages' && packages.length === 0 && !pkgLoading) loadPackages();
+    if (activeTab === 'memberships' && memberships.length === 0 && !memLoading) loadMemberships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   const openAvailability = async (s: Service) => {
     setAvailabilityService(s);
     setAvailabilityOpen(true);
@@ -379,16 +475,45 @@ export default function ServicesPage() {
   return (
     <div className="space-y-4 elite-shell">
       <DashboardPageHeader
-        title="Services"
-        description="Create and manage services offered by your salon."
+        title="Services & Catalog"
+        description="Manage services, packages, and membership plans."
         icon={<Pencil className="w-5 h-5" />}
         rightSlot={
-          <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>
-            New service
-          </Button>
+          activeTab === 'services' ? (
+            <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>New service</Button>
+          ) : activeTab === 'packages' ? (
+            <Button onClick={() => { setEditingPkg(null); setPkgModalOpen(true); }} className="rounded-xl h-11">New package</Button>
+          ) : (
+            <Button onClick={() => { setEditingMem(null); setMemModalOpen(true); }} className="rounded-xl h-11">New membership</Button>
+          )
         }
       />
 
+      {/* ── Tab bar ── */}
+      <div className="flex gap-1 border-b border-[var(--elite-border)] pb-0">
+        {([
+          { key: 'services' as const, label: 'Services', icon: <Pencil className="w-3.5 h-3.5" /> },
+          { key: 'packages' as const, label: 'Packages', icon: <Package className="w-3.5 h-3.5" /> },
+          { key: 'memberships' as const, label: 'Memberships', icon: <CreditCard className="w-3.5 h-3.5" /> },
+        ]).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === tab.key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ═══════════════════ Services Tab ═══════════════════ */}
+      {activeTab === 'services' && <>
       <div className="elite-panel p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="flex-1">
           <label className="block text-xs font-semibold elite-subtle mb-1">Search</label>
@@ -871,6 +996,215 @@ export default function ServicesPage() {
           </div>
         </div>
       ) : null}
+      </>}
+
+      {/* ═══════════════════ Packages Tab ═══════════════════ */}
+      {activeTab === 'packages' && (
+        <>
+          <div className="elite-panel overflow-hidden">
+            {pkgLoading ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+              </div>
+            ) : packages.length === 0 ? (
+              <p className="p-6 text-muted-foreground text-center">No packages yet. Create your first package template.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="w-[120px]">Price</TableHead>
+                    <TableHead className="w-[100px]">Sessions</TableHead>
+                    <TableHead className="w-[120px]">Validity</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="text-right w-[140px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {packages.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground truncate">{p.name}</p>
+                          {p.description && <p className="text-xs text-muted-foreground truncate">{p.description}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {Number(p.price).toLocaleString('en-US', { style: 'currency', currency })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{p.total_sessions}</TableCell>
+                      <TableCell className="text-muted-foreground">{p.validity_days ? `${p.validity_days} days` : 'No expiry'}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${p.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                          {p.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingPkg(p); setPkgModalOpen(true); }} title="Edit">
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deletePkg(p)} title="Delete">
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {pkgModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
+              <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-lg border border-[var(--elite-border)]">
+                <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
+                  <h2 className="font-display text-xl font-semibold elite-title">{editingPkg ? 'Edit package' : 'New package'}</h2>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setPkgModalOpen(false)} aria-label="Close"><X className="w-4 h-4" /></Button>
+                </div>
+                <form onSubmit={savePkg} className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Name</label>
+                    <Input name="name" defaultValue={editingPkg?.name ?? ''} placeholder="e.g. 10 Haircuts Bundle" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Description</label>
+                    <Input name="description" defaultValue={editingPkg?.description ?? ''} placeholder="Optional description" />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Price</label>
+                      <Input name="price" type="number" step="0.01" min="0" defaultValue={editingPkg ? Number(editingPkg.price) : ''} placeholder="150" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Total sessions</label>
+                      <Input name="total_sessions" type="number" min="1" defaultValue={editingPkg?.total_sessions ?? ''} placeholder="10" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Validity (days)</label>
+                      <Input name="validity_days" type="number" min="1" defaultValue={editingPkg?.validity_days ?? ''} placeholder="Leave empty for no expiry" />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="is_active" defaultChecked={editingPkg?.is_active ?? true} className="size-4" />
+                    <span>Active</span>
+                  </label>
+                  <div className="flex gap-2 justify-end pt-1">
+                    <Button type="button" variant="outline" onClick={() => setPkgModalOpen(false)} className="rounded-xl">Cancel</Button>
+                    <Button type="submit" disabled={pkgSaving} className="rounded-xl">{pkgSaving ? 'Saving…' : editingPkg ? 'Save changes' : 'Create package'}</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════ Memberships Tab ═══════════════════ */}
+      {activeTab === 'memberships' && (
+        <>
+          <div className="elite-panel overflow-hidden">
+            {memLoading ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+              </div>
+            ) : memberships.length === 0 ? (
+              <p className="p-6 text-muted-foreground text-center">No membership plans yet. Create your first membership template.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="w-[120px]">Price</TableHead>
+                    <TableHead className="w-[120px]">Interval</TableHead>
+                    <TableHead className="w-[140px]">Credits / Renewal</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="text-right w-[140px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberships.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground truncate">{m.name}</p>
+                          {m.description && <p className="text-xs text-muted-foreground truncate">{m.description}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {Number(m.price).toLocaleString('en-US', { style: 'currency', currency })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">Every {m.interval_months} mo</TableCell>
+                      <TableCell className="text-muted-foreground">{m.credits_per_renewal} sessions</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${m.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                          {m.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingMem(m); setMemModalOpen(true); }} title="Edit">
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deleteMem(m)} title="Delete">
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {memModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
+              <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-lg border border-[var(--elite-border)]">
+                <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
+                  <h2 className="font-display text-xl font-semibold elite-title">{editingMem ? 'Edit membership plan' : 'New membership plan'}</h2>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setMemModalOpen(false)} aria-label="Close"><X className="w-4 h-4" /></Button>
+                </div>
+                <form onSubmit={saveMem} className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Name</label>
+                    <Input name="name" defaultValue={editingMem?.name ?? ''} placeholder="e.g. Monthly Unlimited Blowouts" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Description</label>
+                    <Input name="description" defaultValue={editingMem?.description ?? ''} placeholder="Optional description" />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Price</label>
+                      <Input name="price" type="number" step="0.01" min="0" defaultValue={editingMem ? Number(editingMem.price) : ''} placeholder="80" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Interval (months)</label>
+                      <Input name="interval_months" type="number" min="1" defaultValue={editingMem?.interval_months ?? 1} required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Credits per renewal</label>
+                      <Input name="credits_per_renewal" type="number" min="0" defaultValue={editingMem?.credits_per_renewal ?? 0} required />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="is_active" defaultChecked={editingMem?.is_active ?? true} className="size-4" />
+                    <span>Active</span>
+                  </label>
+                  <div className="flex gap-2 justify-end pt-1">
+                    <Button type="button" variant="outline" onClick={() => setMemModalOpen(false)} className="rounded-xl">Cancel</Button>
+                    <Button type="submit" disabled={memSaving} className="rounded-xl">{memSaving ? 'Saving…' : editingMem ? 'Save changes' : 'Create membership'}</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

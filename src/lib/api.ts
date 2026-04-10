@@ -795,6 +795,90 @@ export const servicesApi = {
   },
 };
 
+/* ── Catalog: Package & Membership Templates ─────────────────────── */
+
+export interface PackageTemplate {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: string | number;
+  total_sessions: number;
+  validity_days?: number | null;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface MembershipPlanTemplate {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: string | number;
+  interval_months: number;
+  credits_per_renewal: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export const catalogApi = {
+  listPackages: (activeOnly?: boolean) =>
+    api<PackageTemplate[]>(
+      `/api/catalog/packages${activeOnly ? "?active_only=1" : ""}`,
+    ).then((r) => (r.error ? { error: r.error } : { data: { packages: r.data ?? [] } })),
+
+  createPackage: (body: {
+    name: string;
+    description?: string;
+    price: number;
+    total_sessions: number;
+    validity_days?: number | null;
+    is_active?: boolean;
+  }) =>
+    api<PackageTemplate>("/api/catalog/packages", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { package: r.data } })),
+
+  updatePackage: (id: string, body: Record<string, unknown>) =>
+    api<PackageTemplate>(`/api/catalog/packages/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { package: r.data } })),
+
+  deletePackage: (id: string) =>
+    api<unknown>(`/api/catalog/packages/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? { error: r.error } : { data: { deleted: true } },
+    ),
+
+  listMemberships: (activeOnly?: boolean) =>
+    api<MembershipPlanTemplate[]>(
+      `/api/catalog/memberships${activeOnly ? "?active_only=1" : ""}`,
+    ).then((r) => (r.error ? { error: r.error } : { data: { memberships: r.data ?? [] } })),
+
+  createMembership: (body: {
+    name: string;
+    description?: string;
+    price: number;
+    interval_months: number;
+    credits_per_renewal: number;
+    is_active?: boolean;
+  }) =>
+    api<MembershipPlanTemplate>("/api/catalog/memberships", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { membership: r.data } })),
+
+  updateMembership: (id: string, body: Record<string, unknown>) =>
+    api<MembershipPlanTemplate>(`/api/catalog/memberships/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { membership: r.data } })),
+
+  deleteMembership: (id: string) =>
+    api<unknown>(`/api/catalog/memberships/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? { error: r.error } : { data: { deleted: true } },
+    ),
+};
+
 export const productsApi = {
   list: async (params?: {
     search?: string;

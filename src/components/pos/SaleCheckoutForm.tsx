@@ -9,11 +9,14 @@ import {
   staffApi,
   servicesApi,
   transactionsApi,
+  catalogApi,
   type Appointment,
   type Client,
   type Product,
   type Service,
   type StaffMember,
+  type PackageTemplate,
+  type MembershipPlanTemplate,
 } from "@/lib/api";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { Combobox } from "@/components/ui/combobox";
@@ -22,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
-type LineType = "service" | "product";
+type LineType = "service" | "product" | "package" | "membership";
 type TipMode = "single" | "equal_split" | "custom";
 
 type PosLine = {
@@ -30,6 +33,8 @@ type PosLine = {
   type: LineType;
   service_id?: string;
   product_id?: string;
+  package_template_id?: string;
+  membership_plan_id?: string;
   name: string;
   quantity: number;
   unit_price: number;
@@ -70,6 +75,8 @@ export default function SaleCheckoutForm({
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [packageTemplates, setPackageTemplates] = useState<PackageTemplate[]>([]);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlanTemplate[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>(
     appointmentsProp ?? [],
   );
@@ -103,11 +110,17 @@ export default function SaleCheckoutForm({
       clientsApi.list(),
       servicesApi.list(),
       productsApi.list(),
-    ]).then(([clientRes, serviceRes, productRes]) => {
+      catalogApi.listPackages(true),
+      catalogApi.listMemberships(true),
+    ]).then(([clientRes, serviceRes, productRes, pkgRes, memRes]) => {
       if (!mounted) return;
       if (clientRes.data?.clients) setClients(clientRes.data.clients);
       if (serviceRes.data?.services) setServices(serviceRes.data.services);
       if (productRes.data?.products) setProducts(productRes.data.products);
+      if (!("error" in pkgRes) && (pkgRes as any).data?.packages)
+        setPackageTemplates((pkgRes as any).data.packages);
+      if (!("error" in memRes) && (memRes as any).data?.memberships)
+        setMembershipPlans((memRes as any).data.memberships);
       setLoading(false);
     });
     return () => {
@@ -256,6 +269,11 @@ export default function SaleCheckoutForm({
     [cashTendered, cashDue],
   );
 
+  const hasPackageOrMembership = useMemo(
+    () => lines.some((l) => l.type === "package" || l.type === "membership"),
+    [lines],
+  );
+
   const addLine = (type: LineType, sourceId: string) => {
     if (!sourceId) return;
     if (type === "service") {
@@ -275,19 +293,53 @@ export default function SaleCheckoutForm({
       ]);
       return;
     }
-    const prod = products.find((p) => String(p.id) === String(sourceId));
-    if (!prod) return;
-    setLines((prev) => [
-      ...prev,
-      {
-        id: `l-${Date.now()}-${prev.length}`,
-        type: "product",
-        product_id: prod.id,
-        name: prod.name,
-        quantity: 1,
-        unit_price: Number(prod.price ?? 0),
-      },
-    ]);
+    if (type === "product") {
+      const prod = products.find((p) => String(p.id) === String(sourceId));
+      if (!prod) return;
+      setLines((prev) => [
+        ...prev,
+        {
+          id: `l-${Date.now()}-${prev.length}`,
+          type: "product",
+          product_id: prod.id,
+          name: prod.name,
+          quantity: 1,
+          unit_price: Number(prod.price ?? 0),
+        },
+      ]);
+      return;
+    }
+    if (type === "package") {
+      const tpl = packageTemplates.find((t) => String(t.id) === String(sourceId));
+      if (!tpl) return;
+      setLines((prev) => [
+        ...prev,
+        {
+          id: `l-${Date.now()}-${prev.length}`,
+          type: "package",
+          package_template_id: tpl.id,
+          name: `📦 ${tpl.name} (${tpl.total_sessions} sessions)`,
+          quantity: 1,
+          unit_price: Number(tpl.price ?? 0),
+        },
+      ]);
+      return;
+    }
+    if (type === "membership") {
+      const plan = membershipPlans.find((m) => String(m.id) === String(sourceId));
+      if (!plan) return;
+      setLines((prev) => [
+        ...prev,
+        {
+          id: `l-${Date.now()}-${prev.length}`,
+          type: "membership",
+          membership_plan_id: plan.id,
+          name: `🎫 ${plan.name} (${plan.credits_per_renewal} credits/renewal)`,
+          quantity: 1,
+          unit_price: Number(plan.price ?? 0),
+        },
+      ]);
+    }
   };
 
   const updateLine = (id: string, patch: Partial<PosLine>) => {
@@ -338,7 +390,9 @@ export default function SaleCheckoutForm({
     if (!locationId) return toastError("Please select a location.");
     if (!clientId) return toastError("Please select a client.");
     if (!lines.length)
-      return toastError("Add at least one service or product to the sale.");
+      return toastError("Add at least one item to the sale.");
+    if (hasPackageOrMembership && !clientId)
+      return toastError("A client must be selected when selling a package or membership.");
     if (requiredDeposit > 0 && paid + 0.01 < requiredDeposit) {
       return toastError(
         `Minimum required deposit is ${requiredDeposit.toFixed(2)}.`,
@@ -377,15 +431,25 @@ export default function SaleCheckoutForm({
                 amount: tipMode === "custom" ? r.amount : undefined,
               }))
           : undefined,
-      items: lines.map((l) => ({
-        type: l.type,
-        service_id: l.service_id,
-        product_id: l.product_id,
-        quantity: l.quantity,
-        unit_price: l.unit_price,
-      })),
+      package_template_id: lines.find((l) => l.type === "package")?.package_template_id || undefined,
+      membership_plan_id: lines.find((l) => l.type === "membership")?.membership_plan_id || undefined,
+      items: lines
+        .filter((l) => l.type === "service" || l.type === "product")
+        .map((l) => ({
+          type: l.type as "service" | "product",
+          service_id: l.service_id,
+          product_id: l.product_id,
+          quantity: l.quantity,
+          unit_price: l.unit_price,
+        })),
       payments: apiPayments,
     };
+    if (!body.items.length && !body.package_template_id && !body.membership_plan_id) {
+      return toastError("Add at least one service or product item.");
+    }
+    if (!body.items.length) {
+      body.items = [{ type: "service" as const, quantity: 1, unit_price: 0 } as any];
+    }
     const { data, error: err } = await transactionsApi.create(body);
     setSubmitting(false);
     if (err || !data?.transaction)
@@ -462,7 +526,7 @@ export default function SaleCheckoutForm({
             <h2 className="font-display text-sm font-semibold elite-title">
               Items
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
               <select
                 onChange={(e) =>
                   e.target.value
@@ -473,7 +537,7 @@ export default function SaleCheckoutForm({
                 className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
                 defaultValue=""
               >
-                <option value="">+ Add service</option>
+                <option value="">+ Service</option>
                 {services.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -490,18 +554,61 @@ export default function SaleCheckoutForm({
                 className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
                 defaultValue=""
               >
-                <option value="">+ Add product</option>
+                <option value="">+ Product</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
               </select>
+              {packageTemplates.length > 0 && (
+                <select
+                  onChange={(e) =>
+                    e.target.value
+                      ? (addLine("package", e.target.value),
+                        (e.target.value = ""))
+                      : undefined
+                  }
+                  className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
+                  defaultValue=""
+                >
+                  <option value="">+ Package</option>
+                  {packageTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.total_sessions} sessions)
+                    </option>
+                  ))}
+                </select>
+              )}
+              {membershipPlans.length > 0 && (
+                <select
+                  onChange={(e) =>
+                    e.target.value
+                      ? (addLine("membership", e.target.value),
+                        (e.target.value = ""))
+                      : undefined
+                  }
+                  className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
+                  defaultValue=""
+                >
+                  <option value="">+ Membership</option>
+                  {membershipPlans.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
+          {hasPackageOrMembership && !clientId && (
+            <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs">
+              A client must be selected when selling a package or membership.
+            </p>
+          )}
           {lines.length === 0 ? (
             <p className="elite-subtle text-xs">
-              No items yet. Add a service or product to start.
+              No items yet. Add a service, product, package, or membership.
             </p>
           ) : (
             <div className="space-y-2">
@@ -515,7 +622,7 @@ export default function SaleCheckoutForm({
                       {line.name}
                     </p>
                     <p className="text-[11px] uppercase tracking-wide elite-subtle">
-                      {line.type === "service" ? "Service" : "Product"}
+                      {line.type === "service" ? "Service" : line.type === "product" ? "Product" : line.type === "package" ? "Package" : "Membership"}
                     </p>
                   </div>
                   <Input

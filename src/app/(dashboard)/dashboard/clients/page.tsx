@@ -330,7 +330,6 @@ export default function ClientsPage() {
             {clients.map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-3 text-sm text-foreground">{c.full_name}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{c.phone ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {c.phone ? (
                     <a className="hover:underline" href={`tel:${c.phone}`}>
@@ -354,8 +353,8 @@ export default function ClientsPage() {
                   <button
                     type="button"
                     onClick={() => openDetails(c)}
-                    aria-label="View client notes"
-                    title="View client notes"
+                    aria-label="View client details"
+                    title="View client details"
                     className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
                   >
                     <Eye className="size-4" />
