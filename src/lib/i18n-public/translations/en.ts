@@ -299,6 +299,7 @@ export const publicTranslationsEn = {
   view: "View",
   listSalonRating: "{rating}/5",
   listSalonDistance: "{n} km",
+  filterAny: "Any",
   step2Helper: "Pick a branch first, then choose your service.",
   step3Helper: "Select a date to load live available times.",
 } as const;

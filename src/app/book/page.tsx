@@ -621,7 +621,7 @@ export default function BookPage() {
                         id="price-max"
                         type="number"
                         min={0}
-                        placeholder="Any"
+                        placeholder={t("filterAny")}
                         value={priceMax}
                         onChange={(e) => setPriceMax(e.target.value)}
                         className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"

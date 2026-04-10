@@ -299,6 +299,7 @@ export const publicTranslationsFr = {
   view: "Voir",
   listSalonRating: "{rating}/5",
   listSalonDistance: "{n} km",
+  filterAny: "Tous",
   step2Helper: "Choisissez d'abord une agence, puis votre service.",
   step3Helper: "Sélectionnez une date pour charger les créneaux disponibles en direct.",
 } as const;

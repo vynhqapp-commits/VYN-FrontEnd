@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarCheck, UserCircle, LayoutDashboard, UserRound } from "lucide-react";
+import { Globe } from "lucide-react";
 import { useAuth, ThemeToggle } from "@/lib/auth-context";
 import { getRedirectForRole } from "@/lib/role-redirect";
 import { APP_NAME } from "@/lib/app-name";
-import { getPublicT } from "@/lib/i18n-public";
+import { getPublicT, supportedPublicLocales, type PublicLocale } from "@/lib/i18n-public";
 import { useLocale } from "@/components/LocaleProvider";
 import { cn } from "@/lib/utils";
+
+const LOCALE_LABELS: Record<PublicLocale, string> = { en: "EN", ar: "عربي", fr: "FR" };
 
 /**
  * Shared public-facing header.
@@ -26,7 +30,7 @@ export default function PublicHeader() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { locale } = useLocale();
+  const { locale, setLocale } = useLocale();
   const t = getPublicT(locale);
 
   const handleLogout = () => {
@@ -73,6 +77,7 @@ export default function PublicHeader() {
         {/* ── Right: Auth state ── */}
         <div className="flex items-center gap-3 shrink-0">
           <ThemeToggle className="size-8 border-border/80" />
+          <LocaleSwitcher locale={locale} setLocale={setLocale} />
 
           {user ? (
             <>
@@ -170,5 +175,51 @@ function NavLink({
     >
       {children}
     </Link>
+  );
+}
+
+function LocaleSwitcher({
+  locale,
+  setLocale,
+}: {
+  locale: PublicLocale;
+  setLocale: (l: PublicLocale) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="inline-flex items-center justify-center gap-1 size-8 rounded-lg border border-border bg-background/80
+          text-foreground text-xs font-medium shadow-sm transition-colors hover:bg-accent"
+        aria-label="Change language"
+      >
+        <Globe className="size-3.5" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute end-0 top-full mt-1 z-40 min-w-[5rem] rounded-lg border border-border bg-background shadow-md py-1">
+            {supportedPublicLocales.map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => { setLocale(l); setOpen(false); }}
+                className={cn(
+                  "w-full px-3 py-1.5 text-start text-sm transition-colors",
+                  l === locale
+                    ? "text-primary font-semibold bg-accent/50"
+                    : "text-foreground hover:bg-accent",
+                )}
+              >
+                {LOCALE_LABELS[l]}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

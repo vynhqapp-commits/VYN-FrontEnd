@@ -44,7 +44,7 @@ export default function FavoritesPage() {
         return;
       }
       setFavorites((prev) => prev.filter((f) => String(f.salon?.id ?? f.salon_id) !== salonId));
-      toast.success(t("removeFavoriteConfirm"));
+      toast.success(t("removedFromFavorites"));
     },
     [t],
   );

@@ -299,6 +299,7 @@ export const publicTranslationsAr = {
   view: "عرض",
   listSalonRating: "{rating}/5",
   listSalonDistance: "{n} كم",
+  filterAny: "الكل",
   step2Helper: "اختر الفرع أولاً، ثم اختر الخدمة.",
   step3Helper: "اختر تاريخاً لعرض الأوقات المتاحة مباشرة.",
 } as const;
