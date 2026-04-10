@@ -108,6 +108,7 @@ function MonthDraggableChip({
   ariaLabel,
   onOpen,
   children,
+  style: extraStyle,
 }: {
   appt: Appointment;
   className: string;
@@ -115,6 +116,7 @@ function MonthDraggableChip({
   ariaLabel: string;
   onOpen: () => void;
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: appointmentDragId(appt.id),
@@ -122,6 +124,7 @@ function MonthDraggableChip({
     data: { appointment: appt },
   });
   const style: React.CSSProperties = {
+    ...extraStyle,
     transform: CSS.Translate.toString(transform),
     ...(isDragging ? { zIndex: 30, position: 'relative' as const } : {}),
   };
@@ -232,6 +235,7 @@ export default function CalendarGrid({
   onReschedule,
   onAppointmentCheckout,
   calendarCopy,
+  staffColorMap,
 }: {
   view: CalendarView;
   focusDate: Date;
@@ -243,6 +247,7 @@ export default function CalendarGrid({
   onReschedule?: (id: string, start: Date, end: Date) => Promise<void>;
   onAppointmentCheckout?: (id: string) => void;
   calendarCopy?: CalendarGridCopy;
+  staffColorMap?: Map<string, string>;
 }) {
   const copy = { ...defaultCalendarCopy, ...calendarCopy };
   const dowLabels = (copy.dowLabels?.length === 7 ? copy.dowLabels : DEFAULT_DOW) as readonly string[];
@@ -303,9 +308,22 @@ export default function CalendarGrid({
     return hash;
   };
 
-  const staffColorMeta = (staffId: string | undefined | null) => {
+  const staffColorMeta = (staffId: string | undefined | null): {
+    bg: string; border: string; text: string; style?: React.CSSProperties;
+  } => {
     const id = staffId ? String(staffId) : '';
     if (!id) return { bg: 'bg-muted/40', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+    const hex = staffColorMap?.get(id);
+    if (hex) {
+      return {
+        bg: '', border: '', text: '',
+        style: {
+          backgroundColor: `${hex}1A`,
+          borderColor: `${hex}66`,
+          color: hex,
+        },
+      };
+    }
     const idx = staffHash(id) % staffPalette.length;
     return staffPalette[idx];
   };
@@ -535,6 +553,7 @@ export default function CalendarGrid({
                                 ariaLabel={aria}
                                 onOpen={() => onAppointmentClick?.(a.id)}
                             className={`w-full text-left rounded-md border px-2 py-1 text-[10px] truncate ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                            style={staffMeta.style}
                               >
                                 {clientName(a)}
                               </MonthDraggableChip>
@@ -606,7 +625,10 @@ export default function CalendarGrid({
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="w-12 shrink-0 text-xs elite-subtle">{timeText}</div>
-                          <div className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}>
+                          <div
+                            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                            style={staffMeta.style}
+                          >
                             {(clientName(a) || '--')
                               .split(' ')
                               .map((x) => x[0])
@@ -743,7 +765,7 @@ export default function CalendarGrid({
         appt={a}
         disabled={!draggable}
         className={`absolute rounded-lg border shadow-sm p-2 text-left cursor-pointer touch-none ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
-        style={{ top, height, left: 6, right: 6 } as React.CSSProperties}
+        style={{ top, height, left: 6, right: 6, ...staffMeta.style } as React.CSSProperties}
         title={`${clientName(a)} - ${serviceName(a)} - ${staffName(a)}`}
         ariaLabel={`${copy.ariaAppointment.replace('{id}', a.id)} (${staffName(a)})`}
         onOpen={() => onAppointmentClick?.(a.id)}
@@ -827,6 +849,7 @@ export default function CalendarGrid({
                         <div className="flex items-center gap-2 min-w-0">
                           <span
                             className={`shrink-0 w-2.5 h-2.5 rounded-full border ${chipMeta.bg} ${chipMeta.border}`}
+                            style={chipMeta.style ? { backgroundColor: chipMeta.style.color, borderColor: chipMeta.style.borderColor } : undefined}
                             aria-hidden
                           />
                           <span className="text-xs font-semibold text-salon-stone truncate">{col.label}</span>

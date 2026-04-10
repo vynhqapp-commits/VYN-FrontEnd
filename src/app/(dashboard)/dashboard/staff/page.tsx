@@ -40,6 +40,7 @@ const staffSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   phone: z.string().optional(),
   specialization: z.string().optional(),
+  color: z.string().optional(),
   branch_id: z.string().min(1, 'Branch is required'),
   is_active: z.boolean().default(true),
 });
@@ -69,7 +70,7 @@ export default function StaffPage() {
 
   const form = useForm<StaffValues>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { name: '', phone: '', specialization: '', branch_id: '', is_active: true },
+    defaultValues: { name: '', phone: '', specialization: '', color: '#3b82f6', branch_id: '', is_active: true },
   });
 
   /* ── load data ── */
@@ -104,7 +105,7 @@ export default function StaffPage() {
   /* ── open add/edit form ── */
   const openAdd = () => {
     setEditing(null);
-    form.reset({ name: '', phone: '', specialization: '', branch_id: branches[0]?.id ?? '', is_active: true });
+    form.reset({ name: '', phone: '', specialization: '', color: '#3b82f6', branch_id: branches[0]?.id ?? '', is_active: true });
     setPanelOpen(true);
     setScheduleOpen(false);
   };
@@ -115,6 +116,7 @@ export default function StaffPage() {
       name: s.name,
       phone: s.phone ?? '',
       specialization: s.specialization ?? '',
+      color: s.color ?? '#3b82f6',
       branch_id: s.branch?.id ?? s.branch_id ?? '',
       is_active: s.is_active,
     });
@@ -270,7 +272,10 @@ export default function StaffPage() {
                   <TableRow key={s.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-[var(--elite-orange-dim)] flex items-center justify-center text-[var(--elite-orange)] font-semibold text-sm shrink-0">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 text-white"
+                          style={{ backgroundColor: s.color || 'var(--elite-orange)' }}
+                        >
                           {s.name[0]?.toUpperCase()}
                         </div>
                         <span className="font-medium text-[var(--elite-text-strong)]">{s.name}</span>
@@ -333,6 +338,18 @@ export default function StaffPage() {
                 <RHFTextField control={form.control} name="name" label="Full name" placeholder="Sara Ahmed" />
                 <RHFTextField control={form.control} name="phone" label="Phone" placeholder="+966 5XX XXX XXXX" />
                 <RHFTextField control={form.control} name="specialization" label="Specialization" placeholder="Hair, Nails, Skin…" />
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">Calendar color</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      {...form.register('color')}
+                      className="w-10 h-10 rounded-lg border border-border cursor-pointer p-0.5 bg-transparent"
+                    />
+                    <span className="text-xs text-muted-foreground">Used for appointment blocks on the calendar</span>
+                  </div>
+                </div>
 
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1.5">Branch</label>

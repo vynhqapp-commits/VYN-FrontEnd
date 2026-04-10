@@ -6,7 +6,7 @@ import FlowTopbar from '@/components/layout/FlowTopbar';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
 import SaleCheckoutForm from '@/components/pos/SaleCheckoutForm';
-import { appointmentsApi, clientsApi, locationsApi, servicesApi, type Appointment, type Client, type Location, type Service } from '@/lib/api';
+import { appointmentsApi, clientsApi, locationsApi, servicesApi, staffApi, salonProfileApi, type Appointment, type Client, type Location, type Service, type StaffMember } from '@/lib/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocale } from '@/components/LocaleProvider';
@@ -49,6 +49,8 @@ export default function AppointmentsPage() {
   const [showWalkIn, setShowWalkIn] = useState(false);
   const [checkoutAppointmentId, setCheckoutAppointmentId] = useState<string | null>(null);
   const [staffFilter, setStaffFilter] = useState<string>('all');
+  const [staffColorMap, setStaffColorMap] = useState<Map<string, string>>(new Map());
+  const [currency, setCurrency] = useState('USD');
 
   // Walk-in modal state
   const [walkInLoading, setWalkInLoading] = useState(false);
@@ -116,9 +118,22 @@ export default function AppointmentsPage() {
     return hash;
   };
 
-  const getStaffColorMeta = (staffId: string | undefined | null) => {
+  const getStaffColorMeta = (staffId: string | undefined | null): {
+    bg: string; border: string; text: string; style?: React.CSSProperties;
+  } => {
     const id = staffId ? String(staffId) : '';
     if (!id) return { bg: 'bg-muted/40', border: 'border-border', text: 'text-muted-foreground' };
+    const hex = staffColorMap.get(id);
+    if (hex) {
+      return {
+        bg: '', border: '', text: '',
+        style: {
+          backgroundColor: `${hex}1A`,
+          borderColor: `${hex}66`,
+          color: hex,
+        },
+      };
+    }
     const idx = staffHash(id) % staffPalette.length;
     return staffPalette[idx];
   };
@@ -228,12 +243,23 @@ export default function AppointmentsPage() {
     return () => clearInterval(id);
   }, [viewMode, focusDate, rangeMode]);
 
-  // Preload reference data for walk-in bookings
+  // Preload reference data for walk-in bookings + staff colors
   useEffect(() => {
-    Promise.all([locationsApi.list(), servicesApi.list(), clientsApi.list()]).then(([loc, svc, cls]) => {
+    Promise.all([locationsApi.list(), servicesApi.list(), clientsApi.list(), staffApi.list(), salonProfileApi.get()]).then(([loc, svc, cls, stf, profile]) => {
       if (!('error' in loc) && loc.data?.locations) setLocations(loc.data.locations);
       if (!('error' in svc) && svc.data?.services) setServices(svc.data.services);
       if (!('error' in cls) && cls.data?.clients) setClients(cls.data.clients);
+      if (!('error' in stf)) {
+        const rows: StaffMember[] = Array.isArray(stf.data) ? stf.data : (stf.data as any)?.data ?? [];
+        const map = new Map<string, string>();
+        for (const s of rows) {
+          if (s.color) map.set(String(s.id), s.color);
+        }
+        setStaffColorMap(map);
+      }
+      if (!('error' in profile) && profile.data?.salon?.currency) {
+        setCurrency(profile.data.salon.currency);
+      }
     });
   }, []);
 
@@ -410,7 +436,7 @@ export default function AppointmentsPage() {
             </div>
             <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
               <p className="text-[10px] uppercase elite-subtle">Expected Revenue</p>
-              <p className="text-sm font-semibold text-[var(--elite-teal)]">€ {expectedRevenue.toFixed(2)}</p>
+              <p className="text-sm font-semibold text-[var(--elite-teal)]">{new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(expectedRevenue)}</p>
             </div>
           </div>
           <div className="mt-3">
@@ -420,19 +446,25 @@ export default function AppointmentsPage() {
                 <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--elite-border-2)] text-[10px]">ALL</span>
                 All Staff
               </button>
-              {staffRows.map(([id, name]) => (
-                <button key={id} type="button" onClick={() => setStaffFilter(id)} className={`staff-chip w-full rounded-lg border px-2 py-2 text-left text-xs ${staffFilter === id ? 'border-[var(--elite-border-2)] bg-[var(--elite-card)] elite-title' : 'border-[var(--elite-border)] bg-transparent elite-subtle'}`}>
-                  <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--elite-border-2)] text-[10px]">
-                    {name
-                      .split(' ')
-                      .map((x) => x[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </span>
-                  {name}
-                </button>
-              ))}
+              {staffRows.map(([id, name]) => {
+                const hex = staffColorMap.get(id);
+                return (
+                  <button key={id} type="button" onClick={() => setStaffFilter(id)} className={`staff-chip w-full rounded-lg border px-2 py-2 text-left text-xs ${staffFilter === id ? 'border-[var(--elite-border-2)] bg-[var(--elite-card)] elite-title' : 'border-[var(--elite-border)] bg-transparent elite-subtle'}`}>
+                    <span
+                      className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-white"
+                      style={hex ? { backgroundColor: hex } : { backgroundColor: 'var(--elite-border-2)', color: 'inherit' }}
+                    >
+                      {name
+                        .split(' ')
+                        .map((x) => x[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </span>
+                    {name}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </aside>
@@ -487,6 +519,7 @@ export default function AppointmentsPage() {
             onAppointmentClick={(id) => setSelectedAppointmentId(id)}
             onAppointmentCheckout={openCheckout}
             onReschedule={rescheduleAppointment}
+            staffColorMap={staffColorMap}
             onDayClick={(d) => {
               setSelectedAppointmentId(null);
               setRangeMode('day');
@@ -536,6 +569,7 @@ export default function AppointmentsPage() {
                         return (
                           <span
                             className={`text-xs px-2 py-1 rounded-full border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                            style={staffMeta.style}
                           >
                             {staffLabel}
                           </span>
@@ -620,6 +654,7 @@ export default function AppointmentsPage() {
                         return (
                           <span
                             className={`inline-flex items-center text-xs px-2 py-1 rounded-full border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
+                            style={staffMeta.style}
                           >
                             {staffLabel}
                           </span>

@@ -2351,6 +2351,7 @@ export interface StaffMember {
   name: string;
   phone?: string | null;
   specialization?: string | null;
+  color?: string | null;
   is_active: boolean;
   branch?: { id: string; name: string } | null;
   schedules?: StaffScheduleRow[];
@@ -2369,6 +2370,7 @@ export interface StaffInput {
   name: string;
   phone?: string;
   specialization?: string;
+  color?: string;
   is_active?: boolean;
   user_id?: string;
 }
