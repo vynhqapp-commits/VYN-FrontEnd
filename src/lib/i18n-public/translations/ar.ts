@@ -227,6 +227,11 @@ export const publicTranslationsAr = {
   checkHighlightedFields: "يرجى مراجعة الحقول المميزة.",
   backToHomeLink: "→ العودة إلى الرئيسية",
 
+  // Auth — Google OAuth
+  continueWithGoogle: "المتابعة مع Google",
+  orDivider: "أو",
+  googleAuthFailed: "فشل تسجيل الدخول بـ Google. حاول مرة أخرى.",
+
   // Auth — Verify OTP
   verifyCodeHeading: "التحقق من الرمز",
   verifyCodeSubheading: "أدخل الرمز الذي أرسلناه إلى بريدك الإلكتروني لتسجيل الدخول.",

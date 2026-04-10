@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -16,6 +17,9 @@ import { RHFTextField } from "@/components/fields/RHFTextField";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/components/LocaleProvider";
 import { getPublicT } from "@/lib/i18n-public";
+
+const GoogleSignInButton = dynamic(() => import("@/components/auth/GoogleSignInButton"), { ssr: false });
+const HAS_GOOGLE = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -116,6 +120,26 @@ export default function LoginPage() {
               {t("loginSubheading")}
             </p>
             <div className="bg-[var(--elite-card)] rounded-2xl border border-[var(--elite-border)] shadow-sm p-6">
+              {HAS_GOOGLE && (
+                <>
+                  <GoogleSignInButton
+                    label={t("continueWithGoogle")}
+                    loadingLabel={t("signingIn")}
+                    successToast={t("welcomeBackToast")}
+                    errorToast={t("googleAuthFailed")}
+                    disabled={loading}
+                  />
+                  <div className="relative my-5">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-[var(--elite-border)]" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-[var(--elite-card)] px-3 text-[var(--elite-muted)]">{t("orDivider")}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(handleSubmit, (e) => {

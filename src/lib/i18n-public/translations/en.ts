@@ -227,6 +227,11 @@ export const publicTranslationsEn = {
   checkHighlightedFields: "Please check the highlighted fields.",
   backToHomeLink: "← Back to home",
 
+  // Auth — Google OAuth
+  continueWithGoogle: "Continue with Google",
+  orDivider: "or",
+  googleAuthFailed: "Google sign-in failed. Please try again.",
+
   // Auth — Verify OTP
   verifyCodeHeading: "Verify code",
   verifyCodeSubheading: "Enter the code we sent to your email to sign in.",

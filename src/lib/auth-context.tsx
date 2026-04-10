@@ -36,6 +36,7 @@ interface AuthContextValue {
   toggleTheme: () => void;
   login: (email: string, password: string) => Promise<{ user: AuthUser } | { error: string }>;
   loginWithOtp: (email: string, code: string) => Promise<{ user: AuthUser } | { error: string }>;
+  loginWithGoogle: (credential: string) => Promise<{ user: AuthUser } | { error: string }>;
   sendOtp: (email: string, locale?: string) => Promise<string | null>;
   registerCustomer: (body: { email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser } | { error: string }>;
   registerSalonOwner: (body: { salon_name: string; salon_address?: string; email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser } | { error: string }>;
@@ -171,6 +172,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { user: data.user };
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const { data, error } = await authApi.googleAuth(credential);
+    if (error || !data) return { error: error || 'Google login failed' };
+    setUser(data.user);
+    setToken(data.token);
+    setTenantId(data.user.tenantId != null ? String(data.user.tenantId) : null);
+    return { user: data.user };
+  };
+
   const logout = () => {
     api('/api/logout', { method: 'POST' }).catch(() => {});
     setToken(null);
@@ -215,6 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         sendOtp,
         loginWithOtp,
+        loginWithGoogle,
         registerCustomer,
         registerSalonOwner,
         logout,

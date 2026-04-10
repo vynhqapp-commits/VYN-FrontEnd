@@ -227,6 +227,11 @@ export const publicTranslationsFr = {
   checkHighlightedFields: "Veuillez vérifier les champs en surbrillance.",
   backToHomeLink: "← Retour à l'accueil",
 
+  // Auth — Google OAuth
+  continueWithGoogle: "Continuer avec Google",
+  orDivider: "ou",
+  googleAuthFailed: "Échec de la connexion Google. Veuillez réessayer.",
+
   // Auth — Verify OTP
   verifyCodeHeading: "Vérifier le code",
   verifyCodeSubheading: "Entrez le code que nous avons envoyé à votre e-mail pour vous connecter.",

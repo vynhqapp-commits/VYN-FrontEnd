@@ -235,6 +235,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  googleAuth: (credential: string) =>
+    plainRequest<{ user: AuthUser; token: string }>("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential }),
+    }),
 };
 
 export const profileApi = {
