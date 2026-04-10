@@ -321,6 +321,21 @@
     background-color: color-mix(in srgb, hsl(var(--card)) 88%, white 12%) !important;
   }
 
+  /*
+   * Native date/datetime/time inputs: browsers often force a light inner field while
+   * inheriting a light text color from dark-themed parents → unreadable text.
+   */
+  .dark input[type="date"],
+  .dark input[type="datetime-local"],
+  .dark input[type="time"],
+  .dark input[type="month"],
+  .dark input[type="week"] {
+    color-scheme: dark;
+    background-color: var(--elite-surface);
+    color: var(--elite-text);
+    border-color: var(--elite-border-2);
+  }
+
   /* Mobile table safety: prevent horizontal layout breakage */
   @media (max-width: 768px) {
     .elite-shell table,

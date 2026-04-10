@@ -123,6 +123,15 @@ export const publicTranslationsAr = {
   removeFavoriteTitle: "إزالة من المفضلة",
   cancelPolicyInsideWindow: "تم التطبيق ضمن نافذة السياسة {hours} ساعة.",
   selectDateTimeFirst: "اختر تاريخاً ووقتاً جديداً أولاً.",
+  selectSlotFirst: "اختر وقتاً متاحاً أولاً.",
+  reschedulePickDate: "التاريخ",
+  rescheduleLoadingSlots: "جارٍ تحميل الأوقات المتاحة…",
+  rescheduleNoSlots: "لا توجد أوقات متاحة في ذلك اليوم. جرّب تاريخاً آخر.",
+  rescheduleSlotsHint: "الأوقات المعروضة فقط يمكن حجزها لهذه الخدمة.",
+  reschedulePolicyReminder:
+    "التغييرات ضمن {hours} ساعة من موعدك قد تخضع لسياسة الصالون.",
+  rescheduleManualFallbackHint:
+    "تعذّر تحميل التوفر المباشر لهذا الحجز. اختر تاريخاً ووقتاً يدوياً، أو أعد الحجز من صفحة الصالون.",
   failedToReschedule: "فشل إعادة جدولة الحجز.",
   reschedulePolicyInsideWindow: "أُعيد الجدولة ضمن نافذة السياسة {hours} ساعة.",
   bookingRescheduled: "تم إعادة جدولة الحجز.",

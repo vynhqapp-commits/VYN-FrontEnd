@@ -123,6 +123,15 @@ export const publicTranslationsFr = {
   removeFavoriteTitle: "Retirer des favoris",
   cancelPolicyInsideWindow: "Appliqué dans la fenêtre de politique de {hours} h.",
   selectDateTimeFirst: "Sélectionnez d'abord une nouvelle date et heure.",
+  selectSlotFirst: "Choisissez d'abord un créneau disponible.",
+  reschedulePickDate: "Date",
+  rescheduleLoadingSlots: "Chargement des créneaux…",
+  rescheduleNoSlots: "Aucun créneau ce jour-là. Essayez une autre date.",
+  rescheduleSlotsHint: "Seuls les horaires affichés sont réservables pour ce service.",
+  reschedulePolicyReminder:
+    "Les modifications dans les {hours} heures précédant le rendez-vous peuvent être soumises à la politique du salon.",
+  rescheduleManualFallbackHint:
+    "Impossible de charger la disponibilité en direct pour cette réservation. Choisissez une date et heure manuellement, ou reprenez une réservation depuis la page du salon.",
   failedToReschedule: "Échec du report du rendez-vous.",
   reschedulePolicyInsideWindow: "Reporté dans la fenêtre de politique de {hours} h.",
   bookingRescheduled: "Rendez-vous reporté.",

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, MapPin, User, Plus, AlertCircle } from "lucide-react";
-import { customerApi } from "@/lib/api";
+import { customerApi, publicApi } from "@/lib/api";
 import type { Appointment, FavoriteSalon } from "@/lib/api";
 import { Spinner } from "@/components/ui";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useLocale } from "@/components/LocaleProvider";
 import { getPublicT, type PublicLocale, type PublicI18nKey } from "@/lib/i18n-public";
@@ -17,6 +18,32 @@ const LOCALE_BCP47: Record<PublicLocale, string> = {
 };
 
 type BookingRow = Appointment;
+
+function fmt(iso: string, locale?: string) {
+  const local = iso.replace(/Z$/, "");
+  return new Date(local).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+}
+
+function localDate(iso: string): Date {
+  return new Date(iso.replace(/Z$/, ""));
+}
+
+function toDatetimeLocal(iso: string): string {
+  const d = localDate(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+function getRescheduleBranchServiceIds(b: BookingRow): { branchId: string; serviceId: string } | null {
+  const branchId = b.branch_id ?? b.branch?.id ?? b.location_id;
+  const serviceId = b.services?.[0]?.service?.id ?? b.service_id ?? b.Service?.id;
+  if (!branchId || !serviceId) return null;
+  return { branchId: String(branchId), serviceId: String(serviceId) };
+}
 
 const STATUS_STYLES: Record<string, string> = {
   scheduled: "bg-blue-50 text-blue-700 border border-blue-100",
@@ -31,6 +58,10 @@ const CANCELLABLE = ["scheduled", "confirmed", "pending"];
 const RESCHEDULABLE = ["scheduled", "confirmed", "pending"];
 const QUICK_REBOOK_STATUSES = ["completed", "cancelled", "no_show"];
 
+const POLICY_WINDOW_HOURS = 24;
+
+type AvailabilitySlot = { start: string; end: string; staff_id: string };
+
 export default function MyBookingsPage() {
   const { locale } = useLocale();
   const t = getPublicT(locale);
@@ -39,7 +70,11 @@ export default function MyBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
-  const [rescheduleStartAt, setRescheduleStartAt] = useState("");
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleSlots, setRescheduleSlots] = useState<AvailabilitySlot[]>([]);
+  const [rescheduleSlotsLoading, setRescheduleSlotsLoading] = useState(false);
+  const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState<AvailabilitySlot | null>(null);
+  const [rescheduleManualAt, setRescheduleManualAt] = useState("");
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
@@ -68,6 +103,34 @@ export default function MyBookingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!rescheduleId || !rescheduleDate) {
+      setRescheduleSlots([]);
+      setRescheduleSlotsLoading(false);
+      return;
+    }
+    const b = bookings.find((x) => x.id === rescheduleId);
+    if (!b) return;
+    const ids = getRescheduleBranchServiceIds(b);
+    if (!ids) {
+      setRescheduleSlots([]);
+      setRescheduleSlotsLoading(false);
+      return;
+    }
+    setSelectedRescheduleSlot(null);
+    setRescheduleSlotsLoading(true);
+    setRescheduleSlots([]);
+    publicApi.availability(ids.branchId, ids.serviceId, rescheduleDate).then(({ data }) => {
+      setRescheduleSlotsLoading(false);
+      if (!data?.slots) return;
+      const buffer = new Date(Date.now() + 30 * 60 * 1000);
+      const future = (data.slots as AvailabilitySlot[]).filter(
+        (slot) => localDate(slot.start) > buffer,
+      );
+      setRescheduleSlots(future);
+    });
+  }, [rescheduleId, rescheduleDate, bookings]);
+
   const handleCancel = async (id: string) => {
     if (!confirm(t("confirmCancelBooking"))) return;
     setCancellingId(id);
@@ -91,16 +154,64 @@ export default function MyBookingsPage() {
   const openReschedule = (booking: BookingRow) => {
     const startIso = booking.starts_at ?? booking.start_at;
     setRescheduleId(booking.id);
-    setRescheduleStartAt(startIso ? toDatetimeLocal(startIso) : "");
+    setSelectedRescheduleSlot(null);
+    setRescheduleSlots([]);
+    setRescheduleManualAt(startIso ? toDatetimeLocal(startIso) : "");
+    const today = new Date().toISOString().slice(0, 10);
+    if (startIso) {
+      const d = startIso.slice(0, 10);
+      setRescheduleDate(d >= today ? d : today);
+    } else {
+      setRescheduleDate(today);
+    }
+  };
+
+  const dismissReschedule = () => {
+    setRescheduleId(null);
+    setRescheduleDate("");
+    setRescheduleSlots([]);
+    setRescheduleSlotsLoading(false);
+    setSelectedRescheduleSlot(null);
+    setRescheduleManualAt("");
   };
 
   const submitReschedule = async (id: string) => {
-    if (!rescheduleStartAt) {
+    const booking = bookings.find((x) => x.id === id);
+    const ids = booking ? getRescheduleBranchServiceIds(booking) : null;
+
+    if (ids) {
+      if (!selectedRescheduleSlot) {
+        toast.error(t("selectSlotFirst"));
+        return;
+      }
+      setReschedulingId(id);
+      const { data, error } = await customerApi.rescheduleBooking(id, {
+        start_at: selectedRescheduleSlot.start,
+        staff_id: selectedRescheduleSlot.staff_id,
+      });
+      setReschedulingId(null);
+      if (error || !data?.booking) {
+        toast.error(error ?? t("failedToReschedule"));
+        return;
+      }
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...data.booking } : b)));
+      if (data?.policy?.violated) {
+        toast.warning(
+          t("reschedulePolicyInsideWindow").replace("{hours}", String(data.policy.window_hours)),
+        );
+      } else {
+        toast.success(t("bookingRescheduled"));
+      }
+      dismissReschedule();
+      return;
+    }
+
+    if (!rescheduleManualAt) {
       toast.error(t("selectDateTimeFirst"));
       return;
     }
     setReschedulingId(id);
-    const iso = new Date(rescheduleStartAt).toISOString();
+    const iso = new Date(rescheduleManualAt).toISOString();
     const { data, error } = await customerApi.rescheduleBooking(id, { start_at: iso });
     setReschedulingId(null);
     if (error || !data?.booking) {
@@ -115,8 +226,7 @@ export default function MyBookingsPage() {
     } else {
       toast.success(t("bookingRescheduled"));
     }
-    setRescheduleId(null);
-    setRescheduleStartAt("");
+    dismissReschedule();
   };
 
   const addFavorite = async (salonId: string) => {
@@ -289,13 +399,20 @@ export default function MyBookingsPage() {
                   onCancel={handleCancel}
                   onStartReschedule={() => openReschedule(b)}
                   onSubmitReschedule={submitReschedule}
-                  onDismissReschedule={() => { setRescheduleId(null); setRescheduleStartAt(""); }}
+                  onDismissReschedule={dismissReschedule}
                   onOpenReview={() => openReview(b)}
                   onSubmitReview={submitReview}
                   onDismissReview={() => { setReviewBookingId(null); setReviewComment(""); setReviewRating(5); }}
                   rescheduleOpen={rescheduleId === b.id}
-                  rescheduleValue={rescheduleStartAt}
-                  onRescheduleValueChange={setRescheduleStartAt}
+                  rescheduleDate={rescheduleDate}
+                  onRescheduleDateChange={setRescheduleDate}
+                  rescheduleSlots={rescheduleSlots}
+                  rescheduleSlotsLoading={rescheduleSlotsLoading}
+                  selectedRescheduleSlot={selectedRescheduleSlot}
+                  onSelectRescheduleSlot={setSelectedRescheduleSlot}
+                  rescheduleManualAt={rescheduleManualAt}
+                  onRescheduleManualChange={setRescheduleManualAt}
+                  policyWindowHours={POLICY_WINDOW_HOURS}
                   reviewOpen={reviewBookingId === b.id}
                   reviewRating={reviewRating}
                   reviewComment={reviewComment}
@@ -385,6 +502,132 @@ function Section({
   );
 }
 
+function ReschedulePanel({
+  booking: b,
+  locale,
+  t,
+  policyWindowHours,
+  rescheduleDate,
+  onRescheduleDateChange,
+  rescheduleSlots,
+  rescheduleSlotsLoading,
+  selectedRescheduleSlot,
+  onSelectRescheduleSlot,
+  rescheduleManualAt,
+  onRescheduleManualChange,
+  onSubmit,
+  onDismiss,
+  rescheduling,
+}: {
+  booking: BookingRow;
+  locale: PublicLocale;
+  t: (key: PublicI18nKey) => string;
+  policyWindowHours: number;
+  rescheduleDate: string;
+  onRescheduleDateChange?: (v: string) => void;
+  rescheduleSlots: AvailabilitySlot[];
+  rescheduleSlotsLoading: boolean;
+  selectedRescheduleSlot: AvailabilitySlot | null;
+  onSelectRescheduleSlot?: (s: AvailabilitySlot | null) => void;
+  rescheduleManualAt: string;
+  onRescheduleManualChange?: (v: string) => void;
+  onSubmit: () => void;
+  onDismiss?: () => void;
+  rescheduling: boolean;
+}) {
+  const ids = getRescheduleBranchServiceIds(b);
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+      <p className="text-xs text-gray-500">
+        {t("reschedulePolicyReminder").replace("{hours}", String(policyWindowHours))}
+      </p>
+      {ids ? (
+        <>
+          <p className="text-xs text-gray-500">{t("rescheduleSlotsHint")}</p>
+          <div>
+            <label htmlFor={`reschedule-date-${b.id}`} className="block text-xs font-medium text-muted-foreground mb-1">
+              {t("reschedulePickDate")}
+            </label>
+            <Input
+              id={`reschedule-date-${b.id}`}
+              type="date"
+              value={rescheduleDate}
+              min={today}
+              onChange={(e) => onRescheduleDateChange?.(e.target.value)}
+              className="w-full sm:w-auto py-2"
+            />
+          </div>
+          {rescheduleSlotsLoading ? (
+            <div className="flex flex-col items-center gap-2 py-4">
+              <Spinner size="sm" />
+              <span className="text-xs text-gray-500">{t("rescheduleLoadingSlots")}</span>
+            </div>
+          ) : rescheduleSlots.length === 0 ? (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              {t("rescheduleNoSlots")}
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2" role="listbox" aria-label={t("reschedulePickDate")}>
+              {rescheduleSlots.map((slot) => {
+                const selected =
+                  selectedRescheduleSlot?.start === slot.start &&
+                  selectedRescheduleSlot?.staff_id === slot.staff_id;
+                return (
+                  <button
+                    key={`${slot.start}-${slot.staff_id}`}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => onSelectRescheduleSlot?.(slot)}
+                    className={`px-3 py-2 text-xs font-medium rounded-lg border transition-colors
+                      ${selected
+                        ? "border-salon-gold bg-salon-gold/10 text-salon-espresso"
+                        : "border-gray-200 hover:border-salon-gold/60 text-salon-espresso"}`}
+                  >
+                    {fmt(slot.start, LOCALE_BCP47[locale])}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            {t("rescheduleManualFallbackHint")}
+          </p>
+          <Input
+            type="datetime-local"
+            value={rescheduleManualAt}
+            min={new Date().toISOString().slice(0, 16)}
+            onChange={(e) => onRescheduleManualChange?.(e.target.value)}
+            className="w-full sm:w-auto py-2"
+          />
+        </>
+      )}
+      <div className="flex gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={rescheduling}
+          className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
+        >
+          {rescheduling ? t("savingReschedule") : t("save")}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
+        >
+          {t("cancelAction")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BookingCard({
   booking: b,
   rebookHref,
@@ -406,8 +649,15 @@ function BookingCard({
   onQuickRebookValueChange,
   quickRebooking,
   rescheduleOpen,
-  rescheduleValue,
-  onRescheduleValueChange,
+  rescheduleDate,
+  onRescheduleDateChange,
+  rescheduleSlots,
+  rescheduleSlotsLoading,
+  selectedRescheduleSlot,
+  onSelectRescheduleSlot,
+  rescheduleManualAt,
+  onRescheduleManualChange,
+  policyWindowHours = POLICY_WINDOW_HOURS,
   reviewOpen,
   reviewRating,
   reviewComment,
@@ -442,8 +692,15 @@ function BookingCard({
   onQuickRebookValueChange?: (v: string) => void;
   quickRebooking?: boolean;
   rescheduleOpen?: boolean;
-  rescheduleValue?: string;
-  onRescheduleValueChange?: (v: string) => void;
+  rescheduleDate?: string;
+  onRescheduleDateChange?: (v: string) => void;
+  rescheduleSlots?: AvailabilitySlot[];
+  rescheduleSlotsLoading?: boolean;
+  selectedRescheduleSlot?: AvailabilitySlot | null;
+  onSelectRescheduleSlot?: (s: AvailabilitySlot | null) => void;
+  rescheduleManualAt?: string;
+  onRescheduleManualChange?: (v: string) => void;
+  policyWindowHours?: number;
   reviewOpen?: boolean;
   reviewRating?: number;
   reviewComment?: string;
@@ -605,42 +862,33 @@ function BookingCard({
         )}
       </div>
       {rescheduleOpen && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col sm:flex-row gap-2 sm:items-center">
-          <input
-            type="datetime-local"
-            value={rescheduleValue ?? ""}
-            min={new Date().toISOString().slice(0, 16)}
-            onChange={(e) => onRescheduleValueChange?.(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onSubmitReschedule?.(b.id)}
-              disabled={!!rescheduling}
-              className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
-            >
-              {rescheduling ? t("savingReschedule") : t("save")}
-            </button>
-            <button
-              type="button"
-              onClick={onDismissReschedule}
-              className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
-            >
-              {t("cancelAction")}
-            </button>
-          </div>
-        </div>
+        <ReschedulePanel
+          booking={b}
+          locale={locale}
+          t={t}
+          policyWindowHours={policyWindowHours}
+          rescheduleDate={rescheduleDate ?? ""}
+          onRescheduleDateChange={onRescheduleDateChange}
+          rescheduleSlots={rescheduleSlots ?? []}
+          rescheduleSlotsLoading={!!rescheduleSlotsLoading}
+          selectedRescheduleSlot={selectedRescheduleSlot ?? null}
+          onSelectRescheduleSlot={onSelectRescheduleSlot}
+          rescheduleManualAt={rescheduleManualAt ?? ""}
+          onRescheduleManualChange={onRescheduleManualChange}
+          onSubmit={() => onSubmitReschedule?.(b.id)}
+          onDismiss={onDismissReschedule}
+          rescheduling={!!rescheduling}
+        />
       )}
       {quickRebookOpen && (
         <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-2">
           <p className="text-xs text-gray-500">{t("quickRebookHint")}</p>
-          <input
+          <Input
             type="datetime-local"
             value={quickRebookValue ?? ""}
             min={new Date().toISOString().slice(0, 16)}
             onChange={(e) => onQuickRebookValueChange?.(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            className="w-full sm:w-auto py-2"
           />
           <div className="flex gap-2">
             <button
@@ -734,26 +982,7 @@ function EmptyState({ t }: { t: (k: PublicI18nKey) => string }) {
   );
 }
 
-// ── Time helpers ──────────────────────────────────────────────────────────────
-
-function fmt(iso: string, locale?: string) {
-  const local = iso.replace(/Z$/, "");
-  return new Date(local).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-}
-
-function localDate(iso: string): Date {
-  return new Date(iso.replace(/Z$/, ""));
-}
-
-function toDatetimeLocal(iso: string): string {
-  const d = localDate(iso);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-}
+// ── Rebook link ───────────────────────────────────────────────────────────────
 
 function buildRebookHref(booking: BookingRow): string {
   const serviceId = booking.services?.[0]?.service?.id ?? booking.service_id ?? booking.Service?.id ?? "";

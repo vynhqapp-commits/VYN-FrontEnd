@@ -123,6 +123,15 @@ export const publicTranslationsEn = {
   removeFavoriteTitle: "Remove favorite",
   cancelPolicyInsideWindow: "Applied inside {hours}h policy window.",
   selectDateTimeFirst: "Select a new date and time first.",
+  selectSlotFirst: "Choose an available time first.",
+  reschedulePickDate: "Date",
+  rescheduleLoadingSlots: "Loading available times…",
+  rescheduleNoSlots: "No open slots that day. Try another date.",
+  rescheduleSlotsHint: "Only listed times can be booked for this service.",
+  reschedulePolicyReminder:
+    "Changes within {hours} hours of your appointment may be subject to salon policy.",
+  rescheduleManualFallbackHint:
+    "We could not load live availability for this booking. Pick a new date and time manually, or book again from the salon page.",
   failedToReschedule: "Failed to reschedule booking.",
   reschedulePolicyInsideWindow: "Rescheduled inside {hours}h policy window.",
   bookingRescheduled: "Booking rescheduled.",
