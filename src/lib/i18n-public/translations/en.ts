@@ -271,6 +271,8 @@ export const publicTranslationsEn = {
   tapSalonToContinue: "Tap a salon to continue",
   popular: "Popular",
   view: "View",
+  listSalonRating: "{rating}/5",
+  listSalonDistance: "{n} km",
   step2Helper: "Pick a branch first, then choose your service.",
   step3Helper: "Select a date to load live available times.",
 } as const;

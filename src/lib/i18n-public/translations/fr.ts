@@ -271,6 +271,8 @@ export const publicTranslationsFr = {
   tapSalonToContinue: "Touchez un salon pour continuer",
   popular: "Populaire",
   view: "Voir",
+  listSalonRating: "{rating}/5",
+  listSalonDistance: "{n} km",
   step2Helper: "Choisissez d'abord une agence, puis votre service.",
   step3Helper: "Sélectionnez une date pour charger les créneaux disponibles en direct.",
 } as const;

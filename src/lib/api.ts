@@ -1771,6 +1771,11 @@ export const publicApi = {
     radius_km?: number;
     page?: number;
     per_page?: number;
+    price_min?: number;
+    price_max?: number;
+    rating_min?: number;
+    availability?: string;
+    gender_preference?: "ladies" | "gents" | "unisex";
   }): Promise<{
     data?: { salons: (Tenant & { distance_km?: number })[] };
     meta?: PaginationMeta;
@@ -1782,6 +1787,11 @@ export const publicApi = {
       radius_km: params.radius_km ?? 10,
       page: params.page,
       per_page: params.per_page,
+      price_min: params.price_min,
+      price_max: params.price_max,
+      rating_min: params.rating_min,
+      availability: params.availability,
+      gender_preference: params.gender_preference,
     });
     const r = await publicRequest<(Tenant & { distance_km?: number })[]>(`/api/public/salons/nearby${q}`);
     if (r.error) return { error: r.error };
@@ -1999,6 +2009,10 @@ export interface Tenant {
   logo?: string | null;
   timezone?: string | null;
   currency?: string | null;
+  /** Aggregated from approved reviews; used for list filters and display */
+  average_rating?: number | string | null;
+  /** Salon / listing gender targeting */
+  gender_preference?: "ladies" | "gents" | "unisex" | null;
   branch_count?: number;
   service_count?: number;
   created_at?: string;

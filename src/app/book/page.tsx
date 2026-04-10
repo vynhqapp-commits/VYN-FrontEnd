@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X } from "lucide-react";
+import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X, Star } from "lucide-react";
 import {
   publicApi,
   customerApi,
@@ -49,6 +49,13 @@ type FilterState = {
   availability: string;
   genderPreference: string;
 };
+
+function formatListRating(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(n)) return null;
+  return n.toFixed(1);
+}
 
 // ── Step bar ─────────────────────────────────────────────────────────────────
 function StepBar({ step, labels }: { step: number; labels: string[] }) {
@@ -209,6 +216,11 @@ export default function BookPage() {
           radius_km: 15,
           page: 1,
           per_page: 12,
+          price_min: appliedFilters.priceMin !== "" ? Number(appliedFilters.priceMin) : undefined,
+          price_max: appliedFilters.priceMax !== "" ? Number(appliedFilters.priceMax) : undefined,
+          rating_min: appliedFilters.ratingMin !== "" ? Number(appliedFilters.ratingMin) : undefined,
+          availability: appliedFilters.availability || undefined,
+          gender_preference: (appliedFilters.genderPreference || undefined) as "ladies" | "gents" | "unisex" | undefined,
         });
         setLocating(false);
         if ("error" in res) { setError(res.error ?? null); return; }
@@ -726,7 +738,14 @@ export default function BookPage() {
                   <p className="text-xs text-gray-400">{t("tapSalonToContinue")}</p>
                 </div>
                 <ul className="space-y-3">
-                  {salons.map((s, i) => (
+                  {salons.map((s, i) => {
+                    const row = s as Tenant & { slug: string; distance_km?: number };
+                    const ratingText = formatListRating(row.average_rating);
+                    const dist = row.distance_km;
+                    const gp = row.gender_preference;
+                    const genderLabel =
+                      gp === "ladies" ? t("genderLadies") : gp === "gents" ? t("genderGents") : gp === "unisex" ? t("genderUnisex") : null;
+                    return (
                     <li
                       key={s.id}
                       className="animate-fade-in-up"
@@ -734,22 +753,41 @@ export default function BookPage() {
                     >
                       <button
                         type="button"
-                        onClick={() => pickSalon((s as Tenant & { slug: string }).slug)}
+                        onClick={() => pickSalon(row.slug)}
                         className="w-full text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group hover:-translate-y-0.5"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <p className="font-semibold text-salon-espresso group-hover:text-salon-gold transition-colors">
                               {s.name}
                             </p>
-                            {i < 2 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-salon-gold/10 text-salon-gold mt-1">
-                                {t("popular")}
-                              </span>
-                            )}
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                              {i < 2 && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-salon-gold/10 text-salon-gold">
+                                  {t("popular")}
+                                </span>
+                              )}
+                              {ratingText && (
+                                <span className="inline-flex items-center gap-1 text-xs text-salon-espresso/90">
+                                  <Star className="w-3.5 h-3.5 text-salon-gold shrink-0" aria-hidden />
+                                  {t("listSalonRating").replace("{rating}", ratingText)}
+                                </span>
+                              )}
+                              {genderLabel && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">
+                                  {genderLabel}
+                                </span>
+                              )}
+                              {dist != null && Number.isFinite(dist) && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  {t("listSalonDistance").replace("{n}", dist < 10 ? dist.toFixed(1) : String(Math.round(dist)))}
+                                </span>
+                              )}
+                            </div>
                             {s.address && (
-                              <p className="flex items-center gap-1 text-gray-400 text-xs mt-1">
-                                <MapPin className="w-3 h-3" />
+                              <p className="flex items-center gap-1 text-gray-400 text-xs mt-1.5">
+                                <MapPin className="w-3 h-3 shrink-0" />
                                 {s.address}
                               </p>
                             )}
@@ -761,7 +799,8 @@ export default function BookPage() {
                         </div>
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
 
                 {meta && meta.last_page > 1 && (

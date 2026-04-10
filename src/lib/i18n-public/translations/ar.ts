@@ -271,6 +271,8 @@ export const publicTranslationsAr = {
   tapSalonToContinue: "اضغط على صالون للمتابعة",
   popular: "شائع",
   view: "عرض",
+  listSalonRating: "{rating}/5",
+  listSalonDistance: "{n} كم",
   step2Helper: "اختر الفرع أولاً، ثم اختر الخدمة.",
   step3Helper: "اختر تاريخاً لعرض الأوقات المتاحة مباشرة.",
 } as const;
