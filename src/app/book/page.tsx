@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X, Star } from "lucide-react";
 import {
   publicApi,
@@ -104,6 +104,7 @@ function StepBar({ step, labels }: { step: number; labels: string[] }) {
 
 export default function BookPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { user } = useAuth();
   const { locale } = useLocale();
   const t = getPublicT(locale);
@@ -837,55 +838,57 @@ export default function BookPage() {
                   <h1 className="font-display text-3xl font-semibold text-salon-espresso">
                     {detail.salon.name}
                   </h1>
-                  {user?.role === "customer" && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const sid = String(detail.salon.id);
-                        setFavoriteToggleBusy(true);
-                        if (favoriteSalonIds.has(sid)) {
-                          const { error } = await customerApi.removeFavoriteSalon(sid);
-                          setFavoriteToggleBusy(false);
-                          if (error) {
-                            toast.error(error);
-                            return;
-                          }
-                          setFavoriteSalonIds((prev) => {
-                            const next = new Set(prev);
-                            next.delete(sid);
-                            return next;
-                          });
-                          toast.success(t("removedFromFavorites"));
-                        } else {
-                          const { data, error } = await customerApi.addFavoriteSalon(sid);
-                          setFavoriteToggleBusy(false);
-                          if (error || !data?.favorite) {
-                            toast.error(error ?? t("failedAddFavorite"));
-                            return;
-                          }
-                          setFavoriteSalonIds((prev) => new Set([...prev, sid]));
-                          toast.success(t("addedToFavorites"));
-                        }
-                      }}
-                      disabled={favoriteToggleBusy}
-                      aria-pressed={favoriteSalonIds.has(String(detail.salon.id))}
-                      title={
-                        favoriteSalonIds.has(String(detail.salon.id))
-                          ? t("favoriteSalonToggleRemove")
-                          : t("favoriteSalonToggleAdd")
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!user) {
+                        router.push("/login");
+                        return;
                       }
-                      className="shrink-0 p-2.5 rounded-xl border border-gray-200 hover:border-salon-gold/50
-                        text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
-                    >
-                      <Heart
-                        className={`w-5 h-5 ${
-                          favoriteSalonIds.has(String(detail.salon.id))
-                            ? "fill-red-500 text-red-500"
-                            : ""
-                        }`}
-                      />
-                    </button>
-                  )}
+                      const sid = String(detail.salon.id);
+                      setFavoriteToggleBusy(true);
+                      if (favoriteSalonIds.has(sid)) {
+                        const { error } = await customerApi.removeFavoriteSalon(sid);
+                        setFavoriteToggleBusy(false);
+                        if (error) {
+                          toast.error(error);
+                          return;
+                        }
+                        setFavoriteSalonIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(sid);
+                          return next;
+                        });
+                        toast.success(t("removedFromFavorites"));
+                      } else {
+                        const { data, error } = await customerApi.addFavoriteSalon(sid);
+                        setFavoriteToggleBusy(false);
+                        if (error || !data?.favorite) {
+                          toast.error(error ?? t("failedAddFavorite"));
+                          return;
+                        }
+                        setFavoriteSalonIds((prev) => new Set([...prev, sid]));
+                        toast.success(t("addedToFavorites"));
+                      }
+                    }}
+                    disabled={favoriteToggleBusy}
+                    aria-pressed={favoriteSalonIds.has(String(detail.salon.id))}
+                    title={
+                      favoriteSalonIds.has(String(detail.salon.id))
+                        ? t("favoriteSalonToggleRemove")
+                        : t("favoriteSalonToggleAdd")
+                    }
+                    className="shrink-0 p-2.5 rounded-xl border border-gray-200 hover:border-salon-gold/50
+                      text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                  >
+                    <Heart
+                      className={`w-5 h-5 ${
+                        favoriteSalonIds.has(String(detail.salon.id))
+                          ? "fill-red-500 text-red-500"
+                          : ""
+                      }`}
+                    />
+                  </button>
                 </div>
                 <p className="text-gray-500 text-sm mb-6">{t("chooseLocationServiceTitle")}</p>
                 <div className="mb-5 rounded-xl border border-gray-200 bg-card p-3">
