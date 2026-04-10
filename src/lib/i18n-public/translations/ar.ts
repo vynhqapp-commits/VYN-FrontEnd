@@ -165,6 +165,18 @@ export const publicTranslationsAr = {
   salonFallbackName: "صالون",
   favoriteSalonToggleAdd: "احفظ هذا الصالون في المفضلة",
   favoriteSalonToggleRemove: "أزل هذا الصالون من المفضلة",
+
+  // Favorites page
+  favorites: "المفضلة",
+  favoritesPageTitle: "الصالونات المحفوظة",
+  favoritesPageSubtitle: "صالوناتك المفضلة، جاهزة للحجز في أي وقت.",
+  noFavoritesYet: "لا توجد مفضلات بعد",
+  noFavoritesDesc: "احفظ الصالونات التي تعجبك وستظهر هنا للحجز السريع.",
+  browseSalons: "تصفح الصالونات",
+  bookNowShort: "احجز الآن",
+  removeFavoriteConfirm: "إزالة من المفضلة؟",
+  addedOnDate: "أُضيف {date}",
+  viewFavorites: "عرض الصالونات المحفوظة",
   statusScheduled: "مجدول",
   statusConfirmed: "مؤكد",
   statusCompleted: "مكتمل",

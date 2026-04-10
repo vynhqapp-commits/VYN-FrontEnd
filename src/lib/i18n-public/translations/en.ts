@@ -165,6 +165,18 @@ export const publicTranslationsEn = {
   salonFallbackName: "Salon",
   favoriteSalonToggleAdd: "Save this salon to your favorites",
   favoriteSalonToggleRemove: "Remove this salon from your favorites",
+
+  // Favorites page
+  favorites: "Favorites",
+  favoritesPageTitle: "Saved Salons",
+  favoritesPageSubtitle: "Your favorite salons, ready to book anytime.",
+  noFavoritesYet: "No favorites yet",
+  noFavoritesDesc: "Save salons you love and they'll appear here for quick booking.",
+  browseSalons: "Browse salons",
+  bookNowShort: "Book now",
+  removeFavoriteConfirm: "Remove from favorites?",
+  addedOnDate: "Added {date}",
+  viewFavorites: "View saved salons",
   statusScheduled: "Scheduled",
   statusConfirmed: "Confirmed",
   statusCompleted: "Completed",

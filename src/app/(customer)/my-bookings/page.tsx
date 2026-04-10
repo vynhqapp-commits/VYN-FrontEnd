@@ -354,27 +354,13 @@ export default function MyBookingsPage() {
       </div>
 
       {favorites.length > 0 && (
-        <div className="mb-6 bg-card rounded-2xl border border-gray-100 shadow-sm p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-            {t("favoritesSectionTitle")}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {favorites.map((fav) => (
-              <div key={fav.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs">
-                <Link href={`/book?salon_id=${fav.salon?.id ?? fav.salon_id}`} className="text-salon-espresso hover:text-salon-gold">
-                  {fav.salon?.name ?? t("salonFallbackName")}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => removeFavorite(String(fav.salon?.id ?? fav.salon_id))}
-                  className="text-red-500 hover:text-red-700"
-                  title={t("removeFavoriteTitle")}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="mb-6">
+          <Link
+            href="/favorites"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            ❤ {t("viewFavorites")} ({favorites.length})
+          </Link>
         </div>
       )}
 

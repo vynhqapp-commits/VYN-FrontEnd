@@ -57,6 +57,9 @@ export default function PublicHeader() {
               <NavLink href="/my-bookings" active={pathname === "/my-bookings"}>
                 {t("myBookings")}
               </NavLink>
+              <NavLink href="/favorites" active={pathname === "/favorites"}>
+                {t("favorites")}
+              </NavLink>
               <NavLink href="/book" active={pathname.startsWith("/book")}>
                 {t("bookAVisit")}
               </NavLink>
