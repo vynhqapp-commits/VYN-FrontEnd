@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { invoicesApi, InvoiceData } from '@/lib/api';
+import { invoicesApi, InvoiceData, salonProfileApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt } from 'lucide-react';
 import FlowTopbar from '@/components/layout/FlowTopbar';
@@ -29,6 +29,18 @@ function fmt(n: number) {
   return Number(n).toFixed(2);
 }
 
+function formatMoney(amount: number, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currencyCode}`;
+  }
+}
+
 type InvoiceLineItem = {
   id: string;
   item_type?: string | null;
@@ -46,7 +58,7 @@ function lineItemName(item: InvoiceLineItem) {
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 
-function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; onClose: () => void; onVoided: () => void }) {
+function InvoiceDetail({ invoiceId, currency, onClose, onVoided }: { invoiceId: string; currency: string; onClose: () => void; onVoided: () => void }) {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [voiding, setVoiding] = useState(false);
@@ -76,7 +88,7 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
       <div
-        className="relative bg-[var(--elite-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[var(--elite-border)]"
+        className="relative elite-scrollbar bg-[var(--elite-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[var(--elite-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -137,8 +149,8 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
                             </div>
                           </td>
                           <td className="py-2 px-3 text-right">{item.quantity ?? 1}</td>
-                          <td className="py-2 px-3 text-right">${fmt(item.unit_price ?? 0)}</td>
-                          <td className="py-2 px-3 text-right font-medium">${fmt(item.total ?? 0)}</td>
+                          <td className="py-2 px-3 text-right">{formatMoney(item.unit_price ?? 0, currency)}</td>
+                          <td className="py-2 px-3 text-right font-medium">{formatMoney(item.total ?? 0, currency)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -150,25 +162,25 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
             {/* Totals */}
             <div className="rounded-xl bg-muted/40 border border-border p-4 space-y-1.5 text-sm">
               <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span><span>${fmt(invoice.subtotal)}</span>
+                <span>Subtotal</span><span>{formatMoney(invoice.subtotal, currency)}</span>
               </div>
               {invoice.discount > 0 && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Discount</span><span>-${fmt(invoice.discount)}</span>
+                  <span>Discount</span><span>-{formatMoney(invoice.discount, currency)}</span>
                 </div>
               )}
               <div className="flex justify-between text-muted-foreground">
-                <span>Tax</span><span>${fmt(invoice.tax)}</span>
+                <span>Tax</span><span>{formatMoney(invoice.tax, currency)}</span>
               </div>
               <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1.5 mt-1.5">
-                <span>Total</span><span>${fmt(invoice.total)}</span>
+                <span>Total</span><span>{formatMoney(invoice.total, currency)}</span>
               </div>
               <div className="flex justify-between text-emerald-700 text-xs">
-                <span>Paid</span><span>${fmt(invoice.paid_amount)}</span>
+                <span>Paid</span><span>{formatMoney(invoice.paid_amount, currency)}</span>
               </div>
               {invoice.total - invoice.paid_amount > 0.01 && (
                 <div className="flex justify-between text-red-600 text-xs font-medium">
-                  <span>Balance due</span><span>${fmt(invoice.total - invoice.paid_amount)}</span>
+                  <span>Balance due</span><span>{formatMoney(invoice.total - invoice.paid_amount, currency)}</span>
                 </div>
               )}
             </div>
@@ -197,6 +209,7 @@ function InvoiceDetail({ invoiceId, onClose, onVoided }: { invoiceId: string; on
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
+  const [currency, setCurrency] = useState('USD');
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -218,6 +231,14 @@ export default function InvoicesPage() {
   };
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    salonProfileApi.get().then((r) => {
+      if (!('error' in r) && r.data?.salon?.currency) {
+        const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
+        if (c) setCurrency(c);
+      }
+    });
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); load(); };
 
@@ -301,10 +322,10 @@ export default function InvoicesPage() {
                     </td>
                     <td className="py-3 px-4">{inv.customer?.name ?? '—'}</td>
                     <td className="py-3 px-4 text-right font-semibold tabular-nums">
-                      ${fmt(inv.total)}
+                      {formatMoney(inv.total, currency)}
                     </td>
                     <td className="py-3 px-4 text-right text-emerald-700 tabular-nums text-xs">
-                      ${fmt(inv.paid_amount)}
+                      {formatMoney(inv.paid_amount, currency)}
                     </td>
                     <td className="py-3 px-4">{statusBadge(inv.status)}</td>
                     <td className="py-3 px-4 text-right">
@@ -346,6 +367,7 @@ export default function InvoicesPage() {
       {detailId && (
         <InvoiceDetail
           invoiceId={detailId}
+          currency={currency}
           onClose={() => setDetailId(null)}
           onVoided={() => load()}
         />

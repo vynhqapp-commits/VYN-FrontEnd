@@ -579,7 +579,7 @@ export default function CalendarGrid({
             <span className="text-xs elite-subtle">{copy.monthHelp}</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="elite-scrollbar overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
             <div className="min-w-[760px]">
               <div className="grid grid-cols-7 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]">
                 {dowLabels.map((h) => (
@@ -918,7 +918,7 @@ export default function CalendarGrid({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="elite-scrollbar overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
           <div className="min-w-[760px]">
             <div
               className="grid"

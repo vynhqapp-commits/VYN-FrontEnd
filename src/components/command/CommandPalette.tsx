@@ -54,7 +54,7 @@ export function CommandPalette({
                 autoFocus
               />
             </div>
-            <CommandList className="max-h-[360px] overflow-auto p-2">
+            <CommandList className="elite-scrollbar max-h-[360px] overflow-auto p-2">
               <CommandEmpty className="p-4 text-sm text-muted-foreground">
                 No results found.
               </CommandEmpty>

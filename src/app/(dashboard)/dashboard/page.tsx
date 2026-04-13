@@ -562,7 +562,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* Appointments table */}
         <Card className="elite-panel">
           <CardHeader className="space-y-1">
@@ -598,26 +598,24 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                <div className="hidden lg:block">
-                  <div className="min-w-[640px]">
-                    <div className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] text-xs font-medium text-muted-foreground border-b pb-2">
-                      <div>Client</div>
-                      <div>Service</div>
-                      <div>Time</div>
+                <div className="hidden min-w-0 lg:block">
+                  <div className="elite-scrollbar max-h-[460px] overflow-y-auto overflow-x-hidden rounded-md">
+                    <div className="sticky top-0 z-10 grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] border-b border-[var(--elite-border)] bg-[var(--elite-card)] pb-2 text-xs font-medium text-muted-foreground">
+                      <div className="min-w-0">Client</div>
+                      <div className="min-w-0">Service</div>
+                      <div className="min-w-0">Time</div>
                       <div>Status</div>
                     </div>
-                  </div>
-                  <div className="max-h-[460px] overflow-auto">
-                    <div className="min-w-[640px] divide-y">
+                    <div className="divide-y divide-[var(--elite-border)]">
                       {rows.map((r) => (
                         <div
                           key={r.id}
-                          className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] py-3 text-sm hover:bg-accent/40 transition-colors rounded-md px-2 -mx-2"
+                          className="grid grid-cols-[1.2fr_1.2fr_0.6fr_0.6fr] py-3 text-sm transition-colors hover:bg-accent/40 rounded-md px-2 -mx-2"
                         >
-                          <div className="font-medium truncate pr-2">{r.client}</div>
-                          <div className="text-muted-foreground truncate pr-2">{r.service}</div>
-                          <div className="text-muted-foreground">{r.time}</div>
-                          <div>
+                          <div className="min-w-0 truncate pr-2 font-medium">{r.client}</div>
+                          <div className="min-w-0 truncate pr-2 text-muted-foreground">{r.service}</div>
+                          <div className="min-w-0 text-muted-foreground">{r.time}</div>
+                          <div className="min-w-0">
                             <Badge variant={statusVariant(r.status) as any}>
                               {r.status}
                             </Badge>
@@ -658,7 +656,7 @@ export default function DashboardPage() {
               This branch only — bookings and payments from the last 7 days, newest first.
             </CardDescription>
           </CardHeader>
-          <CardContent className="max-h-80 space-y-3 overflow-y-auto text-sm pr-1">
+          <CardContent className="elite-scrollbar max-h-80 space-y-3 overflow-y-auto overflow-x-hidden text-sm pr-1">
             {dataPending ? (
               <div className="space-y-3">
                 <Skeleton className="h-14 w-full" />
@@ -703,7 +701,24 @@ export default function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={12} />
                 <YAxis tickLine={false} axisLine={false} fontSize={12} />
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--elite-card)',
+                    border: '1px solid var(--elite-border)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+                    padding: '8px 12px',
+                  }}
+                  labelStyle={{
+                    color: 'var(--elite-text)',
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                  itemStyle={{ color: 'var(--elite-orange)' }}
+                  formatter={(value: number | undefined) =>
+                    value != null ? [money(value), 'Revenue'] : ['—', 'Revenue']
+                  }
+                />
                 <Area
                   type="monotone"
                   dataKey="revenue"

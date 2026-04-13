@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ledgerApi, LedgerEntryRow } from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { ledgerApi, LedgerEntryRow, salonProfileApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { BookOpen, Search, Lock, Unlock } from 'lucide-react';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
@@ -14,14 +14,38 @@ function typeBadge(type: string) {
   );
 }
 
+function formatMoney(amount: number, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currencyCode}`;
+  }
+}
+
 export default function LedgerPage() {
   const [entries, setEntries]       = useState<LedgerEntryRow[]>([]);
   const [loading, setLoading]       = useState(false);
+  const [currency, setCurrency]     = useState('USD');
   const [typeFilter, setTypeFilter] = useState('');
   const [category, setCategory]     = useState('');
   const [from, setFrom]             = useState('');
   const [to, setTo]                 = useState('');
   const [locked, setLocked]         = useState('');
+
+  const money = useMemo(() => (n: number) => formatMoney(n, currency), [currency]);
+
+  useEffect(() => {
+    salonProfileApi.get().then((r) => {
+      if (!('error' in r) && r.data?.salon?.currency) {
+        const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
+        if (c) setCurrency(c);
+      }
+    });
+  }, []);
 
   const load = async (overrides?: Partial<{ type: string; category: string; from: string; to: string; is_locked: string }>) => {
     setLoading(true);
@@ -57,16 +81,16 @@ export default function LedgerPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <p className="text-xs text-muted-foreground">Credits (shown)</p>
-          <p className="mt-1 font-display text-xl font-semibold text-emerald-700 dark:text-emerald-400">${totalCredit.toFixed(2)}</p>
+          <p className="mt-1 font-display text-xl font-semibold text-emerald-700 dark:text-emerald-400">{money(totalCredit)}</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <p className="text-xs text-muted-foreground">Debits (shown)</p>
-          <p className="mt-1 font-display text-xl font-semibold text-red-600 dark:text-red-400">${totalDebit.toFixed(2)}</p>
+          <p className="mt-1 font-display text-xl font-semibold text-red-600 dark:text-red-400">{money(totalDebit)}</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <p className="text-xs text-muted-foreground">Net (shown)</p>
           <p className={`mt-1 font-display text-xl font-semibold ${totalCredit - totalDebit >= 0 ? 'text-foreground' : 'text-red-600 dark:text-red-400'}`}>
-            ${(totalCredit - totalDebit).toFixed(2)}
+            {money(totalCredit - totalDebit)}
           </p>
         </div>
       </div>
@@ -152,11 +176,12 @@ export default function LedgerPage() {
                   </td>
                   <td className="py-3 px-4 text-right text-sm font-semibold tabular-nums">
                     <span className={entry.type === 'credit' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
-                      {entry.type === 'credit' ? '+' : '-'}${Number(entry.amount).toFixed(2)}
+                      {entry.type === 'credit' ? '+' : '-'}
+                      {formatMoney(Math.abs(Number(entry.amount)), currency)}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right text-xs tabular-nums text-muted-foreground">
-                    {entry.tax_amount > 0 ? `$${Number(entry.tax_amount).toFixed(2)}` : '—'}
+                    {entry.tax_amount > 0 ? money(Number(entry.tax_amount)) : '—'}
                   </td>
                   <td className="py-3 px-4 text-center">
                     {entry.is_locked

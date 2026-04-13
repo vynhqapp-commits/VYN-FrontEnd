@@ -191,7 +191,7 @@ export function AppShell({
   }, [onOpenCommandPalette]);
 
   const renderNav = (mode: "desktop" | "mobile") => (
-    <nav className={cn("flex-1 overflow-auto", mode === "desktop" ? "p-2" : "p-3")}>
+    <nav className={cn("elite-scrollbar flex-1 overflow-auto", mode === "desktop" ? "p-2" : "p-3")}>
       <div className="space-y-1">
         {nav.map((i) => (
           <Link
@@ -276,7 +276,7 @@ export function AppShell({
       {/* Sidebar mobile */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] border-r bg-background lg:hidden transform transition-transform duration-200",
+          "fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] border-r bg-background lg:hidden flex flex-col transform transition-transform duration-200",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
         aria-hidden={!mobileOpen}

@@ -155,7 +155,7 @@ function TenantUsersPanel({
         </div>
 
         {/* ── Body ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="elite-scrollbar flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

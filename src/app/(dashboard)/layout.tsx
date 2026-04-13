@@ -37,39 +37,13 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const { locale } = useLocale();
   const td = getDashboardT(locale);
-  /** FlowTopbar tab targets duplicated in the top bar — hide from sidebar in that context. Calendar stays visible. */
-  const FLOW_TOPBAR_TAB_ROUTES_HIDING_FROM_SIDEBAR = useMemo(
-    () =>
-      new Set([
-        "/dashboard/pos",
-        "/dashboard/cash-drawer",
-        "/dashboard/invoices",
-        "/dashboard/debt-aging",
-      ]),
-    [],
-  );
 
   const roleCandidate = (user?.role as AppRole | undefined) ?? undefined;
   const nav: ShellNavItem[] = useMemo(() => {
     if (!roleCandidate) return [];
-    const isFlowTopbarContext =
-      pathname === "/dashboard/appointments" ||
-      pathname.startsWith("/dashboard/appointments/") ||
-      pathname === "/dashboard/pos" ||
-      pathname.startsWith("/dashboard/pos/") ||
-      pathname === "/dashboard/cash-drawer" ||
-      pathname.startsWith("/dashboard/cash-drawer/") ||
-      pathname === "/dashboard/invoices" ||
-      pathname.startsWith("/dashboard/invoices/") ||
-      pathname === "/dashboard/debt-aging" ||
-      pathname.startsWith("/dashboard/debt-aging/");
-
     const baseMenu = menuByRole[roleCandidate];
-    const sidebarMenu = isFlowTopbarContext
-      ? baseMenu.filter((i) => !FLOW_TOPBAR_TAB_ROUTES_HIDING_FROM_SIDEBAR.has(i.href))
-      : baseMenu;
 
-    return sidebarMenu.map((i) => ({
+    return baseMenu.map((i) => ({
       href: i.href,
       label: dashboardNavLabel(i.href, roleCandidate, td, i.label),
       icon:
@@ -115,7 +89,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           <Building2 className="size-5" />
         ) : null,
     }));
-  }, [roleCandidate, locale, pathname, FLOW_TOPBAR_TAB_ROUTES_HIDING_FROM_SIDEBAR]);
+  }, [roleCandidate, locale, td]);
   const cmdItems = useMemo(
     () =>
       nav.map((i) => ({

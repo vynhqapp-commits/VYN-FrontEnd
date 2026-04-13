@@ -161,7 +161,7 @@ export function Combobox({
             />
           </div>
 
-          <div className="max-h-[300px] overflow-auto p-1">
+          <div className="elite-scrollbar max-h-[300px] overflow-auto p-1">
             {filtered.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 {emptyText}

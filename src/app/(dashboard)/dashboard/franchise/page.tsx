@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -21,7 +21,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { franchiseApi, type FranchiseLocationKpi, type FranchiseSummary } from '@/lib/api';
+import { franchiseApi, salonProfileApi, type FranchiseLocationKpi, type FranchiseSummary } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
@@ -29,6 +29,18 @@ import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMoney(amount: number, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currencyCode}`;
+  }
 }
 
 function pct(n: number) {
@@ -99,6 +111,7 @@ function UtilizationBar({ value }: { value: number }) {
 export default function FranchisePage() {
   const [from, setFrom] = useState(startOfMonth);
   const [to, setTo]     = useState(today);
+  const [currency, setCurrency] = useState('USD');
   const [locations, setLocations] = useState<FranchiseLocationKpi[]>([]);
   const [summary, setSummary]     = useState<FranchiseSummary | null>(null);
   const [loading, setLoading]     = useState(true);
@@ -121,6 +134,16 @@ export default function FranchisePage() {
   useEffect(() => { load(); }, [load]);
 
   const totalBookings = locations.reduce((s, l) => s + (l.booking_volume ?? 0), 0);
+  const money = useMemo(() => (n: number) => formatMoney(n, currency), [currency]);
+
+  useEffect(() => {
+    salonProfileApi.get().then((r) => {
+      if (!('error' in r) && r.data?.salon?.currency) {
+        const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
+        if (c) setCurrency(c);
+      }
+    });
+  }, []);
 
   return (
     <div className="space-y-6 elite-shell">
@@ -183,7 +206,7 @@ export default function FranchisePage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
                 label="Total Revenue"
-                value={`$${fmt(summary.total_revenue)}`}
+                value={money(summary.total_revenue)}
                 icon={<TrendingUp className="w-5 h-5" />}
                 accent="success"
               />
@@ -215,7 +238,7 @@ export default function FranchisePage() {
                   {summary.underperforming_count} branch{summary.underperforming_count > 1 ? 'es are' : ' is'} underperforming
                 </p>
                 <p className="text-amber-700 text-xs">
-                  Branches with revenue below 70% of the average (${fmt(summary.average_per_location)}):&nbsp;
+                  Branches with revenue below 70% of the average ({money(summary.average_per_location)}):&nbsp;
                   <span className="font-medium">
                     {summary.underperforming.map((u) => u.name).join(', ')}
                   </span>
@@ -255,11 +278,11 @@ export default function FranchisePage() {
                       tick={{ fontSize: 11, fill: '#8e7b6b' }}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={(v) => `$${v}`}
+                      tickFormatter={(v) => money(Number(v))}
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: 12, border: '1px solid #e8ddd4', fontSize: 12 }}
-                      formatter={(v: number) => [`$${fmt(v)}`, 'Revenue']}
+                      formatter={(v: number) => [money(Number(v)), 'Revenue']}
                     />
                     <Bar dataKey="revenue" radius={[6, 6, 0, 0]} maxBarSize={56}>
                       {locations.map((l) => (
@@ -335,7 +358,7 @@ export default function FranchisePage() {
                           </td>
 
                           <td className="px-4 py-3 text-right font-semibold text-foreground">
-                            ${fmt(loc.revenue)}
+                            {money(loc.revenue)}
                           </td>
 
                           <td className="px-4 py-3 text-right text-muted-foreground">
@@ -350,7 +373,7 @@ export default function FranchisePage() {
                           </td>
 
                           <td className="px-4 py-3 text-right text-muted-foreground">
-                            ${fmt(loc.avg_ticket ?? 0)}
+                            {money(loc.avg_ticket ?? 0)}
                           </td>
 
                           <td className="px-4 py-3">
@@ -380,7 +403,7 @@ export default function FranchisePage() {
                             Total / Average
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-foreground">
-                            ${fmt(summary.total_revenue)}
+                            {money(summary.total_revenue)}
                           </td>
                           <td className="px-4 py-3 text-right font-semibold text-foreground">
                             {totalBookings}
@@ -389,7 +412,7 @@ export default function FranchisePage() {
                             {locations.reduce((s, l) => s + (l.completed_appointments ?? 0), 0)}
                           </td>
                           <td className="px-4 py-3 text-right font-semibold text-foreground">
-                            ${fmt(summary.average_per_location)}
+                            {money(summary.average_per_location)}
                           </td>
                           <td className="px-4 py-3" />
                           <td className="px-4 py-3" />

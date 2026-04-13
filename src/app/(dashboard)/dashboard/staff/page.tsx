@@ -438,7 +438,7 @@ export default function StaffPage() {
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="elite-scrollbar flex-1 overflow-y-auto px-5 py-4">
                 {scheduleLoading ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Loading schedule…</p>
                 ) : (

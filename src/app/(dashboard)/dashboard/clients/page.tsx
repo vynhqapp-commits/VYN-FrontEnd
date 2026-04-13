@@ -377,7 +377,7 @@ export default function ClientsPage() {
           onClick={() => setOpenClient(null)}
         >
           <div
-            className="bg-card rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+            className="elite-scrollbar bg-card rounded-2xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 bg-card/95 backdrop-blur border-b border-border px-4 sm:px-6 py-4">
@@ -422,7 +422,7 @@ export default function ClientsPage() {
 
                 <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
                   <h3 className="text-sm font-semibold text-foreground mb-3">Notes</h3>
-                  <div className="border border-border rounded-xl p-3 bg-muted/40 max-h-64 overflow-auto">
+                  <div className="elite-scrollbar border border-border rounded-xl p-3 bg-muted/40 max-h-64 overflow-auto">
                     {detailLoading ? (
                       <div className="space-y-2">
                         <Skeleton className="h-12 w-full rounded-xl" />

@@ -57,7 +57,7 @@ export default function FlowTopbar() {
         </div>
       </div>
 
-      <div className="mt-2 nav-tabs overflow-x-auto flex justify-center">
+      <div className="mt-2 nav-tabs elite-scrollbar flex justify-center overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
         <div className="inline-flex min-w-max items-center gap-2 rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-1 mx-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;

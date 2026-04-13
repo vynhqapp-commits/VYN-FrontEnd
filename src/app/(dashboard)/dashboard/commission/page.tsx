@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { commissionApi, CommissionRecord, CommissionRule } from '@/lib/api';
+import { commissionApi, CommissionRecord, CommissionRule, salonProfileApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, X, BadgePercent, TrendingUp } from 'lucide-react';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
@@ -17,6 +17,18 @@ const RULE_TYPES: { value: string; label: string }[] = [
 
 function typeLabel(t: string) {
   return RULE_TYPES.find((r) => r.value === t)?.label ?? t;
+}
+
+function formatMoney(amount: number, currencyCode: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currencyCode}`;
+  }
 }
 
 // ─── Rule Modal ───────────────────────────────────────────────────────────────
@@ -173,6 +185,7 @@ function RuleModal({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CommissionPage() {
+  const [currency, setCurrency]       = useState('USD');
   const [rules, setRules]             = useState<CommissionRule[]>([]);
   const [loadingRules, setLoadingRules] = useState(false);
   const [showModal, setShowModal]     = useState(false);
@@ -194,6 +207,14 @@ export default function CommissionPage() {
   };
 
   useEffect(() => { loadRules(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    salonProfileApi.get().then((r) => {
+      if (!('error' in r) && r.data?.salon?.currency) {
+        const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
+        if (c) setCurrency(c);
+      }
+    });
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this commission rule?')) return;
@@ -281,7 +302,7 @@ export default function CommissionPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right font-semibold tabular-nums">
-                        {rule.type.startsWith('percent') ? `${Number(rule.value).toFixed(1)}%` : `$${Number(rule.value).toFixed(2)}`}
+                        {rule.type.startsWith('percent') ? `${Number(rule.value).toFixed(1)}%` : formatMoney(Number(rule.value), currency)}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${rule.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -353,7 +374,7 @@ export default function CommissionPage() {
               {earnings.length > 0 && (
                 <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted/50 border border-border">
                   <span className="text-sm text-muted-foreground">Total commission</span>
-                  <span className="font-display text-lg font-semibold text-primary">${earningsTotal.toFixed(2)}</span>
+                  <span className="font-display text-lg font-semibold text-primary">{formatMoney(earningsTotal, currency)}</span>
                 </div>
               )}
 
@@ -380,7 +401,7 @@ export default function CommissionPage() {
                           </span>
                         </td>
                         <td className="py-2 px-3 text-right font-medium text-foreground tabular-nums">
-                          ${Number(r.amount).toFixed(2)}
+                          {formatMoney(Number(r.amount), currency)}
                         </td>
                       </tr>
                     ))}

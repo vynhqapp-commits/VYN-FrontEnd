@@ -733,7 +733,7 @@ export default function AppointmentsPage() {
       {checkoutAppointment && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" onClick={() => setCheckoutAppointmentId(null)} />
-          <div className="relative ml-auto h-full w-full max-w-5xl overflow-y-auto border-l border-[var(--elite-border)] bg-[var(--elite-surface)] p-4 shadow-xl elite-shell">
+          <div className="relative ml-auto h-full w-full max-w-5xl elite-scrollbar overflow-y-auto border-l border-[var(--elite-border)] bg-[var(--elite-surface)] p-4 shadow-xl elite-shell">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold elite-title">{td('calCheckout')}</h2>
               <button type="button" onClick={() => setCheckoutAppointmentId(null)} className="rounded-lg p-1.5 elite-subtle hover:bg-[var(--elite-card)]">

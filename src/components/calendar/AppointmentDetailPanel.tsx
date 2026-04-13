@@ -68,7 +68,7 @@ export default function AppointmentDetailPanel({
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" onClick={onClose} />
       <div
-        className="relative mt-auto w-full h-[86vh] max-h-[86vh] rounded-t-2xl border-t border-[var(--elite-border)] bg-[var(--elite-surface)] shadow-xl overflow-y-auto
+        className="relative mt-auto w-full h-[86vh] max-h-[86vh] rounded-t-2xl border-t border-[var(--elite-border)] bg-[var(--elite-surface)] shadow-xl elite-scrollbar overflow-y-auto
           md:mt-0 md:ml-auto md:h-full md:max-h-full md:max-w-md md:rounded-none md:border-t-0 md:border-l elite-shell"
         onClick={(e) => e.stopPropagation()}
       >

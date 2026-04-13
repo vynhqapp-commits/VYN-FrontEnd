@@ -152,6 +152,31 @@
     border-radius: 12px;
   }
 
+  /** Thin scrollbars for elite dashboard panels (Firefox + WebKit) */
+  .elite-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--elite-muted) 55%, transparent) var(--elite-surface);
+  }
+
+  .elite-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .elite-scrollbar::-webkit-scrollbar-track {
+    background: var(--elite-surface);
+    border-radius: 6px;
+  }
+
+  .elite-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--elite-muted) 50%, var(--elite-border));
+    border-radius: 6px;
+  }
+
+  .elite-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--elite-muted) 70%, var(--elite-border));
+  }
+
   .elite-title {
     color: var(--elite-text);
     font-weight: 700;
