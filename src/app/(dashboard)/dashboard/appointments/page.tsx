@@ -6,7 +6,7 @@ import FlowTopbar from '@/components/layout/FlowTopbar';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
 import SaleCheckoutForm from '@/components/pos/SaleCheckoutForm';
-import { appointmentsApi, clientsApi, locationsApi, servicesApi, staffApi, salonProfileApi, type Appointment, type Client, type Location, type Service, type StaffMember } from '@/lib/api';
+import { appointmentsApi, clientsApi, locationsApi, servicesApi, staffApi, settingsApi, type Appointment, type Client, type Location, type Service, type StaffMember } from '@/lib/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocale } from '@/components/LocaleProvider';
@@ -245,7 +245,7 @@ export default function AppointmentsPage() {
 
   // Preload reference data for walk-in bookings + staff colors
   useEffect(() => {
-    Promise.all([locationsApi.list(), servicesApi.list(), clientsApi.list(), staffApi.list(), salonProfileApi.get()]).then(([loc, svc, cls, stf, profile]) => {
+    Promise.all([locationsApi.list(), servicesApi.list(), clientsApi.list(), staffApi.list(), settingsApi.get()]).then(([loc, svc, cls, stf, profile]) => {
       if (!('error' in loc) && loc.data?.locations) setLocations(loc.data.locations);
       if (!('error' in svc) && svc.data?.services) setServices(svc.data.services);
       if (!('error' in cls) && cls.data?.clients) setClients(cls.data.clients);

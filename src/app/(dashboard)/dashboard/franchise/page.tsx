@@ -21,7 +21,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { franchiseApi, salonProfileApi, type FranchiseLocationKpi, type FranchiseSummary } from '@/lib/api';
+import { franchiseApi, settingsApi, type FranchiseLocationKpi, type FranchiseSummary } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
@@ -137,7 +137,7 @@ export default function FranchisePage() {
   const money = useMemo(() => (n: number) => formatMoney(n, currency), [currency]);
 
   useEffect(() => {
-    salonProfileApi.get().then((r) => {
+    settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) {
         const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
         if (c) setCurrency(c);

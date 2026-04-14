@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { invoicesApi, InvoiceData, salonProfileApi } from '@/lib/api';
+import { invoicesApi, InvoiceData, settingsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt } from 'lucide-react';
 import FlowTopbar from '@/components/layout/FlowTopbar';
@@ -232,7 +232,7 @@ export default function InvoicesPage() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    salonProfileApi.get().then((r) => {
+    settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) {
         const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
         if (c) setCurrency(c);

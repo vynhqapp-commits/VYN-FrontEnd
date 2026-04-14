@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Command as CommandIcon,
@@ -24,6 +25,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export type ShellNavItem = { href: string; label: string; icon?: React.ReactNode };
+
+export type ShellNavGroup = {
+  id: string;
+  label: string;
+  items: ShellNavItem[];
+};
 
 // ── UserMenu ─────────────────────────────────────────────────────────────────
 
@@ -138,6 +145,10 @@ function UserMenu({
 
 // ── AppShell ──────────────────────────────────────────────────────────────────
 
+function flattenNavGroups(nav: ShellNavGroup[]): ShellNavItem[] {
+  return nav.flatMap((g) => g.items);
+}
+
 export function AppShell({
   brand,
   userLabel,
@@ -149,7 +160,7 @@ export function AppShell({
 }: {
   brand: string;
   userLabel?: string;
-  nav: ShellNavItem[];
+  nav: ShellNavGroup[];
   onLogout?: () => void;
   profileHref?: string;
   children: React.ReactNode;
@@ -158,16 +169,29 @@ export function AppShell({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  /** Category sections folded closed (desktop expanded sidebar only) */
+  const [foldedGroupIds, setFoldedGroupIds] = useState<Set<string>>(() => new Set());
+
+  const flatNav = useMemo(() => flattenNavGroups(nav), [nav]);
 
   const activeHref = useMemo(() => {
     if (!pathname) return "";
-    const matches = nav
+    const matches = flatNav
       .filter((i) => pathname === i.href || pathname.startsWith(i.href + "/"))
       .sort((a, b) => b.href.length - a.href.length);
     return matches[0]?.href ?? "";
-  }, [nav, pathname]);
+  }, [flatNav, pathname]);
 
   const isActive = (href: string) => href === activeHref;
+
+  const toggleGroupFold = (id: string) => {
+    setFoldedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     setMobileOpen(false);
@@ -190,37 +214,85 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onOpenCommandPalette]);
 
-  const renderNav = (mode: "desktop" | "mobile") => (
-    <nav className={cn("elite-scrollbar flex-1 overflow-auto", mode === "desktop" ? "p-2" : "p-3")}>
-      <div className="space-y-1">
-        {nav.map((i) => (
-          <Link
-            key={i.href}
-            href={i.href}
-            className={cn(
-              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive(i.href)
-                ? "bg-[var(--elite-orange)] text-white border border-[var(--elite-orange)]"
-                : "text-[color:var(--sidebar-nav-text)] hover:bg-accent hover:text-foreground",
-              collapsed && mode === "desktop" ? "justify-center" : "",
-            )}
-            title={collapsed && mode === "desktop" ? i.label : undefined}
-          >
-            <span
-              className={cn(
-                isActive(i.href)
-                  ? "text-white"
-                  : "text-[color:var(--sidebar-nav-text)] group-hover:text-foreground",
-              )}
-            >
-              {i.icon ?? <Dot className="size-5" />}
-            </span>
-            {!collapsed || mode === "mobile" ? <span>{i.label}</span> : null}
-          </Link>
-        ))}
-      </div>
-    </nav>
+  const renderNavLink = (i: ShellNavItem, mode: "desktop" | "mobile") => (
+    <Link
+      key={i.href}
+      href={i.href}
+      className={cn(
+        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        isActive(i.href)
+          ? "bg-[var(--elite-orange)] text-white border border-[var(--elite-orange)]"
+          : "text-[color:var(--sidebar-nav-text)] hover:bg-accent hover:text-foreground",
+        collapsed && mode === "desktop" ? "justify-center" : "",
+      )}
+      title={collapsed && mode === "desktop" ? i.label : undefined}
+    >
+      <span
+        className={cn(
+          isActive(i.href)
+            ? "text-white"
+            : "text-[color:var(--sidebar-nav-text)] group-hover:text-foreground",
+        )}
+      >
+        {i.icon ?? <Dot className="size-5" />}
+      </span>
+      {!collapsed || mode === "mobile" ? <span>{i.label}</span> : null}
+    </Link>
   );
+
+  const renderNav = (mode: "desktop" | "mobile") => {
+    const narrowSidebar = mode === "desktop" && collapsed;
+    const showCategoryHeaders = !narrowSidebar;
+
+    return (
+      <nav
+        className={cn(
+          "elite-scrollbar flex-1 overflow-auto",
+          mode === "desktop" ? "p-2" : "p-3",
+        )}
+      >
+        {narrowSidebar ? (
+          <div className="space-y-1">
+            {flatNav.map((i) => renderNavLink(i, mode))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {nav.map((group) => {
+              const folded = foldedGroupIds.has(group.id);
+              return (
+                <div key={group.id} className="space-y-1">
+                  {showCategoryHeaders && group.items.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupFold(group.id)}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide",
+                        "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                      )}
+                      aria-expanded={!folded}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "size-3.5 shrink-0 transition-transform",
+                          folded ? "-rotate-90" : "",
+                        )}
+                      />
+                      <span className="truncate">{group.label}</span>
+                    </button>
+                  ) : null}
+                  {!folded ? (
+                    <div className="space-y-1 pl-0.5">
+                      {group.items.map((i) => renderNavLink(i, mode))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </nav>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">

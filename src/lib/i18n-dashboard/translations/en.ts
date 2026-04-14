@@ -1,4 +1,16 @@
 export const dashboardTranslationsEn = {
+  navGroupOverview: "Overview",
+  navGroupScheduling: "Scheduling",
+  navGroupClients: "Client management",
+  navGroupStaff: "Staff & HR",
+  navGroupCatalog: "Catalog",
+  navGroupPos: "Point of sale",
+  navGroupFinance: "Finance",
+  navGroupInventory: "Inventory",
+  navGroupReports: "Reports",
+  navGroupSettings: "Settings",
+  navGroupMenu: "Menu",
+
   navDashboard: "Dashboard",
   navCalendar: "Calendar",
   navMyCalendar: "My Calendar",

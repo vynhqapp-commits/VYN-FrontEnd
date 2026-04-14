@@ -1,4 +1,16 @@
 export const dashboardTranslationsFr = {
+  navGroupOverview: "Vue d’ensemble",
+  navGroupScheduling: "Planification",
+  navGroupClients: "Gestion clients",
+  navGroupStaff: "Équipe & RH",
+  navGroupCatalog: "Catalogue",
+  navGroupPos: "Point de vente",
+  navGroupFinance: "Finance",
+  navGroupInventory: "Stock",
+  navGroupReports: "Rapports",
+  navGroupSettings: "Paramètres",
+  navGroupMenu: "Menu",
+
   navDashboard: "Tableau de bord",
   navCalendar: "Calendrier",
   navMyCalendar: "Mon calendrier",

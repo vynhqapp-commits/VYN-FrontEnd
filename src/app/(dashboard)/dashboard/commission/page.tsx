@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { commissionApi, CommissionRecord, CommissionRule, salonProfileApi } from '@/lib/api';
+import { commissionApi, CommissionRecord, CommissionRule, settingsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, X, BadgePercent, TrendingUp } from 'lucide-react';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
@@ -208,7 +208,7 @@ export default function CommissionPage() {
 
   useEffect(() => { loadRules(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    salonProfileApi.get().then((r) => {
+    settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) {
         const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
         if (c) setCurrency(c);

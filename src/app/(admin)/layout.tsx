@@ -6,10 +6,9 @@ import { useAuth } from '@/lib/auth-context';
 import { getRedirectForRole } from '@/lib/role-redirect';
 import { LoadingWithHero } from '@/components/SalonHeroImage';
 import { APP_NAME } from '@/lib/app-name';
-import { AppShell, type ShellNavItem } from '@/components/layout/AppShell';
+import { AppShell, type ShellNavGroup, type ShellNavItem } from '@/components/layout/AppShell';
 import { CommandPalette } from '@/components/command/CommandPalette';
 import {
-  Activity,
   Building2,
   CreditCard,
   FileText,
@@ -29,7 +28,7 @@ export default function AdminLayout({
   const { user, loading, logout } = useAuth();
   const [cmdOpen, setCmdOpen] = useState(false);
 
-  const nav: ShellNavItem[] = useMemo(
+  const adminItems: ShellNavItem[] = useMemo(
     () => [
       { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="size-5" /> },
       { href: '/admin/tenants', label: 'Tenants', icon: <Building2 className="size-5" /> },
@@ -40,6 +39,16 @@ export default function AdminLayout({
       { href: '/admin/franchise', label: 'Franchise KPIs', icon: <Globe className="size-5" /> },
     ],
     [],
+  );
+
+  const nav: ShellNavGroup[] = useMemo(
+    () => [{ id: 'admin', label: 'Platform', items: adminItems }],
+    [adminItems],
+  );
+
+  const cmdItems = useMemo(
+    () => adminItems.map((i) => ({ label: i.label, href: i.href })),
+    [adminItems],
   );
 
   const isLoginPage = pathname === '/admin/login';
@@ -70,7 +79,7 @@ export default function AdminLayout({
       }}
       onOpenCommandPalette={() => setCmdOpen(true)}
     >
-      <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} items={nav} />
+      <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} items={cmdItems} />
       {children}
     </AppShell>
   );

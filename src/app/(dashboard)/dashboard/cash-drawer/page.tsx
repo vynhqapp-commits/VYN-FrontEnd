@@ -4,10 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { cashDrawerApi, locationsApi, CashDrawerSession, CashMovement, Location } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import FlowTopbar from '@/components/layout/FlowTopbar';
+import { useAuth } from '@/lib/auth-context';
 
 type StatusFilter = 'all' | 'open' | 'closed' | 'pending_approval' | 'reconciled';
 
 export default function CashDrawerPage() {
+  const { user } = useAuth();
+  const canManageDrawer = user?.role === 'salon_owner' || user?.role === 'manager';
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationId, setLocationId] = useState<string>('');
   const [status, setStatus] = useState<StatusFilter>('open');
@@ -146,7 +149,7 @@ export default function CashDrawerPage() {
       return <p className="text-xs text-muted-foreground/70">No movements recorded yet.</p>;
     }
     return (
-      <ul className="space-y-1 max-h-32 overflow-y-auto text-xs">
+      <ul className="space-y-1 text-xs">
         {movements.map((m) => (
           <li key={m.id} className="flex items-start justify-between gap-2">
             <div>
@@ -215,38 +218,44 @@ export default function CashDrawerPage() {
           <Skeleton className="h-[220px] w-full rounded-xl" />
         </div>
       ) : (
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <div className="elite-panel p-4">
-          <h2 className="font-display text-lg font-semibold elite-title mb-2">Today&apos;s session</h2>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 [&>div]:min-h-0">
+        <div className="elite-panel flex max-h-[min(420px,calc(100vh-180px))] min-h-0 flex-col p-4 md:max-h-[min(480px,calc(100vh-160px))]">
+          <h2 className="font-display shrink-0 text-lg font-semibold elite-title mb-2">
+            Today&apos;s session
+          </h2>
           {currentOpen ? (
-            <div className="space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                Status:{' '}
-                <span className="font-medium text-emerald-600">
-                  Open
-                </span>
-              </p>
-              <p className="text-muted-foreground">
-                Opened at{' '}
-                <span className="font-medium text-foreground">
-                  {new Date(currentOpen.opened_at).toLocaleString()}
-                </span>
-              </p>
-              <p className="text-muted-foreground">
-                Opening balance:{' '}
-                <span className="font-medium text-foreground">
-                  {Number(currentOpen.opening_balance).toFixed(2)}
-                </span>
-              </p>
-              <p className="text-muted-foreground">
-                Running expected:{' '}
-                <span className="font-medium text-foreground">
-                  {runningExpected != null ? runningExpected.toFixed(2) : '-'}
-                </span>
-              </p>
-              <div className="mt-3">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Session movements (manual + sales)</p>
-                {renderMovements(currentOpen.CashMovements)}
+            <div className="flex min-h-0 flex-1 flex-col gap-2 text-sm">
+              <div className="shrink-0 space-y-2">
+                <p className="text-muted-foreground">
+                  Status:{' '}
+                  <span className="font-medium text-emerald-600">Open</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Opened at{' '}
+                  <span className="font-medium text-foreground">
+                    {new Date(currentOpen.opened_at).toLocaleString()}
+                  </span>
+                </p>
+                <p className="text-muted-foreground">
+                  Opening balance:{' '}
+                  <span className="font-medium text-foreground">
+                    {Number(currentOpen.opening_balance).toFixed(2)}
+                  </span>
+                </p>
+                <p className="text-muted-foreground">
+                  Running expected:{' '}
+                  <span className="font-medium text-foreground">
+                    {runningExpected != null ? runningExpected.toFixed(2) : '-'}
+                  </span>
+                </p>
+              </div>
+              <div className="mt-1 flex min-h-0 flex-1 flex-col">
+                <p className="mb-1 shrink-0 text-xs font-medium text-muted-foreground">
+                  Session movements (manual + sales)
+                </p>
+                <div className="elite-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-md pr-1">
+                  {renderMovements(currentOpen.CashMovements)}
+                </div>
               </div>
             </div>
           ) : (
@@ -272,10 +281,14 @@ export default function CashDrawerPage() {
             <button
               type="button"
               onClick={handleOpen}
-              disabled={actionLoading || !locationId || !!currentOpen}
+              disabled={actionLoading || !locationId || !!currentOpen || !canManageDrawer}
               className="w-full mt-1 px-4 py-2 rounded-xl elite-btn-primary text-sm font-medium disabled:opacity-50"
             >
-              {currentOpen ? 'Session already open' : 'Open drawer'}
+              {!canManageDrawer
+                ? 'Owner/manager only'
+                : currentOpen
+                  ? 'Session already open'
+                  : 'Open drawer'}
             </button>
           </div>
 
@@ -308,7 +321,7 @@ export default function CashDrawerPage() {
             <button
               type="button"
               onClick={handleMovement}
-              disabled={actionLoading || !currentOpen || !movementAmount}
+              disabled={actionLoading || !currentOpen || !movementAmount || !canManageDrawer}
               className="w-full mt-1 px-4 py-2 rounded-xl border border-border text-foreground text-sm font-medium disabled:opacity-50"
             >
               Record movement
@@ -345,7 +358,7 @@ export default function CashDrawerPage() {
           <button
             type="button"
             onClick={handleClose}
-            disabled={actionLoading || !currentOpen || !closingBalance}
+            disabled={actionLoading || !currentOpen || !closingBalance || !canManageDrawer}
             className="w-full mt-1 px-4 py-2 rounded-xl elite-btn-primary text-sm font-medium disabled:opacity-50"
           >
             Close session
@@ -360,7 +373,7 @@ export default function CashDrawerPage() {
               className="w-full elite-input rounded-xl px-3 py-2 text-sm"
             />
             <p className="text-xs font-medium text-muted-foreground">Recently closed sessions</p>
-            <div className="space-y-2 max-h-40 overflow-y-auto text-xs">
+            <div className="elite-scrollbar max-h-40 space-y-2 overflow-y-auto overflow-x-hidden rounded-md pr-1 text-xs">
               {sessions
                 .filter((s) => s.status !== 'open')
                 .slice(0, 5)
@@ -382,6 +395,7 @@ export default function CashDrawerPage() {
                       <button
                         type="button"
                         onClick={() => handleReconcile(s.id)}
+                        disabled={!canManageDrawer}
                         className="text-[11px] px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100"
                       >
                         Mark reconciled
@@ -401,7 +415,7 @@ export default function CashDrawerPage() {
       {sessions.length > 0 && (
         <div className="elite-panel p-4">
           <h2 className="font-display text-lg font-semibold elite-title mb-2">Session history</h2>
-          <div className="overflow-x-auto">
+          <div className="elite-scrollbar max-h-[min(420px,55vh)] overflow-auto rounded-md">
             <table className="min-w-full text-xs md:text-sm">
               <thead className="border-b border-border text-muted-foreground">
                 <tr>

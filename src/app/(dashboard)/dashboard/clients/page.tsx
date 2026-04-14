@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X } from 'lucide-react';
-import { clientsApi, debtApi, salonProfileApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
+import { clientsApi, debtApi, settingsApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
@@ -40,7 +40,7 @@ export default function ClientsPage() {
   const [currency, setCurrency] = useState('USD');
 
   useEffect(() => {
-    salonProfileApi.get().then((r) => {
+    settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) setCurrency(r.data.salon.currency);
     });
   }, []);

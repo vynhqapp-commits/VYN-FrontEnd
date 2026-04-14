@@ -1,4 +1,16 @@
 export const dashboardTranslationsAr = {
+  navGroupOverview: "نظرة عامة",
+  navGroupScheduling: "الجدولة",
+  navGroupClients: "إدارة العملاء",
+  navGroupStaff: "الطاقم والموارد البشرية",
+  navGroupCatalog: "الكتالوج",
+  navGroupPos: "نقطة البيع",
+  navGroupFinance: "المالية",
+  navGroupInventory: "المخزون",
+  navGroupReports: "التقارير",
+  navGroupSettings: "الإعدادات",
+  navGroupMenu: "القائمة",
+
   navDashboard: "لوحة التحكم",
   navCalendar: "التقويم",
   navMyCalendar: "تقويمي",

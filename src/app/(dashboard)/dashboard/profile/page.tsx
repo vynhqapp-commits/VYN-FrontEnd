@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Building2, Loader2, Save } from 'lucide-react';
-import { salonProfileApi, type Tenant } from '@/lib/api';
+import { settingsApi, type Tenant } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
@@ -36,13 +36,28 @@ const POLICY_MODES = [
   { value: 'none', label: 'No restriction' },
 ] as const;
 
+const GENDER_PREFS = [
+  { value: 'unisex', label: 'Unisex' },
+  { value: 'ladies', label: 'Ladies' },
+  { value: 'gents', label: 'Gents' },
+] as const;
+
+const LOCALES = [
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'fr', label: 'French' },
+] as const;
+
 const schema = z.object({
   name:     z.string().min(1, 'Salon name is required').max(255),
   phone:    z.string().max(30).optional().or(z.literal('')),
   address:  z.string().max(500).optional().or(z.literal('')),
   timezone: z.string().optional(),
   currency: z.string().length(3, 'Must be a 3-letter currency code').optional().or(z.literal('')),
+  vat_rate: z.coerce.number().min(0).max(100).optional(),
   logo:     z.string().max(500).optional().or(z.literal('')),
+  gender_preference: z.enum(['ladies', 'gents', 'unisex']).optional(),
+  preferred_locale: z.string().max(10).optional().or(z.literal('')),
   cancellation_window_hours: z.coerce.number().int().min(0).max(168).optional(),
   cancellation_policy_mode:  z.enum(['soft', 'hard', 'none']).optional(),
 });
@@ -55,11 +70,23 @@ export default function SalonProfilePage() {
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', phone: '', address: '', timezone: 'UTC', currency: 'USD', logo: '', cancellation_window_hours: 24, cancellation_policy_mode: 'soft' as const },
+    defaultValues: {
+      name: '',
+      phone: '',
+      address: '',
+      timezone: 'UTC',
+      currency: 'USD',
+      vat_rate: 0,
+      logo: '',
+      gender_preference: 'unisex' as const,
+      preferred_locale: 'en',
+      cancellation_window_hours: 24,
+      cancellation_policy_mode: 'soft' as const,
+    },
   });
 
   useEffect(() => {
-    salonProfileApi.get().then((res) => {
+    settingsApi.get().then((res) => {
       setLoading(false);
       if ('error' in res) { toastError(res.error ?? 'Failed to load salon profile'); return; }
       const s = res.data?.salon;
@@ -71,7 +98,10 @@ export default function SalonProfilePage() {
         address:  s.address ?? '',
         timezone: s.timezone ?? 'UTC',
         currency: s.currency ?? 'USD',
+        vat_rate: s.vat_rate != null ? Number(s.vat_rate) : 0,
         logo:     s.logo ?? '',
+        gender_preference: (s.gender_preference ?? 'unisex') as 'ladies' | 'gents' | 'unisex',
+        preferred_locale: s.preferred_locale ?? 'en',
         cancellation_window_hours: s.cancellation_window_hours ?? 24,
         cancellation_policy_mode:  (s.cancellation_policy_mode ?? 'soft') as 'soft' | 'hard' | 'none',
       });
@@ -81,13 +111,16 @@ export default function SalonProfilePage() {
 
   const onSubmit = async (values: Values) => {
     setSaving(true);
-    const res = await salonProfileApi.update({
+    const res = await settingsApi.update({
       name:     values.name,
       phone:    values.phone || undefined,
       address:  values.address || undefined,
       timezone: values.timezone || undefined,
       currency: values.currency || undefined,
+      vat_rate: values.vat_rate,
       logo:     values.logo || undefined,
+      gender_preference: values.gender_preference,
+      preferred_locale: values.preferred_locale || undefined,
       cancellation_window_hours: values.cancellation_window_hours,
       cancellation_policy_mode:  values.cancellation_policy_mode,
     });
@@ -176,6 +209,55 @@ export default function SalonProfilePage() {
                 placeholder="https://example.com/logo.png"
                 disabled={saving}
               />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Default VAT rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    {...form.register('vat_rate', { valueAsNumber: true })}
+                    disabled={saving}
+                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                  />
+                  {form.formState.errors.vat_rate && (
+                    <p className="text-xs text-red-500 mt-1">{form.formState.errors.vat_rate.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Preferred locale
+                  </label>
+                  <select
+                    {...form.register('preferred_locale')}
+                    disabled={saving}
+                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                  >
+                    {LOCALES.map((l) => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Listing gender preference
+                </label>
+                <select
+                  {...form.register('gender_preference')}
+                  disabled={saving}
+                  className="w-full max-w-md rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                >
+                  {GENDER_PREFS.map((g) => (
+                    <option key={g.value} value={g.value}>{g.label}</option>
+                  ))}
+                </select>
+              </div>
 
               {/* Booking Policies */}
               <div className="pt-4 mt-4 border-t border-border">

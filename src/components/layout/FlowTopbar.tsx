@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertTriangle, CalendarDays, ReceiptText, ShoppingCart, Wallet } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 type Tab = {
   href: string;
@@ -22,7 +23,15 @@ const TABS: Tab[] = [
 
 export default function FlowTopbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [clock, setClock] = useState('--:--');
+
+  const tabs = useMemo(() => {
+    if (user?.role === 'receptionist') {
+      return TABS.filter((t) => t.href !== '/dashboard/debt-aging');
+    }
+    return TABS;
+  }, [user?.role]);
 
   useEffect(() => {
     const tick = () =>
@@ -59,7 +68,7 @@ export default function FlowTopbar() {
 
       <div className="mt-2 nav-tabs elite-scrollbar flex justify-center overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
         <div className="inline-flex min-w-max items-center gap-2 rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-1 mx-auto">
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             return isActive(tab.href) ? (
               <span

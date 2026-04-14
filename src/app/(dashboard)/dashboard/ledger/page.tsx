@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ledgerApi, LedgerEntryRow, salonProfileApi } from '@/lib/api';
+import { ledgerApi, LedgerEntryRow, settingsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { BookOpen, Search, Lock, Unlock } from 'lucide-react';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
@@ -39,7 +39,7 @@ export default function LedgerPage() {
   const money = useMemo(() => (n: number) => formatMoney(n, currency), [currency]);
 
   useEffect(() => {
-    salonProfileApi.get().then((r) => {
+    settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) {
         const c = String(r.data.salon.currency).trim().toUpperCase().slice(0, 3);
         if (c) setCurrency(c);

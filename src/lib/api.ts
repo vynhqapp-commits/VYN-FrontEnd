@@ -280,6 +280,31 @@ export const salonProfileApi = {
     }).then((r) => (r.data ? { data: { salon: r.data } } : { error: r.error })),
 };
 
+/** Tenant (salon) settings — GET/PATCH `/api/settings` (salon_owner, manager; requires X-Tenant). */
+export const settingsApi = {
+  get: () =>
+    api<Tenant>("/api/settings").then((r) =>
+      r.data ? { data: { salon: r.data } } : { error: r.error },
+    ),
+  update: (body: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    timezone?: string;
+    currency?: string;
+    vat_rate?: number;
+    logo?: string;
+    gender_preference?: "ladies" | "gents" | "unisex";
+    preferred_locale?: string;
+    cancellation_window_hours?: number;
+    cancellation_policy_mode?: "soft" | "hard" | "none";
+  }) =>
+    api<Tenant>("/api/settings", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.data ? { data: { salon: r.data } } : { error: r.error })),
+};
+
 export const tenantsApi = {
   list: async (params?: { page?: number; per_page?: number }) => {
     const qsPart = params?.page || params?.per_page ? qs(params) : "";
@@ -2088,6 +2113,8 @@ export interface AuthUser {
   role: string;
   tenantId: string | null;
   fullName?: string | null;
+  /** Resolved Spatie permissions for the current user (api guard) */
+  permissions?: string[];
 }
 
 export interface Tenant {
@@ -2103,6 +2130,8 @@ export interface Tenant {
   logo?: string | null;
   timezone?: string | null;
   currency?: string | null;
+  vat_rate?: number | string | null;
+  preferred_locale?: string | null;
   /** Aggregated from approved reviews; used for list filters and display */
   average_rating?: number | string | null;
   /** Salon / listing gender targeting */
@@ -2474,8 +2503,12 @@ export interface ScheduleInput {
 }
 
 export const staffApi = {
-  list: (params?: { branch_id?: string; include_inactive?: boolean }) =>
-    api<StaffMember[]>('/api/staff' + qs(params ?? {})),
+  list: async (params?: { branch_id?: string; include_inactive?: boolean }): Promise<{ data?: StaffMember[]; error?: string }> => {
+    const res = await api<StaffMember[] | { data: StaffMember[] }>('/api/staff' + qs(params ?? {}));
+    if (res.error) return { error: res.error };
+    const list = Array.isArray(res.data) ? res.data : listData(res.data);
+    return { data: list };
+  },
 
   get: (id: string) =>
     api<StaffMember>(`/api/staff/${id}`),

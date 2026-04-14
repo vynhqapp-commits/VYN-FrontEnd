@@ -14,7 +14,7 @@ import {
   appointmentsApi,
   clientsApi,
   locationsApi,
-  salonProfileApi,
+  settingsApi,
   staffApi,
   transactionsApi,
   type Appointment,
@@ -23,6 +23,7 @@ import {
   type Transaction,
 } from '@/lib/api';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
+import { useAuth } from '@/lib/auth-context';
 
 type ApptRow = {
   id: string;
@@ -211,6 +212,7 @@ const EMPTY_STATS: DashboardStats = {
 };
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   /** `null` while resolving locations; `''` if none exist; otherwise selected branch id (dashboard is always branch-scoped). */
@@ -287,6 +289,7 @@ export default function DashboardPage() {
 
       const locParam = branchFilter;
 
+      const canReadStaff = !!user?.permissions?.some((p) => p === 'staff.view' || p === 'staff.manage');
       try {
         const [
           weekAppointmentsRes,
@@ -301,9 +304,11 @@ export default function DashboardPage() {
           transactionsApi.listAll({ from: today, to: today, location_id: locParam }),
           transactionsApi.listAll({ from: yesterday, to: yesterday, location_id: locParam }),
           clientsApi.list(),
-          staffApi.list(),
+          canReadStaff
+            ? staffApi.list()
+            : Promise.resolve<{ data?: StaffMember[]; error?: string }>({ data: [] }),
           transactionsApi.listAll({ from: sevenDaysAgo, to: today, location_id: locParam }),
-          salonProfileApi.get(),
+          settingsApi.get(),
         ]);
 
         if (cancelled) return;
@@ -326,7 +331,7 @@ export default function DashboardPage() {
         const todaySales = todaySalesRes.data?.transactions ?? [];
         const yesterdaySales = yesterdaySalesRes.data?.transactions ?? [];
         const clients = clientsRes.data?.clients ?? [];
-        const staffRaw = Array.isArray(staffRes.data) ? staffRes.data : [];
+        const staffRaw = staffRes.data ?? [];
         const staffForKpi = staffRaw.filter((s) => sameRecordId(staffBranchId(s), branchFilter));
         const weekSales = weekSalesRes.data?.transactions ?? [];
 
@@ -426,7 +431,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [branchFilter]);
+  }, [branchFilter, user?.permissions]);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -715,8 +720,8 @@ export default function DashboardPage() {
                     marginBottom: 4,
                   }}
                   itemStyle={{ color: 'var(--elite-orange)' }}
-                  formatter={(value: number | undefined) =>
-                    value != null ? [money(value), 'Revenue'] : ['—', 'Revenue']
+                  formatter={(value: string | number | (string | number)[]) =>
+                    value != null ? [money(Number(value)), 'Revenue'] : ['—', 'Revenue']
                   }
                 />
                 <Area

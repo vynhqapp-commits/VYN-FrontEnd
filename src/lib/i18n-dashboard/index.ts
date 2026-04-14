@@ -12,6 +12,20 @@ const translations = {
 
 export type DashboardI18nKey = keyof typeof dashboardTranslationsEn;
 
+const groupIdToKey: Record<string, DashboardI18nKey> = {
+  overview: "navGroupOverview",
+  scheduling: "navGroupScheduling",
+  clients: "navGroupClients",
+  staff: "navGroupStaff",
+  catalog: "navGroupCatalog",
+  pos: "navGroupPos",
+  finance: "navGroupFinance",
+  inventory: "navGroupInventory",
+  reports: "navGroupReports",
+  settings: "navGroupSettings",
+  menu: "navGroupMenu",
+};
+
 const hrefToKey: Partial<Record<string, DashboardI18nKey>> = {
   "/dashboard": "navDashboard",
   "/dashboard/appointments": "navCalendar",
@@ -52,5 +66,15 @@ export function dashboardNavLabel(
   if (role === "staff" && href === "/dashboard/appointments") return t("navMyCalendar");
   if (role === "staff" && href === "/dashboard/commission") return t("navMyEarnings");
   const key = hrefToKey[href];
+  return key ? t(key) : fallback;
+}
+
+/** Sidebar category heading from group id (overview, scheduling, …). */
+export function dashboardGroupLabel(
+  groupId: string,
+  t: (key: DashboardI18nKey) => string,
+  fallback: string,
+): string {
+  const key = groupIdToKey[groupId];
   return key ? t(key) : fallback;
 }

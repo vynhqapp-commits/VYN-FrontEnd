@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { locationsApi, servicesApi, salonProfileApi, catalogApi, type Location, type Service, type PackageTemplate, type MembershipPlanTemplate } from '@/lib/api';
+import { locationsApi, servicesApi, settingsApi, catalogApi, type Location, type Service, type PackageTemplate, type MembershipPlanTemplate } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,9 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 export default function ServicesPage() {
+  const { user } = useAuth();
+  const canManageCatalog = user?.role === 'salon_owner' || user?.role === 'manager';
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState<Location[]>([]);
@@ -124,7 +128,7 @@ export default function ServicesPage() {
     locationsApi.list().then((r) => {
       if (!('error' in r) && r.data?.locations) setBranches(r.data.locations);
     });
-    salonProfileApi.get().then((r) => {
+    settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) setCurrency(r.data.salon.currency);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,6 +143,7 @@ export default function ServicesPage() {
   }, [q, status]);
 
   const openCreate = () => {
+    if (!canManageCatalog) return;
     setEditing(null);
     form.reset({
       name: '',
@@ -153,6 +158,7 @@ export default function ServicesPage() {
   };
 
   const openEdit = (s: Service) => {
+    if (!canManageCatalog) return;
     setEditing(s);
     form.reset({
       name: s.name ?? '',
@@ -322,6 +328,7 @@ export default function ServicesPage() {
   }, [activeTab]);
 
   const openAvailability = async (s: Service) => {
+    if (!canManageCatalog) return;
     setAvailabilityService(s);
     setAvailabilityOpen(true);
     setAvailabilityTab('weekly');
@@ -355,6 +362,10 @@ export default function ServicesPage() {
       setAvailabilityLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (availabilityOpen && !canManageCatalog) setAvailabilityOpen(false);
+  }, [availabilityOpen, canManageCatalog]);
 
   useEffect(() => {
     if (!availabilityOpen || !availabilityService?.id || !availabilityBranchId) return;
@@ -479,7 +490,9 @@ export default function ServicesPage() {
         description="Manage services, packages, and membership plans."
         icon={<Pencil className="w-5 h-5" />}
         rightSlot={
-          activeTab === 'services' ? (
+          !canManageCatalog ? (
+            <span className="text-xs text-muted-foreground">View only</span>
+          ) : activeTab === 'services' ? (
             <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>New service</Button>
           ) : activeTab === 'packages' ? (
             <Button onClick={() => { setEditingPkg(null); setPkgModalOpen(true); }} className="rounded-xl h-11">New package</Button>
@@ -549,7 +562,7 @@ export default function ServicesPage() {
                 <TableHead className="w-[140px]">Price</TableHead>
                 <TableHead className="w-[140px]">Deposit</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="text-right w-[220px]">Actions</TableHead>
+                {canManageCatalog && <TableHead className="text-right w-[220px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -585,6 +598,7 @@ export default function ServicesPage() {
                       {s.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </TableCell>
+                  {canManageCatalog && (
                   <TableCell className="text-right">
                     <div className="inline-flex items-center gap-2">
                       <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(s)} disabled={saving} title="Edit">
@@ -606,6 +620,7 @@ export default function ServicesPage() {
                       </Button>
                     </div>
                   </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -1018,7 +1033,7 @@ export default function ServicesPage() {
                     <TableHead className="w-[100px]">Sessions</TableHead>
                     <TableHead className="w-[120px]">Validity</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="text-right w-[140px]">Actions</TableHead>
+                    {canManageCatalog && <TableHead className="text-right w-[140px]">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1040,6 +1055,7 @@ export default function ServicesPage() {
                           {p.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </TableCell>
+                      {canManageCatalog && (
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingPkg(p); setPkgModalOpen(true); }} title="Edit">
@@ -1050,6 +1066,7 @@ export default function ServicesPage() {
                           </Button>
                         </div>
                       </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1122,7 +1139,7 @@ export default function ServicesPage() {
                     <TableHead className="w-[120px]">Interval</TableHead>
                     <TableHead className="w-[140px]">Credits / Renewal</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="text-right w-[140px]">Actions</TableHead>
+                    {canManageCatalog && <TableHead className="text-right w-[140px]">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1144,6 +1161,7 @@ export default function ServicesPage() {
                           {m.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </TableCell>
+                      {canManageCatalog && (
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingMem(m); setMemModalOpen(true); }} title="Edit">
@@ -1154,6 +1172,7 @@ export default function ServicesPage() {
                           </Button>
                         </div>
                       </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

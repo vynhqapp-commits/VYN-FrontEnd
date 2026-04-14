@@ -4,13 +4,25 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { getRedirectForRole, type AppRole } from "@/lib/role-redirect";
-import { isRouteAllowed, menuByRole } from "@/lib/rbac";
+import {
+  getFilteredSidebarGroups,
+  isRouteAllowed,
+  menuByRole,
+} from "@/lib/rbac";
 import { LoadingWithHero } from "@/components/SalonHeroImage";
 import { APP_NAME } from "@/lib/app-name";
-import { AppShell, type ShellNavItem } from "@/components/layout/AppShell";
+import {
+  AppShell,
+  type ShellNavGroup,
+  type ShellNavItem,
+} from "@/components/layout/AppShell";
 import { CommandPalette } from "@/components/command/CommandPalette";
 import { LocaleProvider, useLocale } from "@/components/LocaleProvider";
-import { dashboardNavLabel, getDashboardT } from "@/lib/i18n-dashboard";
+import {
+  dashboardGroupLabel,
+  dashboardNavLabel,
+  getDashboardT,
+} from "@/lib/i18n-dashboard";
 import {
   BarChart3,
   BookText,
@@ -30,6 +42,33 @@ import {
   Wallet,
 } from "lucide-react";
 
+function iconForHref(href: string): React.ReactNode {
+  if (href === "/dashboard") return <BarChart3 className="size-5" />;
+  if (href === "/dashboard/appointments")
+    return <CalendarDays className="size-5" />;
+  if (href === "/dashboard/clients") return <Users className="size-5" />;
+  if (href === "/dashboard/staff") return <UserCog className="size-5" />;
+  if (href === "/dashboard/locations") return <MapPin className="size-5" />;
+  if (href === "/dashboard/services") return <Settings2 className="size-5" />;
+  if (href === "/dashboard/products") return <Package className="size-5" />;
+  if (href === "/dashboard/inventory") return <Boxes className="size-5" />;
+  if (href === "/dashboard/transactions") return <Receipt className="size-5" />;
+  if (href === "/dashboard/pos") return <CreditCard className="size-5" />;
+  if (href === "/dashboard/invoices") return <FileText className="size-5" />;
+  if (href === "/dashboard/cash-drawer") return <Wallet className="size-5" />;
+  if (href === "/dashboard/debt-aging")
+    return <BriefcaseBusiness className="size-5" />;
+  if (href === "/dashboard/commission") return <BarChart3 className="size-5" />;
+  if (href === "/dashboard/gift-cards") return <Gift className="size-5" />;
+  if (href === "/dashboard/expenses") return <Receipt className="size-5" />;
+  if (href === "/dashboard/ledger") return <BookText className="size-5" />;
+  if (href === "/dashboard/reports") return <BarChart3 className="size-5" />;
+  if (href === "/dashboard/franchise")
+    return <BriefcaseBusiness className="size-5" />;
+  if (href === "/dashboard/profile") return <Building2 className="size-5" />;
+  return null;
+}
+
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -39,63 +78,43 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const td = getDashboardT(locale);
 
   const roleCandidate = (user?.role as AppRole | undefined) ?? undefined;
-  const nav: ShellNavItem[] = useMemo(() => {
-    if (!roleCandidate) return [];
-    const baseMenu = menuByRole[roleCandidate];
+  const perms = user?.permissions;
 
-    return baseMenu.map((i) => ({
+  const nav: ShellNavGroup[] = useMemo(() => {
+    if (!roleCandidate) return [];
+
+    const mapItem = (i: { href: string; label: string }): ShellNavItem => ({
       href: i.href,
       label: dashboardNavLabel(i.href, roleCandidate, td, i.label),
-      icon:
-        i.href === "/dashboard" ? (
-          <BarChart3 className="size-5" />
-        ) : i.href === "/dashboard/appointments" ? (
-          <CalendarDays className="size-5" />
-        ) : i.href === "/dashboard/clients" ? (
-          <Users className="size-5" />
-        ) : i.href === "/dashboard/staff" ? (
-          <UserCog className="size-5" />
-        ) : i.href === "/dashboard/locations" ? (
-          <MapPin className="size-5" />
-        ) : i.href === "/dashboard/services" ? (
-          <Settings2 className="size-5" />
-        ) : i.href === "/dashboard/products" ? (
-          <Package className="size-5" />
-        ) : i.href === "/dashboard/inventory" ? (
-          <Boxes className="size-5" />
-        ) : i.href === "/dashboard/transactions" ? (
-          <Receipt className="size-5" />
-        ) : i.href === "/dashboard/pos" ? (
-          <CreditCard className="size-5" />
-        ) : i.href === "/dashboard/invoices" ? (
-          <FileText className="size-5" />
-        ) : i.href === "/dashboard/cash-drawer" ? (
-          <Wallet className="size-5" />
-        ) : i.href === "/dashboard/debt-aging" ? (
-          <BriefcaseBusiness className="size-5" />
-        ) : i.href === "/dashboard/commission" ? (
-          <BarChart3 className="size-5" />
-        ) : i.href === "/dashboard/gift-cards" ? (
-          <Gift className="size-5" />
-        ) : i.href === "/dashboard/expenses" ? (
-          <Receipt className="size-5" />
-        ) : i.href === "/dashboard/ledger" ? (
-          <BookText className="size-5" />
-        ) : i.href === "/dashboard/reports" ? (
-          <BarChart3 className="size-5" />
-        ) : i.href === "/dashboard/franchise" ? (
-          <BriefcaseBusiness className="size-5" />
-        ) : i.href === "/dashboard/profile" ? (
-          <Building2 className="size-5" />
-        ) : null,
-    }));
-  }, [roleCandidate, locale, td]);
+      icon: iconForHref(i.href),
+    });
+
+    if (perms && perms.length > 0) {
+      return getFilteredSidebarGroups(perms, roleCandidate).map((g) => ({
+        id: g.id,
+        label: dashboardGroupLabel(g.id, td, g.categoryLabel),
+        items: g.items.map(mapItem),
+      }));
+    }
+
+    const baseMenu = menuByRole[roleCandidate] ?? [];
+    return [
+      {
+        id: "menu",
+        label: dashboardGroupLabel("menu", td, "Menu"),
+        items: baseMenu.map(mapItem),
+      },
+    ];
+  }, [roleCandidate, perms, td, locale]);
+
   const cmdItems = useMemo(
     () =>
-      nav.map((i) => ({
-        label: i.label,
-        href: i.href,
-      })),
+      nav.flatMap((g) =>
+        g.items.map((i) => ({
+          label: i.label,
+          href: i.href,
+        })),
+      ),
     [nav],
   );
 
@@ -119,7 +138,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
-    if (!isRouteAllowed(user.role, pathname)) {
+    if (
+      !isRouteAllowed(user.role, pathname, user.permissions ?? undefined)
+    ) {
       router.replace(getRedirectForRole(user.role));
       return;
     }
@@ -150,7 +171,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <Suspense fallback={<LoadingWithHero />}>
       <LocaleProvider>
