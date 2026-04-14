@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X } from 'lucide-react';
 import { clientsApi, debtApi, settingsApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
+import { toastError, toastSuccess } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
@@ -597,6 +598,26 @@ export default function ClientsPage() {
                                 <p className="text-xs text-muted-foreground mt-1">
                                   Remaining credits: {m.remaining_services}
                                 </p>
+                                {m.status === 'active' && (
+                                  <label className="flex items-center gap-2 text-xs text-muted-foreground mt-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!m.auto_renew}
+                                      onChange={async (e) => {
+                                        if (!openClient) return;
+                                        const res = await clientsApi.toggleAutoRenew(openClient.id, m.id, e.target.checked);
+                                        if ('error' in res && res.error) {
+                                          toastError(res.error);
+                                        } else {
+                                          setMemberships((prev) => prev.map((x) => x.id === m.id ? { ...x, auto_renew: e.target.checked } : x));
+                                          toastSuccess(e.target.checked ? 'Auto-renew enabled' : 'Auto-renew disabled');
+                                        }
+                                      }}
+                                      className="size-3.5"
+                                    />
+                                    Auto-renew
+                                  </label>
+                                )}
                               </div>
                               {m.status === 'active' && (
                                 <button

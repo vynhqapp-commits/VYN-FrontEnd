@@ -650,6 +650,13 @@ export const clientsApi = {
     });
     return res.error ? { error: res.error } : { data: { membership: res.data } };
   },
+  toggleAutoRenew: async (clientId: string, membershipId: string, autoRenew: boolean) => {
+    const res = await api<unknown>(`/api/customers/${clientId}/memberships/${membershipId}/auto-renew`, {
+      method: "PATCH",
+      body: JSON.stringify({ auto_renew: autoRenew }),
+    });
+    return res.error ? { error: res.error } : { data: { membership: res.data } };
+  },
 };
 
 function normalizeClient(raw: Record<string, unknown>): Client {
@@ -902,6 +909,70 @@ export const catalogApi = {
 
   deleteMembership: (id: string) =>
     api<unknown>(`/api/catalog/memberships/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? { error: r.error } : { data: { deleted: true } },
+    ),
+};
+
+/* ── Coupons ─────────────────────────────────────────────────────────── */
+
+export const couponsApi = {
+  list: async (params?: { q?: string; is_active?: boolean; page?: number; per_page?: number }) => {
+    const res = await api<Coupon[] | { data: Coupon[] }>(
+      "/api/coupons" + qs(params as Record<string, string | number | boolean | undefined> || {}),
+    );
+    const list = listData(res.data);
+    return res.error ? { error: res.error } : { data: { coupons: list }, meta: res.meta };
+  },
+  get: (id: string) =>
+    api<Coupon>(`/api/coupons/${id}`).then((r) =>
+      r.data ? { data: { coupon: r.data } } : { error: r.error },
+    ),
+  create: (body: {
+    code: string;
+    type: "flat" | "percent";
+    value: number;
+    is_active?: boolean;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    usage_limit?: number | null;
+    min_subtotal?: number | null;
+    name?: string | null;
+    description?: string | null;
+  }) =>
+    api<Coupon>("/api/coupons", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { coupon: r.data } })),
+  update: (id: string, body: Record<string, unknown>) =>
+    api<Coupon>(`/api/coupons/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { coupon: r.data } })),
+  delete: (id: string) =>
+    api<unknown>(`/api/coupons/${id}`, { method: "DELETE" }).then((r) =>
+      r.error ? { error: r.error } : { data: { deleted: true } },
+    ),
+};
+
+/* ── Service Add-Ons ────────────────────────────────────────────────── */
+
+export const addOnsApi = {
+  list: (serviceId: string) =>
+    api<ServiceAddOn[]>(`/api/services/${serviceId}/add-ons`).then((r) =>
+      r.error ? { error: r.error } : { data: { add_ons: listData(r.data as ServiceAddOn[] | { data: ServiceAddOn[] }) } },
+    ),
+  create: (serviceId: string, body: { name: string; description?: string | null; price: number; duration_minutes?: number; is_active?: boolean }) =>
+    api<ServiceAddOn>(`/api/services/${serviceId}/add-ons`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { add_on: r.data } })),
+  update: (serviceId: string, id: string, body: Record<string, unknown>) =>
+    api<ServiceAddOn>(`/api/services/${serviceId}/add-ons/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => (r.error ? { error: r.error } : { data: { add_on: r.data } })),
+  delete: (serviceId: string, id: string) =>
+    api<unknown>(`/api/services/${serviceId}/add-ons/${id}`, { method: "DELETE" }).then((r) =>
       r.error ? { error: r.error } : { data: { deleted: true } },
     ),
 };
@@ -2209,12 +2280,28 @@ export interface ClientMembership {
   service_credits_per_renewal: number;
   remaining_services: number;
   status?: string;
+  auto_renew?: boolean;
 }
 
 export interface ClientStats {
   total_spent: number;
   invoice_count: number;
   avg_ticket: number;
+}
+
+export interface ServicePricingTier {
+  id?: string | number;
+  tier_label: string;
+  price: string | number;
+}
+
+export interface ServiceAddOn {
+  id?: string | number;
+  name: string;
+  description?: string | null;
+  price: string | number;
+  duration_minutes: number;
+  is_active: boolean;
 }
 
 export interface Service {
@@ -2228,6 +2315,25 @@ export interface Service {
   cost?: string | number | null;
   category?: string | null;
   is_active: boolean;
+  pricing_tiers?: ServicePricingTier[];
+  add_ons?: ServiceAddOn[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  type: "flat" | "percent";
+  value: string | number;
+  is_active: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  usage_limit?: number | null;
+  used_count: number;
+  min_subtotal?: string | number | null;
+  name?: string | null;
+  description?: string | null;
   created_at?: string;
   updated_at?: string;
 }

@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, X, Package, CreditCard } from 'lucide-react';
+import { Pencil, Trash2, X, Package, CreditCard, Plus, Ticket, Layers } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { locationsApi, servicesApi, settingsApi, catalogApi, type Location, type Service, type PackageTemplate, type MembershipPlanTemplate } from '@/lib/api';
+import { locationsApi, servicesApi, settingsApi, catalogApi, couponsApi, addOnsApi, type Location, type Service, type ServicePricingTier, type ServiceAddOn, type PackageTemplate, type MembershipPlanTemplate, type Coupon } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -60,8 +60,11 @@ export default function ServicesPage() {
   const [editing, setEditing] = useState<Service | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /* ── Pricing tiers local state (managed outside react-hook-form) ── */
+  const [tiers, setTiers] = useState<{ tier_label: string; price: number }[]>([]);
+
   /* ── Top-level tab ── */
-  const [activeTab, setActiveTab] = useState<'services' | 'packages' | 'memberships'>('services');
+  const [activeTab, setActiveTab] = useState<'services' | 'packages' | 'memberships' | 'coupons'>('services');
 
   /* ── Packages state ── */
   const [packages, setPackages] = useState<PackageTemplate[]>([]);
@@ -76,6 +79,22 @@ export default function ServicesPage() {
   const [memModalOpen, setMemModalOpen] = useState(false);
   const [editingMem, setEditingMem] = useState<MembershipPlanTemplate | null>(null);
   const [memSaving, setMemSaving] = useState(false);
+
+  /* ── Coupons state ── */
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponModalOpen, setCouponModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [couponSaving, setCouponSaving] = useState(false);
+
+  /* ── Add-ons state ── */
+  const [addOnsOpen, setAddOnsOpen] = useState(false);
+  const [addOnsService, setAddOnsService] = useState<Service | null>(null);
+  const [addOns, setAddOns] = useState<ServiceAddOn[]>([]);
+  const [addOnsLoading, setAddOnsLoading] = useState(false);
+  const [addOnModalOpen, setAddOnModalOpen] = useState(false);
+  const [editingAddOn, setEditingAddOn] = useState<ServiceAddOn | null>(null);
+  const [addOnSaving, setAddOnSaving] = useState(false);
 
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [availabilityService, setAvailabilityService] = useState<Service | null>(null);
@@ -145,6 +164,7 @@ export default function ServicesPage() {
   const openCreate = () => {
     if (!canManageCatalog) return;
     setEditing(null);
+    setTiers([]);
     form.reset({
       name: '',
       description: '',
@@ -160,6 +180,7 @@ export default function ServicesPage() {
   const openEdit = (s: Service) => {
     if (!canManageCatalog) return;
     setEditing(s);
+    setTiers((s.pricing_tiers ?? []).map((t) => ({ tier_label: t.tier_label, price: Number(t.price) })));
     form.reset({
       name: s.name ?? '',
       description: (s.description as any) ?? '',
@@ -175,16 +196,18 @@ export default function ServicesPage() {
   const onSubmit = async (values: Values) => {
     setSaving(true);
     try {
+      const payload = {
+        name: values.name,
+        description: values.description ?? null,
+        duration_minutes: values.duration_minutes,
+        price: values.price,
+        deposit_amount: values.deposit_amount ?? 0,
+        cost: values.cost ?? 0,
+        is_active: values.is_active,
+        pricing_tiers: tiers.filter((t) => t.tier_label.trim()),
+      } as any;
       if (editing?.id) {
-        const res = await servicesApi.update(String(editing.id), {
-          name: values.name,
-          description: values.description ?? null,
-          duration_minutes: values.duration_minutes,
-          price: values.price,
-          deposit_amount: values.deposit_amount ?? 0,
-          cost: values.cost ?? 0,
-          is_active: values.is_active,
-        } as any);
+        const res = await servicesApi.update(String(editing.id), payload);
         if ('error' in res && res.error) toastError(res.error);
         else {
           toastSuccess('Service updated.');
@@ -192,15 +215,7 @@ export default function ServicesPage() {
           await load();
         }
       } else {
-        const res = await servicesApi.create({
-          name: values.name,
-          description: values.description ?? null,
-          duration_minutes: values.duration_minutes,
-          price: values.price,
-          deposit_amount: values.deposit_amount ?? 0,
-          cost: values.cost ?? 0,
-          is_active: values.is_active,
-        });
+        const res = await servicesApi.create(payload);
         if ('error' in res && res.error) toastError(res.error);
         else {
           toastSuccess('Service created.');
@@ -321,9 +336,102 @@ export default function ServicesPage() {
     else { toastSuccess('Membership deleted.'); loadMemberships(); }
   };
 
+  /* ── Coupon CRUD helpers ── */
+  const loadCoupons = async () => {
+    setCouponLoading(true);
+    const res = await couponsApi.list();
+    setCouponLoading(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else setCoupons((res as any).data?.coupons ?? []);
+  };
+
+  const saveCoupon = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const body: any = {
+      code: String(fd.get('code') ?? '').toUpperCase(),
+      name: String(fd.get('name') ?? '') || null,
+      type: String(fd.get('type') ?? 'flat'),
+      value: Number(fd.get('value') ?? 0),
+      min_subtotal: fd.get('min_subtotal') ? Number(fd.get('min_subtotal')) : null,
+      starts_at: String(fd.get('starts_at') ?? '') || null,
+      ends_at: String(fd.get('ends_at') ?? '') || null,
+      usage_limit: fd.get('usage_limit') ? Number(fd.get('usage_limit')) : null,
+      is_active: fd.get('is_active') === 'on',
+      description: String(fd.get('description') ?? '') || null,
+    };
+    if (!body.code) { toastError('Code is required'); return; }
+    setCouponSaving(true);
+    const res = editingCoupon
+      ? await couponsApi.update(editingCoupon.id, body)
+      : await couponsApi.create(body);
+    setCouponSaving(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess(editingCoupon ? 'Coupon updated.' : 'Coupon created.'); setCouponModalOpen(false); loadCoupons(); }
+  };
+
+  const deleteCoupon = async (c: Coupon) => {
+    if (!window.confirm(`Delete coupon "${c.code}"?`)) return;
+    const res = await couponsApi.delete(c.id);
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess('Coupon deleted.'); loadCoupons(); }
+  };
+
+  /* ── Add-ons helpers ── */
+  const openAddOns = async (s: Service) => {
+    if (!canManageCatalog) return;
+    setAddOnsService(s);
+    setAddOnsOpen(true);
+    setAddOnsLoading(true);
+    const res = await addOnsApi.list(String(s.id));
+    setAddOnsLoading(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else setAddOns((res as any).data?.add_ons ?? []);
+  };
+
+  const saveAddOn = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!addOnsService) return;
+    const fd = new FormData(e.currentTarget);
+    const body: any = {
+      name: String(fd.get('name') ?? ''),
+      description: String(fd.get('description') ?? '') || null,
+      price: Number(fd.get('price') ?? 0),
+      duration_minutes: Number(fd.get('duration_minutes') ?? 0),
+      is_active: fd.get('is_active') === 'on',
+    };
+    if (!body.name) { toastError('Name is required'); return; }
+    setAddOnSaving(true);
+    const res = editingAddOn
+      ? await addOnsApi.update(String(addOnsService.id), String(editingAddOn.id), body)
+      : await addOnsApi.create(String(addOnsService.id), body);
+    setAddOnSaving(false);
+    if ('error' in res && res.error) toastError(res.error);
+    else {
+      toastSuccess(editingAddOn ? 'Add-on updated.' : 'Add-on created.');
+      setAddOnModalOpen(false);
+      const reload = await addOnsApi.list(String(addOnsService.id));
+      if (!('error' in reload)) setAddOns((reload as any).data?.add_ons ?? []);
+      await load();
+    }
+  };
+
+  const deleteAddOn = async (a: ServiceAddOn) => {
+    if (!addOnsService || !window.confirm(`Delete add-on "${a.name}"?`)) return;
+    const res = await addOnsApi.delete(String(addOnsService.id), String(a.id));
+    if ('error' in res && res.error) toastError(res.error);
+    else {
+      toastSuccess('Add-on deleted.');
+      const reload = await addOnsApi.list(String(addOnsService.id));
+      if (!('error' in reload)) setAddOns((reload as any).data?.add_ons ?? []);
+      await load();
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'packages' && packages.length === 0 && !pkgLoading) loadPackages();
     if (activeTab === 'memberships' && memberships.length === 0 && !memLoading) loadMemberships();
+    if (activeTab === 'coupons' && coupons.length === 0 && !couponLoading) loadCoupons();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -496,6 +604,8 @@ export default function ServicesPage() {
             <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>New service</Button>
           ) : activeTab === 'packages' ? (
             <Button onClick={() => { setEditingPkg(null); setPkgModalOpen(true); }} className="rounded-xl h-11">New package</Button>
+          ) : activeTab === 'coupons' ? (
+            <Button onClick={() => { setEditingCoupon(null); setCouponModalOpen(true); }} className="rounded-xl h-11">New coupon</Button>
           ) : (
             <Button onClick={() => { setEditingMem(null); setMemModalOpen(true); }} className="rounded-xl h-11">New membership</Button>
           )
@@ -508,6 +618,7 @@ export default function ServicesPage() {
           { key: 'services' as const, label: 'Services', icon: <Pencil className="w-3.5 h-3.5" /> },
           { key: 'packages' as const, label: 'Packages', icon: <Package className="w-3.5 h-3.5" /> },
           { key: 'memberships' as const, label: 'Memberships', icon: <CreditCard className="w-3.5 h-3.5" /> },
+          { key: 'coupons' as const, label: 'Coupons', icon: <Ticket className="w-3.5 h-3.5" /> },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -561,6 +672,8 @@ export default function ServicesPage() {
                 <TableHead className="w-[140px]">Duration</TableHead>
                 <TableHead className="w-[140px]">Price</TableHead>
                 <TableHead className="w-[140px]">Deposit</TableHead>
+                <TableHead className="w-[160px]">Tiers</TableHead>
+                <TableHead className="w-[100px]">Add-Ons</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
                 {canManageCatalog && <TableHead className="text-right w-[220px]">Actions</TableHead>}
               </TableRow>
@@ -587,6 +700,14 @@ export default function ServicesPage() {
                   <TableCell className="text-muted-foreground">
                     {Number(s.deposit_amount ?? 0).toLocaleString('en-US', { style: 'currency', currency })}
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {s.pricing_tiers && s.pricing_tiers.length > 0
+                      ? s.pricing_tiers.map((t) => `${t.tier_label}: ${Number(t.price).toLocaleString('en-US', { style: 'currency', currency })}`).join(', ')
+                      : '—'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {s.add_ons && s.add_ons.length > 0 ? `${s.add_ons.length}` : '—'}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -603,6 +724,14 @@ export default function ServicesPage() {
                     <div className="inline-flex items-center gap-2">
                       <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => openEdit(s)} disabled={saving} title="Edit">
                         <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="h-9 rounded-xl"
+                        onClick={() => openAddOns(s)}
+                        disabled={saving}
+                      >
+                        <Layers className="size-3.5 mr-1" />Add-Ons
                       </Button>
                       <Button
                         variant="ghost"
@@ -715,6 +844,56 @@ export default function ServicesPage() {
                     disabled={saving}
                     rows={3}
                   />
+
+                  {/* Pricing Tiers */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium leading-none">Pricing Tiers</label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 rounded-lg text-xs gap-1"
+                        onClick={() => setTiers((prev) => [...prev, { tier_label: '', price: 0 }])}
+                        disabled={saving}
+                      >
+                        <Plus className="size-3" /> Add tier
+                      </Button>
+                    </div>
+                    {tiers.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No tiers — base price applies to all staff.</p>
+                    )}
+                    {tiers.map((tier, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input
+                          value={tier.tier_label}
+                          onChange={(e) => setTiers((prev) => prev.map((t, i) => i === idx ? { ...t, tier_label: e.target.value } : t))}
+                          placeholder="e.g. Junior"
+                          className="flex-1"
+                          disabled={saving}
+                        />
+                        <Input
+                          value={tier.price}
+                          onChange={(e) => setTiers((prev) => prev.map((t, i) => i === idx ? { ...t, price: Number(e.target.value) || 0 } : t))}
+                          placeholder="Price"
+                          type="number"
+                          inputMode="decimal"
+                          className="w-28"
+                          disabled={saving}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => setTiers((prev) => prev.filter((_, i) => i !== idx))}
+                          disabled={saving}
+                        >
+                          <Trash2 className="size-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
 
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1223,6 +1402,261 @@ export default function ServicesPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ═══════════════════ Coupons Tab ═══════════════════ */}
+      {activeTab === 'coupons' && (
+        <>
+          <div className="elite-panel overflow-hidden">
+            {couponLoading ? (
+              <div className="p-6 space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+              </div>
+            ) : coupons.length === 0 ? (
+              <p className="p-6 text-muted-foreground text-center">No coupons yet. Create your first coupon code.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead className="w-[100px]">Type</TableHead>
+                    <TableHead className="w-[100px]">Value</TableHead>
+                    <TableHead className="w-[120px]">Usage</TableHead>
+                    <TableHead className="w-[120px]">Min Subtotal</TableHead>
+                    <TableHead className="w-[180px]">Valid Period</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    {canManageCatalog && <TableHead className="text-right w-[140px]">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {coupons.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <p className="font-mono font-medium text-foreground">{c.code}</p>
+                          {c.name && <p className="text-xs text-muted-foreground truncate">{c.name}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground capitalize">{c.type}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {c.type === 'percent' ? `${Number(c.value)}%` : Number(c.value).toLocaleString('en-US', { style: 'currency', currency })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {c.used_count}{c.usage_limit != null ? ` / ${c.usage_limit}` : ''}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {c.min_subtotal != null ? Number(c.min_subtotal).toLocaleString('en-US', { style: 'currency', currency }) : '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {c.starts_at ? new Date(c.starts_at).toLocaleDateString() : '—'} → {c.ends_at ? new Date(c.ends_at).toLocaleDateString() : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${c.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                          {c.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </TableCell>
+                      {canManageCatalog && (
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingCoupon(c); setCouponModalOpen(true); }} title="Edit">
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deleteCoupon(c)} title="Delete">
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {couponModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
+              <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-lg border border-[var(--elite-border)]">
+                <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
+                  <h2 className="font-display text-xl font-semibold elite-title">{editingCoupon ? 'Edit coupon' : 'New coupon'}</h2>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setCouponModalOpen(false)} aria-label="Close"><X className="w-4 h-4" /></Button>
+                </div>
+                <form onSubmit={saveCoupon} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Code</label>
+                      <Input name="code" defaultValue={editingCoupon?.code ?? ''} placeholder="e.g. SUMMER20" required className="font-mono uppercase" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Name</label>
+                      <Input name="name" defaultValue={editingCoupon?.name ?? ''} placeholder="Optional label" />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Type</label>
+                      <select name="type" defaultValue={editingCoupon?.type ?? 'flat'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm">
+                        <option value="flat">Flat ($)</option>
+                        <option value="percent">Percent (%)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Value</label>
+                      <Input name="value" type="number" step="0.01" min="0" defaultValue={editingCoupon ? Number(editingCoupon.value) : ''} placeholder="10" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Min subtotal</label>
+                      <Input name="min_subtotal" type="number" step="0.01" min="0" defaultValue={editingCoupon?.min_subtotal != null ? Number(editingCoupon.min_subtotal) : ''} placeholder="Optional" />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Starts at</label>
+                      <Input name="starts_at" type="date" defaultValue={editingCoupon?.starts_at ? editingCoupon.starts_at.slice(0, 10) : ''} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Ends at</label>
+                      <Input name="ends_at" type="date" defaultValue={editingCoupon?.ends_at ? editingCoupon.ends_at.slice(0, 10) : ''} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Usage limit</label>
+                      <Input name="usage_limit" type="number" min="1" defaultValue={editingCoupon?.usage_limit ?? ''} placeholder="Unlimited" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">Description</label>
+                    <Input name="description" defaultValue={editingCoupon?.description ?? ''} placeholder="Optional description" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="is_active" defaultChecked={editingCoupon?.is_active ?? true} className="size-4" />
+                    <span>Active</span>
+                  </label>
+                  <div className="flex gap-2 justify-end pt-1">
+                    <Button type="button" variant="outline" onClick={() => setCouponModalOpen(false)} className="rounded-xl">Cancel</Button>
+                    <Button type="submit" disabled={couponSaving} className="rounded-xl">{couponSaving ? 'Saving…' : editingCoupon ? 'Save changes' : 'Create coupon'}</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════ Add-Ons Modal ═══════════════════ */}
+      {addOnsOpen && addOnsService && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
+          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-2xl border border-[var(--elite-border)] overflow-hidden">
+            <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-display text-xl font-semibold elite-title truncate">
+                  Add-Ons · {addOnsService.name}
+                </h2>
+                <p className="text-xs elite-subtle mt-1">Manage optional upsells for this service.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" className="rounded-xl gap-1" onClick={() => { setEditingAddOn(null); setAddOnModalOpen(true); }}>
+                  <Plus className="size-3" /> Add
+                </Button>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setAddOnsOpen(false)} aria-label="Close">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-5">
+              {addOnsLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                </div>
+              ) : addOns.length === 0 ? (
+                <p className="text-muted-foreground text-center text-sm py-6">No add-ons yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="w-[100px]">Price</TableHead>
+                      <TableHead className="w-[100px]">Duration</TableHead>
+                      <TableHead className="w-[80px]">Status</TableHead>
+                      <TableHead className="text-right w-[120px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {addOns.map((a) => (
+                      <TableRow key={String(a.id)}>
+                        <TableCell>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{a.name}</p>
+                            {a.description && <p className="text-xs text-muted-foreground truncate">{String(a.description)}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {Number(a.price).toLocaleString('en-US', { style: 'currency', currency })}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{a.duration_minutes} min</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${a.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                            {a.is_active ? 'Active' : 'Off'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingAddOn(a); setAddOnModalOpen(true); }} title="Edit">
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deleteAddOn(a)} title="Delete">
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addOnModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
+          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-md border border-[var(--elite-border)]">
+            <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
+              <h2 className="font-display text-xl font-semibold elite-title">{editingAddOn ? 'Edit add-on' : 'New add-on'}</h2>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setAddOnModalOpen(false)} aria-label="Close"><X className="w-4 h-4" /></Button>
+            </div>
+            <form onSubmit={saveAddOn} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1.5">Name</label>
+                <Input name="name" defaultValue={editingAddOn?.name ?? ''} placeholder="e.g. Deep Conditioning" required />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1.5">Description</label>
+                <Input name="description" defaultValue={editingAddOn?.description ?? ''} placeholder="Optional" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">Price</label>
+                  <Input name="price" type="number" step="0.01" min="0" defaultValue={editingAddOn ? Number(editingAddOn.price) : ''} placeholder="15" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">Extra duration (min)</label>
+                  <Input name="duration_minutes" type="number" min="0" defaultValue={editingAddOn?.duration_minutes ?? 0} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="is_active" defaultChecked={editingAddOn?.is_active ?? true} className="size-4" />
+                <span>Active</span>
+              </label>
+              <div className="flex gap-2 justify-end pt-1">
+                <Button type="button" variant="outline" onClick={() => setAddOnModalOpen(false)} className="rounded-xl">Cancel</Button>
+                <Button type="submit" disabled={addOnSaving} className="rounded-xl">{addOnSaving ? 'Saving…' : editingAddOn ? 'Save changes' : 'Create add-on'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
