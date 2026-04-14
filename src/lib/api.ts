@@ -982,6 +982,7 @@ export const productsApi = {
     search?: string;
     is_active?: boolean;
     category?: string;
+    classification?: string;
     page?: number;
     per_page?: number;
   }) => {
@@ -992,6 +993,7 @@ export const productsApi = {
         is_active:
           params?.is_active == null ? undefined : params.is_active ? 1 : 0,
         category: params?.category,
+        classification: params?.classification,
         page: params?.page,
         per_page: params?.per_page,
       }),
@@ -1009,6 +1011,7 @@ export const productsApi = {
     name: string;
     description?: string;
     category?: string;
+    classification?: string | null;
     sku?: string;
     cost?: number;
     price?: number;
@@ -1022,6 +1025,7 @@ export const productsApi = {
         name: body.name,
         description: body.description,
         category: body.category,
+        classification: body.classification,
         sku: body.sku ?? "SKU-" + Date.now(),
         cost: body.cost ?? 0,
         price: body.price ?? body.cost ?? 0,
@@ -1055,6 +1059,34 @@ export const inventoryApi = {
     const list = listData(res.data);
     return res.error ? { error: res.error } : { data: { inventory: list } };
   },
+  movements: async (params: {
+    branch_id: string;
+    from: string;
+    to: string;
+    product_id?: string;
+    type?: string;
+  }) => {
+    const res = await api<{
+      from: string;
+      to: string;
+      summary: {
+        sold: number;
+        service_used: number;
+        adjustment_in: number;
+        adjustment_out: number;
+      };
+      rows: InventoryMovementRow[];
+    }>(
+      `/api/inventory/${params.branch_id}/movements` +
+        qs({
+          from: params.from,
+          to: params.to,
+          product_id: params.product_id,
+          type: params.type,
+        }),
+    );
+    return res.error ? { error: res.error } : { data: res.data };
+  },
   lowStock: () =>
     api<{ items: Inventory[] }>("/api/reports/low-stock").then((r) =>
       r.data
@@ -1073,6 +1105,8 @@ export const inventoryApi = {
       quantity?: number;
       low_stock_threshold?: number;
       branch_id?: string;
+      reason?: string;
+      type?: string;
     },
   ) =>
     api<Inventory>("/api/inventory/stock", {
@@ -1081,6 +1115,8 @@ export const inventoryApi = {
         product_id: id,
         branch_id: body.branch_id,
         quantity: body.quantity ?? 0,
+        reason: body.reason,
+        type: body.type,
       }),
     }).then((r) =>
       r.data ? { data: { inventory: r.data } } : { error: r.error },
@@ -1849,7 +1885,15 @@ export const reportsApi = {
     api<{
       from: string;
       to: string;
-      summary: { in: number; out: number; net: number };
+      summary: {
+        in: number;
+        out: number;
+        net: number;
+        sold?: number;
+        service_used?: number;
+        adjustment_in?: number;
+        adjustment_out?: number;
+      };
       rows: InventoryMovementRow[];
     }>(
       "/api/reports/inventory-movement" +
@@ -2344,6 +2388,7 @@ export interface Product {
   name: string;
   description?: string | null;
   category?: string | null;
+  classification?: string | null;
   sku?: string | null;
   cost?: string | number | null;
   price?: string | number | null;

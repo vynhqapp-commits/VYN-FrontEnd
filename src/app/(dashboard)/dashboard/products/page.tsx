@@ -18,10 +18,13 @@ import { type PaginationMeta } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
+const classificationValues = ['', 'retail', 'professional', 'both'] as const;
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   description: z.string().optional(),
   sku: z.string().optional(),
+  classification: z.enum(classificationValues).optional(),
   cost: z.preprocess((v) => Number(v), z.number().min(0)),
   price: z.preprocess((v) => Number(v), z.number().min(0)),
   stock_quantity: z.preprocess((v) => Number(v), z.number().int().min(0)),
@@ -35,6 +38,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [classification, setClassification] = useState<string>('');
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,6 +51,7 @@ export default function ProductsPage() {
       name: '',
       description: '',
       sku: '',
+      classification: '',
       cost: 0,
       price: 0,
       stock_quantity: 0,
@@ -60,6 +65,7 @@ export default function ProductsPage() {
     const res = await productsApi.list({
       search: q || undefined,
       is_active: status === 'all' ? undefined : status === 'active',
+      classification: classification || undefined,
       page: p,
       per_page: 20,
     });
@@ -81,7 +87,7 @@ export default function ProductsPage() {
     const t = setTimeout(() => load(1), 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, status]);
+  }, [q, status, classification]);
 
   const openCreate = () => {
     setEditing(null);
@@ -89,6 +95,7 @@ export default function ProductsPage() {
       name: '',
       description: '',
       sku: '',
+      classification: '',
       cost: 0,
       price: 0,
       stock_quantity: 0,
@@ -104,6 +111,7 @@ export default function ProductsPage() {
       name: p.name ?? '',
       description: p.description ?? '',
       sku: p.sku ?? '',
+      classification: (p.classification as '' | 'retail' | 'professional' | 'both' | undefined) ?? '',
       cost: Number(p.cost ?? 0),
       price: Number(p.price ?? 0),
       stock_quantity: Number(p.stock_quantity ?? 0),
@@ -115,9 +123,13 @@ export default function ProductsPage() {
 
   const onSubmit = async (v: Values) => {
     setSaving(true);
+    const payload = {
+      ...v,
+      classification: v.classification === '' ? null : v.classification,
+    };
     try {
       if (editing?.id) {
-        const res = await productsApi.update(String(editing.id), v as any);
+        const res = await productsApi.update(String(editing.id), payload as any);
         if ('error' in res && res.error) toastError(res.error);
         else {
           toastSuccess('Product updated.');
@@ -125,7 +137,7 @@ export default function ProductsPage() {
           await load();
         }
       } else {
-        const res = await productsApi.create(v as any);
+        const res = await productsApi.create(payload as any);
         if ('error' in res && res.error) toastError(res.error);
         else {
           toastSuccess('Product created.');
@@ -168,7 +180,7 @@ export default function ProductsPage() {
         rightSlot={<Button onClick={openCreate} className="rounded-xl h-11">New product</Button>}
       />
 
-      <div className="elite-panel p-4 grid gap-3 sm:grid-cols-2">
+      <div className="elite-panel p-4 grid gap-3 sm:grid-cols-3">
         <div>
           <label className="block text-xs font-semibold elite-subtle mb-1">Search</label>
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, SKU..." />
@@ -185,6 +197,19 @@ export default function ProductsPage() {
             <option value="inactive">Inactive</option>
           </select>
         </div>
+        <div>
+          <label className="block text-xs font-semibold elite-subtle mb-1">Classification</label>
+          <select
+            value={classification}
+            onChange={(e) => setClassification(e.target.value)}
+            className="elite-input flex h-9 w-full px-3 py-1 text-sm"
+          >
+            <option value="">All</option>
+            <option value="retail">Retail</option>
+            <option value="professional">Professional</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
       </div>
 
       <div className="elite-panel overflow-hidden">
@@ -195,6 +220,7 @@ export default function ProductsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Classification</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
@@ -210,6 +236,7 @@ export default function ProductsPage() {
                       <p className="text-xs text-muted-foreground">{p.sku ?? '—'}</p>
                     </div>
                   </TableCell>
+                  <TableCell className="text-muted-foreground capitalize">{p.classification ?? '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{Number(p.price ?? 0).toFixed(2)}</TableCell>
                   <TableCell className="text-muted-foreground">{Number(p.stock_quantity ?? 0)}</TableCell>
                   <TableCell className="text-muted-foreground">{p.is_active ? 'Active' : 'Inactive'}</TableCell>
@@ -260,6 +287,19 @@ export default function ProductsPage() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <RHFTextField control={form.control} name="name" label="Name" placeholder="Shampoo 500ml" />
                     <RHFTextField control={form.control} name="sku" label="SKU" placeholder="SKU-12345" />
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Classification</label>
+                      <select
+                        className="elite-input flex h-9 w-full px-3 py-1 text-sm rounded-md border border-input bg-background"
+                        value={form.watch('classification') ?? ''}
+                        onChange={(e) => form.setValue('classification', e.target.value as Values['classification'])}
+                      >
+                        <option value="">Not set</option>
+                        <option value="retail">Retail</option>
+                        <option value="professional">Professional</option>
+                        <option value="both">Both</option>
+                      </select>
+                    </div>
                     <RHFTextField control={form.control} name="price" label="Price" type="number" placeholder="0" inputMode="decimal" />
                     <RHFTextField control={form.control} name="cost" label="Cost" type="number" placeholder="0" inputMode="decimal" />
                     <RHFTextField control={form.control} name="stock_quantity" label="Stock quantity" type="number" placeholder="0" inputMode="numeric" />
