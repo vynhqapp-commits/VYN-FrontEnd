@@ -1722,11 +1722,18 @@ export const commissionApi = {
         ? {
           data: {
             records: listData(
-              r.data as CommissionRecord[] | { data: CommissionRecord[] },
+              ((r.data as { records?: CommissionRecord[] })?.records
+                ? (r.data as { records: CommissionRecord[] }).records
+                : r.data) as CommissionRecord[] | { data: CommissionRecord[] },
             ),
-            total: listData(
-              r.data as CommissionRecord[] | { data: CommissionRecord[] },
-            ).reduce((sum, x: any) => sum + Number(x.amount ?? 0), 0),
+            total: (
+              (r.data as { summary?: { total?: number } })?.summary?.total ??
+              listData(
+                ((r.data as { records?: CommissionRecord[] })?.records
+                  ? (r.data as { records: CommissionRecord[] }).records
+                  : r.data) as CommissionRecord[] | { data: CommissionRecord[] },
+              ).reduce((sum, x: any) => sum + Number(x.amount ?? 0), 0)
+            ),
           },
         }
         : { error: r.error },
@@ -2567,6 +2574,7 @@ export interface CommissionRecord {
   staff_id: string;
   amount: string | number;
   type: string;
+  created_at?: string;
   reversed_at?: string | null;
 }
 
@@ -2622,10 +2630,12 @@ export interface StaffMember {
   name: string;
   phone?: string | null;
   specialization?: string | null;
+  photo_url?: string | null;
   color?: string | null;
   is_active: boolean;
   branch?: { id: string; name: string } | null;
   schedules?: StaffScheduleRow[];
+  services?: { id: string; name: string }[];
 }
 
 export interface StaffScheduleRow {
@@ -2636,11 +2646,49 @@ export interface StaffScheduleRow {
   is_day_off: boolean;
 }
 
+export interface TimeOffRequestRow {
+  id: string;
+  staff_id: string;
+  staff_name?: string | null;
+  branch_id?: string | null;
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by?: string | null;
+  reviewed_by_name?: string | null;
+  reviewed_at?: string | null;
+  decision_note?: string | null;
+  created_at?: string;
+}
+
+export interface StaffTimeEntryRow {
+  id: string;
+  staff_id: string;
+  staff_name?: string | null;
+  branch_id?: string | null;
+  clock_in_at: string;
+  clock_out_at?: string | null;
+  created_at?: string;
+}
+
+export interface StaffPerformanceRow {
+  staff_id: string;
+  staff_name: string;
+  revenue: number;
+  total_appointments: number;
+  completed_appointments: number;
+  no_shows: number;
+  completion_rate: number;
+}
+
 export interface StaffInput {
   branch_id: string;
   name: string;
   phone?: string;
   specialization?: string;
+  photo_url?: string;
+  service_ids?: string[];
   color?: string;
   is_active?: boolean;
   user_id?: string;
@@ -2651,6 +2699,14 @@ export interface ScheduleInput {
   start_time: string;
   end_time: string;
   is_day_off: boolean;
+}
+
+export interface TimeOffRequestInput {
+  staff_id: string;
+  branch_id?: string;
+  start_date: string;
+  end_date: string;
+  reason?: string;
 }
 
 export const staffApi = {
@@ -2687,6 +2743,40 @@ export const staffApi = {
       method: 'POST',
       body: JSON.stringify({ schedules }),
     }),
+};
+
+export const timeOffApi = {
+  list: (params?: { staff_id?: string; status?: string }) =>
+    api<TimeOffRequestRow[] | { data: TimeOffRequestRow[] }>(`/api/time-off-requests${qs(params ?? {})}`),
+  create: (body: TimeOffRequestInput) =>
+    api<TimeOffRequestRow>('/api/time-off-requests', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateStatus: (id: string, status: 'approved' | 'rejected', decision_note?: string) =>
+    api<TimeOffRequestRow>(`/api/time-off-requests/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, decision_note }),
+    }),
+};
+
+export const staffTimeApi = {
+  list: (params?: { staff_id?: string }) =>
+    api<StaffTimeEntryRow[] | { data: StaffTimeEntryRow[] }>(`/api/staff-time-entries${qs(params ?? {})}`),
+  clockIn: (body: { staff_id: string; branch_id?: string }) =>
+    api<StaffTimeEntryRow>('/api/staff-time-entries/clock-in', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  clockOut: (id: string) =>
+    api<StaffTimeEntryRow>(`/api/staff-time-entries/${id}/clock-out`, {
+      method: 'POST',
+    }),
+};
+
+export const staffPerformanceApi = {
+  list: (params?: { from?: string; to?: string }) =>
+    api<StaffPerformanceRow[] | { data: StaffPerformanceRow[] }>(`/api/staff/performance${qs(params ?? {})}`),
 };
 
 export interface InvoiceData {
