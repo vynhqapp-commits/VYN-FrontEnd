@@ -10,6 +10,7 @@ import { toastError, toastSuccess } from '@/lib/toast';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Combobox } from '@/components/ui/combobox';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 
 const TIMEZONES = [
@@ -171,15 +172,19 @@ export default function SalonProfilePage() {
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Currency
                   </label>
-                  <select
-                    {...form.register('currency')}
+                  <Combobox
+                    value={form.watch('currency')}
+                    onValueChange={(value) => form.setValue('currency', value)}
+                    options={CURRENCIES.map((c) => ({
+                      value: c.code,
+                      label: c.label,
+                    }))}
+                    placeholder="Select currency"
+                    searchPlaceholder="Search currencies..."
+                    emptyText="No currencies found."
                     disabled={saving}
-                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
-                  >
-                    {CURRENCIES.map((c) => (
-                      <option key={c.code} value={c.code}>{c.label}</option>
-                    ))}
-                  </select>
+                    className="w-full"
+                  />
                   {form.formState.errors.currency && (
                     <p className="text-xs text-red-500 mt-1.5">{form.formState.errors.currency.message}</p>
                   )}
@@ -190,15 +195,19 @@ export default function SalonProfilePage() {
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Timezone
                   </label>
-                  <select
-                    {...form.register('timezone')}
+                  <Combobox
+                    value={form.watch('timezone')}
+                    onValueChange={(value) => form.setValue('timezone', value)}
+                    options={TIMEZONES.map((tz) => ({
+                      value: tz,
+                      label: tz,
+                    }))}
+                    placeholder="Select timezone"
+                    searchPlaceholder="Search timezones..."
+                    emptyText="No timezones found."
                     disabled={saving}
-                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
-                  >
-                    {TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>{tz}</option>
-                    ))}
-                  </select>
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -232,15 +241,19 @@ export default function SalonProfilePage() {
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Preferred locale
                   </label>
-                  <select
-                    {...form.register('preferred_locale')}
+                  <Combobox
+                    value={form.watch('preferred_locale')}
+                    onValueChange={(value) => form.setValue('preferred_locale', value)}
+                    options={LOCALES.map((l) => ({
+                      value: l.value,
+                      label: l.label,
+                    }))}
+                    placeholder="Select locale"
+                    searchPlaceholder="Search locales..."
+                    emptyText="No locales found."
                     disabled={saving}
-                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
-                  >
-                    {LOCALES.map((l) => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </select>
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -248,15 +261,19 @@ export default function SalonProfilePage() {
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Listing gender preference
                 </label>
-                <select
-                  {...form.register('gender_preference')}
+                <Combobox
+                  value={form.watch('gender_preference')}
+                  onValueChange={(value) => form.setValue('gender_preference', value)}
+                  options={GENDER_PREFS.map((g) => ({
+                    value: g.value,
+                    label: g.label,
+                  }))}
+                  placeholder="Select gender preference"
+                  searchPlaceholder="Search preferences..."
+                  emptyText="No preferences found."
                   disabled={saving}
-                  className="w-full max-w-md rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
-                >
-                  {GENDER_PREFS.map((g) => (
-                    <option key={g.value} value={g.value}>{g.label}</option>
-                  ))}
-                </select>
+                  className="w-full max-w-md"
+                />
               </div>
 
               {/* Booking Policies */}
@@ -289,15 +306,19 @@ export default function SalonProfilePage() {
                     <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Policy Mode
                     </label>
-                    <select
-                      {...form.register('cancellation_policy_mode')}
+                    <Combobox
+                      value={form.watch('cancellation_policy_mode')}
+                      onValueChange={(value) => form.setValue('cancellation_policy_mode', value)}
+                      options={POLICY_MODES.map((m) => ({
+                        value: m.value,
+                        label: m.label,
+                      }))}
+                      placeholder="Select policy mode"
+                      searchPlaceholder="Search modes..."
+                      emptyText="No modes found."
                       disabled={saving}
-                      className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
-                    >
-                      {POLICY_MODES.map((m) => (
-                        <option key={m.value} value={m.value}>{m.label}</option>
-                      ))}
-                    </select>
+                      className="w-full"
+                    />
                     <p className="text-[11px] text-muted-foreground mt-1">
                       &quot;Allow with warning&quot; lets customers proceed with a notice. &quot;Block&quot; prevents changes inside the window.
                     </p>

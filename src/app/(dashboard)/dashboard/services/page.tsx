@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { locationsApi, servicesApi, settingsApi, catalogApi, couponsApi, addOnsApi, type Location, type Service, type ServicePricingTier, type ServiceAddOn, type PackageTemplate, type MembershipPlanTemplate, type Coupon } from '@/lib/api';
+import { locationsApi, servicesApi, settingsApi, catalogApi, couponsApi, addOnsApi, productsApi, staffApi, type Location, type Service, type ServicePricingTier, type ServiceAddOn, type PackageTemplate, type MembershipPlanTemplate, type Coupon, type Product, type StaffMember } from '@/lib/api';
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 import { useAuth } from '@/lib/auth-context';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -63,8 +64,25 @@ export default function ServicesPage() {
   /* ── Pricing tiers local state (managed outside react-hook-form) ── */
   const [tiers, setTiers] = useState<{ tier_label: string; price: number }[]>([]);
 
+  /* ── Product requirements local state ── */
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productRequirements, setProductRequirements] = useState<{ product_id: string; quantity: number }[]>([]);
+
+  /* ── Staff assignment local state ── */
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+
   /* ── Top-level tab ── */
   const [activeTab, setActiveTab] = useState<'services' | 'packages' | 'memberships' | 'coupons'>('services');
+
+  const productOptions = useMemo(
+    () =>
+      products.map((p) => ({
+        value: String(p.id),
+        label: p.name ?? 'Unnamed product',
+      })),
+    [products],
+  );
 
   /* ── Packages state ── */
   const [packages, setPackages] = useState<PackageTemplate[]>([]);
@@ -147,6 +165,12 @@ export default function ServicesPage() {
     locationsApi.list().then((r) => {
       if (!('error' in r) && r.data?.locations) setBranches(r.data.locations);
     });
+    productsApi.list().then((r) => {
+      if (!('error' in r) && r.data?.products) setProducts(r.data.products);
+    });
+    staffApi.list().then((r) => {
+      if (!('error' in r) && r.data) setStaff(r.data);
+    });
     settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) setCurrency(r.data.salon.currency);
     });
@@ -165,6 +189,8 @@ export default function ServicesPage() {
     if (!canManageCatalog) return;
     setEditing(null);
     setTiers([]);
+    setProductRequirements([]);
+    setSelectedStaffIds([]);
     form.reset({
       name: '',
       description: '',
@@ -181,6 +207,8 @@ export default function ServicesPage() {
     if (!canManageCatalog) return;
     setEditing(s);
     setTiers((s.pricing_tiers ?? []).map((t) => ({ tier_label: t.tier_label, price: Number(t.price) })));
+    setProductRequirements((s.product_requirements ?? []).map((p) => ({ product_id: String(p.product_id), quantity: Number(p.quantity) })));
+    setSelectedStaffIds((s.assigned_staff ?? []).map((st) => String(st.id)));
     form.reset({
       name: s.name ?? '',
       description: (s.description as any) ?? '',
@@ -205,6 +233,8 @@ export default function ServicesPage() {
         cost: values.cost ?? 0,
         is_active: values.is_active,
         pricing_tiers: tiers.filter((t) => t.tier_label.trim()),
+        product_requirements: productRequirements.filter((p) => p.product_id),
+        staff_ids: selectedStaffIds,
       } as any;
       if (editing?.id) {
         const res = await servicesApi.update(String(editing.id), payload);
@@ -649,15 +679,19 @@ export default function ServicesPage() {
         </div>
         <div className="w-full sm:w-44">
           <label className="block text-xs font-semibold elite-subtle mb-1">Status</label>
-          <select
+          <Combobox
             value={status}
-            onChange={(e) => setStatus(e.target.value as any)}
-            className="elite-input flex h-9 w-full px-3 py-1 text-sm"
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            onValueChange={(value) => setStatus(value as any)}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+            ]}
+            placeholder="Select status"
+            searchPlaceholder="Search status..."
+            emptyText="No status found."
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -674,6 +708,7 @@ export default function ServicesPage() {
                 <TableHead className="w-[140px]">Deposit</TableHead>
                 <TableHead className="w-[160px]">Tiers</TableHead>
                 <TableHead className="w-[100px]">Add-Ons</TableHead>
+                <TableHead className="w-[120px]">Products</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
                 {canManageCatalog && <TableHead className="text-right w-[220px]">Actions</TableHead>}
               </TableRow>
@@ -707,6 +742,9 @@ export default function ServicesPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {s.add_ons && s.add_ons.length > 0 ? `${s.add_ons.length}` : '—'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {s.product_requirements && s.product_requirements.length > 0 ? `${s.product_requirements.length}` : '—'}
                   </TableCell>
                   <TableCell>
                     <span
@@ -759,8 +797,8 @@ export default function ServicesPage() {
       <Pagination meta={meta} onPageChange={(p) => load(p)} />
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4">
-          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-2xl border border-[var(--elite-border)]">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[1px] p-2 sm:p-4 overflow-y-auto elite-scrollbar">
+          <div className="bg-[var(--elite-card)] rounded-2xl shadow-xl w-full max-w-2xl border border-[var(--elite-border)] my-auto">
             <div className="p-5 border-b border-[var(--elite-border)] flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-display text-xl font-semibold elite-title">
@@ -782,7 +820,7 @@ export default function ServicesPage() {
               </Button>
             </div>
 
-            <div className="p-5">
+            <div className="p-5 pb-32">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit, () =>
@@ -834,6 +872,16 @@ export default function ServicesPage() {
                       inputMode="decimal"
                       disabled={saving}
                     />
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium leading-none">Assigned Staff</label>
+                      <MultiSelect
+                        options={staff.map((s) => ({ label: s.name, value: String(s.id) }))}
+                        selected={selectedStaffIds}
+                        onChange={setSelectedStaffIds}
+                        placeholder="Select staff..."
+                        className="h-10"
+                      />
+                    </div>
                   </div>
 
                   <RHFTextareaField
@@ -887,6 +935,61 @@ export default function ServicesPage() {
                           size="icon"
                           className="h-8 w-8 shrink-0"
                           onClick={() => setTiers((prev) => prev.filter((_, i) => i !== idx))}
+                          disabled={saving}
+                        >
+                          <Trash2 className="size-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Product Usage (Informative) */}
+                  <div className="space-y-2 pt-2 border-t border-[var(--elite-border)]">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium leading-none">Product Usage <span className="text-[10px] text-muted-foreground uppercase ml-1">(Informative)</span></label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 rounded-lg text-xs gap-1"
+                        onClick={() => setProductRequirements((prev) => [...prev, { product_id: '', quantity: 1 }])}
+                        disabled={saving}
+                      >
+                        <Plus className="size-3" /> Add product
+                      </Button>
+                    </div>
+                    {productRequirements.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No products associated with this service.</p>
+                    )}
+                    {productRequirements.map((req, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <Combobox
+                            value={req.product_id}
+                            onValueChange={(val) => setProductRequirements((prev) => prev.map((p, i) => i === idx ? { ...p, product_id: val } : p))}
+                            options={productOptions}
+                            placeholder="Select product..."
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="w-24">
+                          <Input
+                            value={req.quantity}
+                            onChange={(e) => setProductRequirements((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: Number(e.target.value) || 1 } : p))}
+                            placeholder="Qty"
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            disabled={saving}
+                            className="h-10"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          onClick={() => setProductRequirements((prev) => prev.filter((_, i) => i !== idx))}
                           disabled={saving}
                         >
                           <Trash2 className="size-3.5 text-destructive" />
@@ -999,17 +1102,18 @@ export default function ServicesPage() {
                       >
                         <div className="space-y-2">
                           <label className="text-sm font-medium leading-none">Day</label>
-                          <select
-                            value={availabilityForm.watch('day_of_week') as any}
-                            onChange={(e) => availabilityForm.setValue('day_of_week', Number(e.target.value) as any)}
-                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {dayNames.map((d, idx) => (
-                              <option key={d} value={idx}>
-                                {d}
-                              </option>
-                            ))}
-                          </select>
+                          <Combobox
+                            value={String(availabilityForm.watch('day_of_week') ?? '')}
+                            onValueChange={(value) => availabilityForm.setValue('day_of_week', Number(value) as any)}
+                            options={dayNames.map((d, idx) => ({
+                              value: String(idx),
+                              label: d,
+                            }))}
+                            placeholder="Select day"
+                            searchPlaceholder="Search days..."
+                            emptyText="No days found."
+                            className="w-full"
+                          />
                         </div>
                         <RHFTextField
                           control={availabilityForm.control}
@@ -1496,10 +1600,25 @@ export default function ServicesPage() {
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Type</label>
-                      <select name="type" defaultValue={editingCoupon?.type ?? 'flat'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm">
-                        <option value="flat">Flat ($)</option>
-                        <option value="percent">Percent (%)</option>
-                      </select>
+                      <Combobox
+                        value={editingCoupon?.type ?? 'flat'}
+                        onValueChange={(value) => {
+                          const form = document.querySelector('form');
+                          if (form) {
+                            const typeInput = form.querySelector('select[name="type"]') as HTMLSelectElement;
+                            if (typeInput) typeInput.value = value;
+                          }
+                        }}
+                        options={[
+                          { value: 'flat', label: 'Flat ($)' },
+                          { value: 'percent', label: 'Percent (%)' },
+                        ]}
+                        placeholder="Select type"
+                        searchPlaceholder="Search types..."
+                        emptyText="No types found."
+                        className="w-full"
+                      />
+                      <select name="type" defaultValue={editingCoupon?.type ?? 'flat'} className="hidden" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Value</label>

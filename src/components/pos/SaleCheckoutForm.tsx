@@ -18,11 +18,14 @@ import {
   type PackageTemplate,
   type MembershipPlanTemplate,
 } from "@/lib/api";
+import { Plus, Trash2, User, ShoppingBag, CreditCard, Tags, Info, Search, Package, Star, ChevronDown } from "lucide-react";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 type LineType = "service" | "product" | "package" | "membership";
@@ -56,6 +59,88 @@ const paymentMethods = [
   { value: "whish", label: "Whish" },
   { value: "omt", label: "OMT" },
 ];
+
+function RichSelectMenu({
+  label,
+  icon,
+  items,
+  onSelect,
+  buttonClass,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  items: Array<{ id: string; name: string; info?: string }>;
+  onSelect: (id: string) => void;
+  buttonClass: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  
+  const filtered = useMemo(() => {
+    const needle = q.toLowerCase().trim();
+    if (!needle) return items;
+    return items.filter(x => 
+      x.name.toLowerCase().includes(needle) || 
+      x.info?.toLowerCase().includes(needle)
+    );
+  }, [items, q]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button 
+          type="button"
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:brightness-110 active:scale-95 shadow-sm", 
+            buttonClass
+          )}
+        >
+          {icon}
+          {label}
+          <ChevronDown className="size-3 opacity-70 ml-0.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="p-0 w-64 bg-[var(--elite-card)] border border-[var(--elite-border)] shadow-2xl rounded-2xl z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200" 
+        align="end"
+      >
+        <div className="p-2 bg-[var(--elite-surface)]/70 border-b border-[var(--elite-border)]">
+          <div className="relative flex items-center">
+            <Search className="absolute left-2 size-3 text-[var(--elite-muted)]" />
+            <input 
+              autoFocus
+              placeholder="Quick search..." 
+              value={q} 
+              onChange={e => setQ(e.target.value)}
+              className="w-full bg-[var(--elite-card)] border border-[var(--elite-border)] rounded-xl pl-7 pr-2 py-1.5 text-xs text-[var(--elite-text)] placeholder:text-[var(--elite-muted)]/60 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/50 transition-all"
+            />
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto elite-scrollbar p-1.5 space-y-0.5">
+          {filtered.length === 0 ? (
+             <div className="py-6 text-center text-xs font-medium text-[var(--elite-muted)]">No matches found.</div>
+          ) : (
+            filtered.map(x => (
+              <button 
+                key={x.id} 
+                type="button"
+                className="w-full text-left p-2.5 rounded-xl hover:bg-[var(--elite-surface)] flex flex-col items-start transition-colors group"
+                onClick={() => {
+                  onSelect(x.id);
+                  setOpen(false);
+                  setQ("");
+                }}
+              >
+                <span className="text-xs font-black elite-title group-hover:text-[var(--elite-text-strong)] transition-colors">{x.name}</span>
+                {x.info && <span className="text-[9px] font-bold uppercase tracking-wide text-[var(--elite-muted)] mt-0.5 opacity-80 group-hover:opacity-100">{x.info}</span>}
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 type Props = {
   locationId: string;
@@ -142,8 +227,13 @@ export default function SaleCheckoutForm({
       appointmentsApi
         .list({ location_id: locationId, from: today, to: today })
         .then((res) => {
-          if (!("error" in res) && res.data?.appointments)
-            setAppointments(res.data.appointments);
+          if (!("error" in res) && res.data?.appointments) {
+            // Filter out completed, cancelled, and no-show appointments
+            const available = res.data.appointments.filter(
+              (a) => !['completed', 'cancelled', 'no_show'].includes(a.status)
+            );
+            setAppointments(available);
+          }
         });
     }
     cashDrawerApi.list(locationId, "open").then((res) => {
@@ -200,6 +290,19 @@ export default function SaleCheckoutForm({
         keywords: [c.full_name, c.phone, c.email].filter(Boolean).join(" "),
       })),
     [clients],
+  );
+
+  const appointmentOptions = useMemo(
+    () =>
+      [
+        { value: "", label: "No appointment" },
+        ...appointments.map((a) => ({
+          value: String(a.id),
+          label: `${a.Client?.full_name ?? a.client_id} · ${a.Service?.name ?? a.service_id}`,
+          keywords: [a.Client?.full_name, a.Service?.name].filter(Boolean).join(" "),
+        })),
+      ],
+    [appointments],
   );
 
   const subtotal = useMemo(
@@ -467,13 +570,13 @@ export default function SaleCheckoutForm({
 
   if (loading) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)] elite-shell">
-        <div className="space-y-4">
+      <div className="elite-shell grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-[280px] w-full rounded-xl" />
         </div>
-        <div className="space-y-4">
+        <div className="lg:col-span-1 space-y-4">
           <Skeleton className="h-[260px] w-full rounded-xl" />
           <Skeleton className="h-[300px] w-full rounded-xl" />
         </div>
@@ -482,411 +585,365 @@ export default function SaleCheckoutForm({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)] elite-shell">
-      <div className="space-y-4">
-        {!hideAppointmentPicker && (
-          <div className="elite-panel p-4 space-y-2">
-            <h2 className="font-display text-sm font-semibold elite-title">
-              Booking link (optional)
-            </h2>
-            <select
-              value={appointmentId}
-              onChange={(e) => pickAppointment(e.target.value)}
-              className="w-full elite-input rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="">No appointment</option>
-              {appointments.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.Client?.full_name ?? a.client_id} ·{" "}
-                  {a.Service?.name ?? a.service_id}
-                </option>
-              ))}
-            </select>
+    <div className="elite-shell grid gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-2 space-y-4">
+        {/* Client Selection */}
+        <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] shadow-sm">
+          <div className="p-4 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]/50 flex items-center gap-2">
+            <User className="size-4 text-[var(--elite-orange)]" />
+            <h2 className="text-[11px] font-bold uppercase tracking-wider elite-title">Client Information</h2>
           </div>
-        )}
-
-        <div className="elite-panel p-4 space-y-3">
-          <h2 className="font-display text-sm font-semibold elite-title">
-            Client
-          </h2>
-          <Combobox
-            value={clientId}
-            onValueChange={setClientId}
-            options={clientOptions}
-            placeholder="Select client"
-            searchPlaceholder="Search clients..."
-          />
+          <div className="p-5 space-y-4">
+            {!hideAppointmentPicker && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wide elite-subtle">Link to Appointment</label>
+                <Combobox
+                  value={appointmentId}
+                  onValueChange={pickAppointment}
+                  options={appointmentOptions}
+                  placeholder="Find appointment..."
+                />
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wide elite-subtle">Select Client</label>
+              <Combobox
+                value={clientId}
+                onValueChange={setClientId}
+                options={clientOptions}
+                placeholder="Search clients..."
+                searchPlaceholder="Name, phone, or email..."
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="elite-panel p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-sm font-semibold elite-title">
-              Items
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
-              <select
-                onChange={(e) =>
-                  e.target.value
-                    ? (addLine("service", e.target.value),
-                      (e.target.value = ""))
-                    : undefined
-                }
-                className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
-                defaultValue=""
-              >
-                <option value="">+ Service</option>
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                onChange={(e) =>
-                  e.target.value
-                    ? (addLine("product", e.target.value),
-                      (e.target.value = ""))
-                    : undefined
-                }
-                className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
-                defaultValue=""
-              >
-                <option value="">+ Product</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              {packageTemplates.length > 0 && (
-                <select
-                  onChange={(e) =>
-                    e.target.value
-                      ? (addLine("package", e.target.value),
-                        (e.target.value = ""))
-                      : undefined
-                  }
-                  className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
-                  defaultValue=""
-                >
-                  <option value="">+ Package</option>
-                  {packageTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.total_sessions} sessions)
-                    </option>
-                  ))}
-                </select>
-              )}
-              {membershipPlans.length > 0 && (
-                <select
-                  onChange={(e) =>
-                    e.target.value
-                      ? (addLine("membership", e.target.value),
-                        (e.target.value = ""))
-                      : undefined
-                  }
-                  className="elite-input w-full rounded-lg px-3 py-1.5 text-xs"
-                  defaultValue=""
-                >
-                  <option value="">+ Membership</option>
-                  {membershipPlans.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+        {/* Items Section */}
+        <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] shadow-sm">
+          <div className="p-4 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]/50 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="size-4 text-[var(--elite-orange)]" />
+              <h2 className="text-[11px] font-bold uppercase tracking-wider elite-title">Sale Items</h2>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              <RichSelectMenu 
+                label="Add Service"
+                icon={<Star className="size-3 opacity-90" />}
+                buttonClass="bg-[var(--elite-orange)] text-white border-none"
+                onSelect={(id) => addLine("service", id)}
+                items={services.map(s => ({ id: String(s.id), name: s.name, info: `Service · $${Number(s.price || 0).toFixed(2)}` }))}
+              />
+              
+              <RichSelectMenu 
+                label="Add Product"
+                icon={<Package className="size-3 opacity-90" />}
+                buttonClass="bg-[var(--elite-teal)] text-white border-none"
+                onSelect={(id) => addLine("product", id)}
+                items={products.map(p => ({ id: String(p.id), name: p.name, info: `Product · $${Number(p.price || 0).toFixed(2)}` }))}
+              />
+
+              {(packageTemplates.length > 0 || membershipPlans.length > 0) && (
+                <RichSelectMenu 
+                  label="Bundles"
+                  icon={<Plus className="size-3 opacity-90" />}
+                  buttonClass="bg-[var(--elite-surface)] elite-title border border-[var(--elite-border)]"
+                  onSelect={(combined) => {
+                    const [type, id] = combined.split(':');
+                    if (type === 'pkg') addLine("package", id);
+                    if (type === 'mem') addLine("membership", id);
+                  }}
+                  items={[
+                    ...packageTemplates.map((t) => ({ id: `pkg:${t.id}`, name: `📦 ${t.name}`, info: `Package · ${t.total_sessions} sessions` })),
+                    ...membershipPlans.map((m) => ({ id: `mem:${m.id}`, name: `🎫 ${m.name}`, info: `Membership · ${m.credits_per_renewal} renewal` }))
+                  ]}
+                />
               )}
             </div>
           </div>
-          {hasPackageOrMembership && !clientId && (
-            <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs">
-              A client must be selected when selling a package or membership.
-            </p>
-          )}
-          {lines.length === 0 ? (
-            <p className="elite-subtle text-xs">
-              No items yet. Add a service, product, package, or membership.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {lines.map((line) => (
-                <div
-                  key={line.id}
-                  className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] gap-2 items-center"
-                >
-                  <div>
-                    <p className="text-sm font-medium elite-title truncate">
-                      {line.name}
-                    </p>
-                    <p className="text-[11px] uppercase tracking-wide elite-subtle">
-                      {line.type === "service" ? "Service" : line.type === "product" ? "Product" : line.type === "package" ? "Package" : "Membership"}
-                    </p>
-                  </div>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={line.quantity}
-                    onChange={(e) =>
-                      updateLine(line.id, {
-                        quantity: Math.max(1, Number(e.target.value) || 1),
-                      })
-                    }
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={line.unit_price}
-                    onChange={(e) =>
-                      updateLine(line.id, {
-                        unit_price: Math.max(0, Number(e.target.value) || 0),
-                      })
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeLine(line.id)}
-                    className="text-xs text-salon-stone hover:text-salon-espresso"
-                  >
-                    ✕
-                  </button>
+
+          <div className="p-0">
+            {lines.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <div className="inline-flex p-3 rounded-full bg-[var(--elite-surface)] text-[var(--elite-muted)]">
+                  <ShoppingBag className="size-6" />
                 </div>
-              ))}
+                <p className="text-sm font-medium elite-subtle">Your cart is empty</p>
+                <p className="text-xs elite-muted max-w-[200px] mx-auto">Add services or products to begin checkout.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--elite-border)]">
+                {lines.map((line) => (
+                  <div key={line.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 group hover:bg-[var(--elite-surface)]/30 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {line.type === 'service' && <Star className="size-3 text-[var(--elite-orange)]" />}
+                        {line.type === 'product' && <Package className="size-3 text-[var(--elite-teal)]" />}
+                        <p className="text-sm font-bold elite-title truncate">{line.name}</p>
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest elite-subtle mt-0.5">{line.type}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase elite-subtle">Qty</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-8 w-16 text-center text-xs font-bold"
+                          value={line.quantity}
+                          onChange={(e) => updateLine(line.id, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase elite-subtle">Price</label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-1.5 text-[10px] elite-subtle">$</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 w-24 pl-5 text-right text-xs font-bold"
+                            value={line.unit_price}
+                            onChange={(e) => updateLine(line.id, { unit_price: Math.max(0, Number(e.target.value) || 0) })}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase elite-subtle">Total</label>
+                        <div className="h-8 flex items-center px-2 bg-[var(--elite-surface)] rounded-md border border-[var(--elite-border)] text-xs font-bold elite-title">
+                          ${(line.quantity * line.unit_price).toFixed(2)}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeLine(line.id)}
+                        className="mt-5 p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {lines.length > 0 && (
+            <div className="p-4 bg-[var(--elite-surface)]/50 border-t border-[var(--elite-border)] flex justify-between items-center">
+              <p className="text-xs font-bold elite-subtle uppercase tracking-wider">Subtotal Items</p>
+              <p className="text-sm font-black elite-title">${subtotal.toFixed(2)}</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="elite-panel p-4 space-y-3">
-          <h2 className="font-display text-sm font-semibold elite-title">
-            Summary
-          </h2>
-          <div className="space-y-2 rounded-lg border border-[var(--elite-border)] bg-[var(--elite-surface)] p-2">
-            <p className="text-[11px] font-medium elite-subtle">Discount code</p>
-            <Input
-              value={discountCode}
-              onChange={(e) => setDiscountCode(e.target.value)}
-              placeholder="Code (optional)"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <select
-                value={discountType}
-                onChange={(e) =>
-                  setDiscountType(e.target.value as "flat" | "percent")
-                }
-                className="w-full elite-input rounded-lg px-3 py-2 text-xs"
-              >
-                <option value="flat">Flat</option>
-                <option value="percent">Percent %</option>
-              </select>
+      <div className="lg:col-span-1 space-y-4">
+        {/* Summary & Adjustments */}
+        <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]/50 flex items-center gap-2">
+            <Tags className="size-4 text-[var(--elite-orange)]" />
+            <h2 className="text-[11px] font-bold uppercase tracking-wider elite-title">Adjustments</h2>
+          </div>
+          <div className="p-5 space-y-5">
+            {/* Discount Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase tracking-wide elite-subtle">Discount</label>
+                {discountAmount > 0 && <span className="text-[10px] font-bold text-[var(--elite-green)]">-${discountAmount.toFixed(2)}</span>}
+              </div>
               <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={discountValue}
-                onChange={(e) =>
-                  setDiscountValue(Math.max(0, Number(e.target.value) || 0))
-                }
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value)}
+                placeholder="Promo code..."
+                className="h-9 text-xs"
               />
-            </div>
-            <p className="text-[11px] font-medium elite-subtle">Tip amount</p>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={tipsAmount}
-              onChange={(e) =>
-                setTipsAmount(Math.max(0, Number(e.target.value) || 0))
-              }
-              placeholder="Enter tip amount"
-            />
-            <p className="text-[11px] font-medium elite-subtle">Tip allocation</p>
-            <select
-              value={tipMode}
-              onChange={(e) => setTipMode(e.target.value as TipMode)}
-                className="w-full elite-input rounded-lg px-3 py-2 text-xs"
-            >
-              <option value="single">Single staff</option>
-              <option value="equal_split">Equal split</option>
-              <option value="custom">Custom split</option>
-            </select>
-            {tipRows.map((row) => (
-              <div
-                key={row.id}
-                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-2 items-center"
-              >
+              <div className="grid grid-cols-2 gap-2">
                 <select
-                  value={row.staff_id}
-                  onChange={(e) =>
-                    setTipRows((prev) =>
-                      prev.map((x) =>
-                        x.id === row.id
-                          ? { ...x, staff_id: e.target.value }
-                          : x,
-                      ),
-                    )
-                  }
-                  className="w-full elite-input rounded-lg px-3 py-2 text-xs"
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as "flat" | "percent")}
+                  className="elite-input rounded-lg px-3 h-9 text-xs font-medium"
                 >
-                  <option value="">Select staff</option>
-                  {staff.map((s) => (
-                    <option key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </option>
-                  ))}
+                  <option value="flat">Fixed $</option>
+                  <option value="percent">Percent %</option>
                 </select>
                 <Input
                   type="number"
                   min={0}
                   step="0.01"
-                  value={row.amount}
-                  onChange={(e) =>
-                    setTipRows((prev) =>
-                      prev.map((x) =>
-                        x.id === row.id
-                          ? {
-                              ...x,
-                              amount: Math.max(0, Number(e.target.value) || 0),
-                            }
-                          : x,
-                      ),
-                    )
-                  }
-                  disabled={tipMode !== "custom"}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(Math.max(0, Number(e.target.value) || 0))}
+                  className="h-9 text-xs"
                 />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTipRows((prev) =>
-                      prev.length > 1
-                        ? prev.filter((x) => x.id !== row.id)
-                        : prev,
-                    )
-                  }
-                  className="text-xs text-salon-stone hover:text-salon-espresso"
-                >
-                  ✕
-                </button>
               </div>
-            ))}
+            </div>
+
+            <div className="h-px bg-[var(--elite-border)]" />
+
+            {/* Tip Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase tracking-wide elite-subtle">Gratuity / Tips</label>
+                {tipsAmount > 0 && <span className="text-[10px] font-bold text-[var(--elite-teal)]">+${tipsAmount.toFixed(2)}</span>}
+              </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-2.5 text-xs elite-subtle">$</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={tipsAmount}
+                    onChange={(e) => setTipsAmount(Math.max(0, Number(e.target.value) || 0))}
+                    className="pl-7 h-9 text-xs font-bold"
+                  />
+                </div>
+                <select
+                  value={tipMode}
+                  onChange={(e) => setTipMode(e.target.value as TipMode)}
+                  className="w-32 elite-input rounded-lg px-3 h-9 text-[10px] font-bold uppercase tracking-tight"
+                >
+                  <option value="single">Single</option>
+                  <option value="equal_split">Split</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                {tipRows.map((row) => (
+                  <div key={row.id} className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                    <select
+                      value={row.staff_id}
+                      onChange={(e) => setTipRows((prev) => prev.map((x) => x.id === row.id ? { ...x, staff_id: e.target.value } : x))}
+                      className="flex-1 elite-input rounded-lg px-3 h-8 text-xs font-medium"
+                    >
+                      <option value="">Choose staff...</option>
+                      {staff.map((s) => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+                    </select>
+                    {tipMode === "custom" && (
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="w-16 h-8 text-xs px-2"
+                        value={row.amount}
+                        onChange={(e) => setTipRows((prev) => prev.map((x) => x.id === row.id ? { ...x, amount: Math.max(0, Number(e.target.value) || 0) } : x))}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setTipRows((prev) => prev.length > 1 ? prev.filter((x) => x.id !== row.id) : prev)}
+                      className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between text-sm elite-subtle">
-            <span>Total</span>
-            <span className="font-display text-xl font-semibold elite-title">
-              {grandTotal.toFixed(2)}
-            </span>
+
+          {/* Grand Total Area */}
+          <div className="p-5 bg-[var(--elite-surface)] border-t border-[var(--elite-border)] space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold elite-subtle uppercase tracking-widest">Grand Total</span>
+              <span className="text-3xl font-black tracking-tighter text-[var(--elite-orange)]">${grandTotal.toFixed(2)}</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 rounded-xl bg-[var(--elite-card)] border border-[var(--elite-border)] flex flex-col items-center justify-center gap-1 shadow-sm">
+                <span className="text-[9px] font-black uppercase tracking-widest elite-subtle">Paid</span>
+                <span className="text-sm font-bold elite-title">${paid.toFixed(2)}</span>
+              </div>
+              <div className="p-3 rounded-xl bg-[var(--elite-card)] border border-[var(--elite-border)] flex flex-col items-center justify-center gap-1 shadow-sm">
+                <span className="text-[9px] font-black uppercase tracking-widest elite-subtle">Balance</span>
+                <span className={`text-sm font-bold ${remaining > 0 ? 'text-[var(--elite-red)]' : 'text-[var(--elite-green)]'}`}>
+                  ${remaining.toFixed(2)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="elite-panel p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-sm font-semibold elite-title">
-              Payments
-            </h2>
+        {/* Payment Processing Section */}
+        <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]/50 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CreditCard className="size-4 text-[var(--elite-orange)]" />
+              <h2 className="text-[11px] font-bold uppercase tracking-wider elite-title">Payment Methods</h2>
+            </div>
             <button
               type="button"
               onClick={addPaymentRow}
-              className="text-xs font-medium text-[var(--elite-orange)] hover:opacity-80"
+              className="p-1.5 rounded-lg text-[var(--elite-orange)] hover:bg-[var(--elite-orange-dim)] transition-all"
             >
-              + Add payment
+              <Plus className="size-4" />
             </button>
           </div>
-          {payments.map((p) => (
-            <div
-              key={p.id}
-              className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] gap-2 items-center"
-            >
-              <select
-                value={p.method}
-                onChange={(e) =>
-                  updatePayment(p.id, { method: e.target.value })
-                }
-                className="w-full elite-input rounded-lg px-3 py-2 text-xs"
-              >
-                {paymentMethods.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={p.amount}
-                onChange={(e) =>
-                  updatePayment(p.id, {
-                    amount: Math.max(0, Number(e.target.value) || 0),
-                  })
-                }
-              />
-              <button
-                type="button"
-                onClick={() => removePaymentRow(p.id)}
-                className="text-xs text-salon-stone hover:text-salon-espresso"
-              >
-                ✕
-              </button>
+          
+          <div className="p-5 space-y-4">
+            <div className="space-y-3">
+              {payments.map((p) => (
+                <div key={p.id} className="space-y-2 p-3 rounded-xl bg-[var(--elite-surface)]/50 border border-[var(--elite-border)] relative animate-in slide-in-from-right-2 duration-300">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={p.method}
+                      onChange={(e) => updatePayment(p.id, { method: e.target.value })}
+                      className="flex-1 elite-input rounded-lg h-9 px-3 text-xs font-bold uppercase tracking-wide"
+                    >
+                      {paymentMethods.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                    <div className="relative w-32">
+                      <span className="absolute left-3 top-2.5 text-xs elite-subtle">$</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="pl-7 h-9 text-xs font-black"
+                        value={p.amount}
+                        onChange={(e) => updatePayment(p.id, { amount: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                    {payments.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePaymentRow(p.id)}
+                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 transition-all"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    placeholder="Reference / Auth code (optional)"
+                    className="h-8 text-[10px]"
+                    value={p.reference ?? ""}
+                    onChange={(e) => updatePayment(p.id, { reference: e.target.value })}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-          <div className="text-xs elite-subtle space-y-1">
-            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-surface)] px-2 py-1.5">
-              <div className="flex justify-between">
-                <span>Cash drawer session</span>
-                <span className={hasOpenDrawer ? "text-emerald-700 font-medium" : "text-amber-700 font-medium"}>
-                  {hasOpenDrawer ? "Open" : "Closed"}
-                </span>
-              </div>
-              {!hasOpenDrawer && (
-                <p className="mt-1">
-                  Open session from{" "}
-                  <Link href="/dashboard/cash-drawer" className="text-[var(--elite-orange)] font-medium hover:opacity-80">
-                    Cash drawer
-                  </Link>{" "}
-                  to accept cash in checkout.
-                </p>
-              )}
-            </div>
-            <div className="flex justify-between">
-              <span>Paid</span>
-              <span>{paid.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Remaining</span>
-              <span>{remaining.toFixed(2)}</span>
-            </div>
+
             {changeDue > 0 && (
-              <p className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
-                Change due: {changeDue.toFixed(2)} (cash sent to API is capped
-                to amount due).
-              </p>
+              <div className="p-3 rounded-xl bg-[var(--elite-green-dim)] border border-[var(--elite-green)]/30 flex items-center justify-between animate-bounce">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--elite-green)]">Change Due</span>
+                <span className="text-lg font-black text-[var(--elite-green)]">${changeDue.toFixed(2)}</span>
+              </div>
             )}
-            {cashToDrawer > 0 && (
-              <p className="text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1">
-                Auto-post to cash drawer from this sale: {cashToDrawer.toFixed(2)}.
-              </p>
-            )}
-            {remaining > 0 && (
-              <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
-                Partial payment will be recorded as client debt.
-              </p>
-            )}
-            {requiredDeposit > 0 && paid + 0.01 < requiredDeposit && (
-              <p className="text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
-                Deposit rule not met. Collect at least{" "}
-                {requiredDeposit.toFixed(2)}.
-              </p>
-            )}
+
+            <Button
+              disabled={submitting || !locationId || !clientId || lines.length === 0}
+              onClick={handleSubmit}
+              className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-widest bg-[var(--elite-orange)] hover:brightness-110 text-white shadow-xl shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-30"
+            >
+              {submitting ? "Processing..." : "Complete Sale"}
+            </Button>
+            
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--elite-surface)] text-[10px] elite-subtle">
+              <Info className="size-3 shrink-0" />
+              <p>Total items: {lines.reduce((s, l) => s + l.quantity, 0)}. Partial payments will automatically generate client debt.</p>
+            </div>
           </div>
-          <Button
-            type="button"
-            disabled={submitting}
-            onClick={handleSubmit}
-            className="mt-2 w-full h-11 rounded-xl text-sm font-semibold elite-btn-primary"
-          >
-            {submitting ? "Processing..." : "Complete sale"}
-          </Button>
         </div>
       </div>
     </div>

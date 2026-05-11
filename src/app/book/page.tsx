@@ -36,7 +36,7 @@ type SalonDetail = {
 
 type Selected = {
   branchId: string;
-  serviceId: string;
+  serviceIds: string[];
   date: string;
   slot: Slot;
 };
@@ -48,6 +48,7 @@ type FilterState = {
   ratingMin: string;
   availability: string;
   genderPreference: string;
+  radiusKm: string;
 };
 
 function formatListRating(value: unknown): string | null {
@@ -120,6 +121,8 @@ export default function BookPage() {
   const [genderPreference, setGenderPreference] = useState("");
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [page, setPage] = useState(1);
+  const [radiusKm, setRadiusKm] = useState("");
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [detail, setDetail] = useState<SalonDetail | null>(null);
@@ -140,7 +143,7 @@ export default function BookPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [branchId, setBranchId] = useState("");
-  const [serviceId, setServiceId] = useState("");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>({
@@ -150,6 +153,7 @@ export default function BookPage() {
     ratingMin: "",
     availability: "",
     genderPreference: "",
+    radiusKm: "",
   });
   const [prefillSalonId, setPrefillSalonId] = useState<string>("");
   const [prefillBranchId, setPrefillBranchId] = useState<string>("");
@@ -200,8 +204,48 @@ export default function BookPage() {
       });
   };
 
-  const fetchNearbySalons = async () => {
+  const fetchNearbySalons = async (rKm?: string) => {
     setError(null);
+    
+    let radiusVal: number | undefined = undefined;
+    if (rKm !== undefined && typeof rKm === 'string') {
+      radiusVal = rKm === "" ? undefined : Number(rKm);
+      if (radiusVal !== undefined && Number.isNaN(radiusVal)) radiusVal = undefined;
+    } else if (radiusKm !== "") {
+      radiusVal = Number(radiusKm);
+      if (Number.isNaN(radiusVal)) radiusVal = undefined;
+    }
+
+    const runSearch = async (latitude: number, longitude: number) => {
+      setLocating(false);
+      setLoading(true);
+      const res = await publicApi.nearbySalons({
+        lat: latitude,
+        lng: longitude,
+        radius_km: radiusVal,
+        page: 1,
+        per_page: 12,
+        price_min: appliedFilters.priceMin !== "" ? Number(appliedFilters.priceMin) : undefined,
+        price_max: appliedFilters.priceMax !== "" ? Number(appliedFilters.priceMax) : undefined,
+        rating_min: appliedFilters.ratingMin !== "" ? Number(appliedFilters.ratingMin) : undefined,
+        availability: appliedFilters.availability || undefined,
+        gender_preference: (appliedFilters.genderPreference || undefined) as "ladies" | "gents" | "unisex" | undefined,
+      });
+      setLoading(false);
+      if ("error" in res) { setError(res.error ?? null); return; }
+      setSearch("");
+      setAppliedFilters((prev) => ({ ...prev, search: "", radiusKm: radiusVal != null ? String(radiusVal) : "" }));
+      setRadiusKm(radiusVal != null ? String(radiusVal) : ""); // Sync local input if triggered externally
+      setPage(1);
+      setSalons(res.data?.salons ?? []);
+      setMeta(res.meta ?? null);
+    };
+
+    if (userCoords) {
+      await runSearch(userCoords.latitude, userCoords.longitude);
+      return;
+    }
+
     if (!("geolocation" in navigator)) {
       setError(t("geolocationNotSupported"));
       return;
@@ -211,25 +255,8 @@ export default function BookPage() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
-        const res = await publicApi.nearbySalons({
-          lat: latitude,
-          lng: longitude,
-          radius_km: 15,
-          page: 1,
-          per_page: 12,
-          price_min: appliedFilters.priceMin !== "" ? Number(appliedFilters.priceMin) : undefined,
-          price_max: appliedFilters.priceMax !== "" ? Number(appliedFilters.priceMax) : undefined,
-          rating_min: appliedFilters.ratingMin !== "" ? Number(appliedFilters.ratingMin) : undefined,
-          availability: appliedFilters.availability || undefined,
-          gender_preference: (appliedFilters.genderPreference || undefined) as "ladies" | "gents" | "unisex" | undefined,
-        });
-        setLocating(false);
-        if ("error" in res) { setError(res.error ?? null); return; }
-        setSearch("");
-        setAppliedFilters((prev) => ({ ...prev, search: "" }));
-        setPage(1);
-        setSalons(res.data?.salons ?? []);
-        setMeta(res.meta ?? null);
+        setUserCoords({ latitude, longitude });
+        await runSearch(latitude, longitude);
       },
       (geoErr) => {
         setLocating(false);
@@ -259,6 +286,7 @@ export default function BookPage() {
     ratingMin,
     availability: availabilityFilter,
     genderPreference,
+    radiusKm,
   };
 
   const hasPendingChanges =
@@ -267,7 +295,8 @@ export default function BookPage() {
     currentFilters.priceMax !== appliedFilters.priceMax ||
     currentFilters.ratingMin !== appliedFilters.ratingMin ||
     currentFilters.availability !== appliedFilters.availability ||
-    currentFilters.genderPreference !== appliedFilters.genderPreference;
+    currentFilters.genderPreference !== appliedFilters.genderPreference ||
+    currentFilters.radiusKm !== appliedFilters.radiusKm;
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -284,7 +313,11 @@ export default function BookPage() {
   const applyFilters = () => {
     setPage(1);
     setAppliedFilters(currentFilters);
-    fetchSalons(currentFilters, 1);
+    if (currentFilters.radiusKm !== "") {
+      fetchNearbySalons(currentFilters.radiusKm);
+    } else {
+      fetchSalons(currentFilters, 1);
+    }
   };
   const resetFilters = () => {
     const reset: FilterState = {
@@ -294,12 +327,14 @@ export default function BookPage() {
       ratingMin: "",
       availability: "",
       genderPreference: "",
+      radiusKm: "",
     };
     setPriceMin("");
     setPriceMax("");
     setRatingMin("");
     setAvailabilityFilter("");
     setGenderPreference("");
+    setRadiusKm("");
     setSearch("");
     setPage(1);
     setAppliedFilters(reset);
@@ -329,6 +364,11 @@ export default function BookPage() {
       label: t("filterPreferenceChip").replace("{value}", genderPreference),
       clear: () => setGenderPreference(""),
     } : null,
+    radiusKm ? {
+      key: "radius",
+      label: `${radiusKm}km Range`,
+      clear: () => setRadiusKm(""),
+    } : null,
   ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
 
   const pickSalon = (slug: string) => {
@@ -336,7 +376,7 @@ export default function BookPage() {
     setLoadingDetail(true);
     setDetail(null);
     setBranchId("");
-    setServiceId("");
+    setSelectedServiceIds([]);
     setDate("");
     setSlots([]);
     setSelected(null);
@@ -361,15 +401,16 @@ export default function BookPage() {
       setBranchId(String(prefillBranchId));
     }
     if (prefillServiceId && detail.services.some((s) => String(s.id) === String(prefillServiceId))) {
-      setServiceId(String(prefillServiceId));
+      setSelectedServiceIds([String(prefillServiceId)]);
     }
   }, [detail, prefillBranchId, prefillServiceId]);
 
-  const fetchSlots = (bId: string, sId: string, d: string) => {
-    if (!bId || !sId || !d) return;
+  const fetchSlots = (bId: string, sIds: string[], d: string) => {
+    if (!bId || sIds.length === 0 || !d) return;
     setLoadingSlots(true);
     setSlots([]);
-    publicApi.availability(bId, sId, d).then(({ data }) => {
+    // For multi-service, use first service ID for availability check
+    publicApi.availability(bId, sIds[0], d).then(({ data }) => {
       setLoadingSlots(false);
       if (data?.slots) {
         const buffer = new Date(Date.now() + 30 * 60 * 1000);
@@ -382,7 +423,7 @@ export default function BookPage() {
   };
 
   const pickSlot = (slot: Slot) => {
-    setSelected({ branchId, serviceId, date, slot });
+    setSelected({ branchId, serviceIds: selectedServiceIds, date, slot });
     setStep(4);
   };
 
@@ -393,7 +434,7 @@ export default function BookPage() {
     const { data, error: err } = await publicApi.book({
       tenant_id: detail.salon.id,
       branch_id: selected.branchId,
-      service_id: selected.serviceId,
+      service_ids: selected.serviceIds,
       staff_id: selected.slot.staff_id,
       start_at: selected.slot.start,
       client_name: form.client_name,
@@ -407,7 +448,9 @@ export default function BookPage() {
   };
 
   const selectedBranch = detail?.branches.find((b) => String(b.id) === String(branchId));
-  const selectedService = detail?.services.find((s) => String(s.id) === String(serviceId));
+  const selectedServices = detail?.services.filter((s) => selectedServiceIds.includes(String(s.id))) ?? [];
+  const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
+  const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price ?? 0), 0);
 
   // ── Step 5: Confirmation ─────────────────────────────────────────────────
   if (step === 5 && confirmed) {
@@ -567,7 +610,7 @@ export default function BookPage() {
               </div>
               <button
                 type="button"
-                onClick={fetchNearbySalons}
+                onClick={() => fetchNearbySalons()}
                 disabled={locating || loading}
                 className="shrink-0 px-4 py-3 bg-card border border-gray-200 rounded-xl text-salon-espresso text-sm font-medium
                   hover:border-salon-gold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
@@ -655,6 +698,39 @@ export default function BookPage() {
                         onChange={(e) => setAvailabilityFilter(e.target.value)}
                         className="w-full px-3 py-2.5 bg-card border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold"
                       />
+                    </div>
+                    <div className="sm:col-span-2 border-t border-gray-100/10 pt-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label htmlFor="distance-range" className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Distance Range
+                        </label>
+                        <span className="text-xs font-medium text-salon-gold">
+                          {radiusKm ? `${radiusKm} km` : "Off"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          id="distance-range"
+                          type="range"
+                          min="1"
+                          max="50"
+                          step="1"
+                          value={radiusKm || 0}
+                          onChange={(e) => setRadiusKm(e.target.value === "0" ? "" : e.target.value)}
+                          className="flex-1 h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-salon-gold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setRadiusKm("")}
+                          className="text-[10px] text-gray-400 hover:text-salon-espresso underline shrink-0"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-medium">
+                        <span>1 km</span>
+                        <span>50 km</span>
+                      </div>
                     </div>
                     <div className="sm:col-span-2">
                       <label htmlFor="gender-preference" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
@@ -752,10 +828,12 @@ export default function BookPage() {
                       className="animate-fade-in-up"
                       style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
                     >
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => pickSalon(row.slug)}
-                        className="w-full text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group hover:-translate-y-0.5"
+                        onKeyDown={(e) => e.key === 'Enter' && pickSalon(row.slug)}
+                        className="w-full cursor-pointer text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group hover:-translate-y-0.5"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
@@ -785,6 +863,17 @@ export default function BookPage() {
                                   {t("listSalonDistance").replace("{n}", dist < 10 ? dist.toFixed(1) : String(Math.round(dist)))}
                                 </span>
                               )}
+                              {row.latitude != null && row.longitude != null && (
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${row.latitude},${row.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-500 hover:text-blue-700 underline underline-offset-2"
+                                >
+                                  View on map
+                                </a>
+                              )}
                             </div>
                             {s.address && (
                               <p className="flex items-center gap-1 text-gray-400 text-xs mt-1.5">
@@ -798,7 +887,7 @@ export default function BookPage() {
                             <span className="text-[10px] text-gray-400 group-hover:text-salon-gold transition-colors">{t("view")}</span>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     </li>
                     );
                   })}
@@ -922,36 +1011,84 @@ export default function BookPage() {
                     </div>
                   </div>
 
-                  {/* Service */}
+                  {/* Services (Multi-select) */}
                   <div>
                     <SectionLabel>{t("service")}</SectionLabel>
                     <div className="space-y-3">
-                      {detail.services.map((s, i) => (
-                        <SelectCard
-                          key={s.id}
-                          active={String(serviceId) === String(s.id)}
-                          onClick={() => setServiceId(String(s.id))}
-                          delay={i * 40}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-salon-espresso text-sm truncate">{s.name}</p>
-                            <p className="flex items-center gap-1 text-gray-400 text-xs mt-0.5">
-                              <Clock className="w-3 h-3 shrink-0" />
-                              {s.duration_minutes} {t("minutes")}
-                              {s.description ? ` · ${s.description}` : ""}
-                            </p>
-                          </div>
-                          <p
-                            className={`text-base font-bold shrink-0 transition-colors ${String(serviceId) === String(s.id) ? "text-salon-gold" : "text-salon-espresso"}`}
+                      {detail.services.map((s, i) => {
+                        const isSelected = selectedServiceIds.includes(String(s.id));
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedServiceIds((prev) =>
+                                prev.includes(String(s.id))
+                                  ? prev.filter((id) => id !== String(s.id))
+                                  : [...prev, String(s.id)]
+                              );
+                            }}
+                            className={`w-full text-start p-5 rounded-2xl border shadow-sm transition-all animate-fade-in-up ${
+                              isSelected
+                                ? "border-salon-gold/50 bg-salon-gold/5 shadow-md"
+                                : "border-gray-100 bg-card hover:border-salon-gold/30"
+                            }`}
+                            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
                           >
-                            {formatPublicCurrency(Number(s.price), detail.salon.currency, locale)}
-                          </p>
-                        </SelectCard>
-                      ))}
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded-md border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
+                                isSelected
+                                  ? "border-salon-gold bg-salon-gold"
+                                  : "border-gray-300"
+                              }`}>
+                                {isSelected && (
+                                  <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-salon-espresso text-sm truncate">{s.name}</p>
+                                <p className="flex items-center gap-1 text-gray-400 text-xs mt-0.5">
+                                  <Clock className="w-3 h-3 shrink-0" />
+                                  {s.duration_minutes} {t("minutes")}
+                                  {s.description ? ` · ${s.description}` : ""}
+                                </p>
+                              </div>
+                              <p className={`text-base font-bold shrink-0 transition-colors ${
+                                isSelected ? "text-salon-gold" : "text-salon-espresso"
+                              }`}>
+                                {formatPublicCurrency(Number(s.price), detail.salon.currency, locale)}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <PrimaryBtn disabled={!branchId || !serviceId} onClick={() => setStep(3)}>
+                  {selectedServiceIds.length > 0 && (
+                    <div className="bg-salon-gold/5 border border-salon-gold/20 rounded-2xl p-4 space-y-2 text-sm animate-fade-in-up">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 font-medium">{selectedServiceIds.length} service{selectedServiceIds.length !== 1 ? "s" : ""} selected</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedServiceIds([])}
+                          className="text-xs text-gray-500 hover:text-salon-gold transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-salon-gold/10">
+                        <span className="text-salon-espresso font-semibold">Total Duration</span>
+                        <span className="text-salon-gold font-bold">{totalDuration} {t("minutes")}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-salon-espresso font-semibold">Total Price</span>
+                        <span className="text-salon-gold font-bold">{formatPublicCurrency(totalPrice, detail.salon.currency, locale)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <PrimaryBtn disabled={!branchId || selectedServiceIds.length === 0} onClick={() => setStep(3)}>
                     <span className="flex items-center justify-center gap-2">
                       {t("chooseDateTimeCta")} <ChevronRight className="w-4 h-4" />
                     </span>
@@ -970,7 +1107,7 @@ export default function BookPage() {
               {t("step3Title")}
             </h1>
             <p className="text-gray-500 text-sm mb-6">
-              {selectedService?.name} · {selectedBranch?.name}
+              {selectedServices.map(s => s.name).join(", ")} · {selectedBranch?.name}
             </p>
             <div className="mb-5 rounded-xl border border-gray-200 bg-card p-3">
               <p className="text-xs text-gray-500">{t("step3Helper")}</p>
@@ -982,7 +1119,7 @@ export default function BookPage() {
                 type="date"
                 value={date}
                 min={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => { setDate(e.target.value); fetchSlots(branchId, serviceId, e.target.value); }}
+                onChange={(e) => { setDate(e.target.value); fetchSlots(branchId, selectedServiceIds, e.target.value); }}
                 className="w-full bg-card border border-gray-200 rounded-xl px-4 py-3 text-salon-espresso shadow-sm focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold transition-shadow"
               />
             </div>
@@ -1031,7 +1168,10 @@ export default function BookPage() {
 
             {/* Summary card */}
             <div className="bg-card rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-2 text-sm">
-              <SummaryRow label={t("summaryService")} value={selectedService?.name ?? "—"} />
+              <SummaryRow 
+                label={t("summaryService")} 
+                value={selectedServices.map(s => s.name).join(", ") || "—"} 
+              />
               <SummaryRow label={t("summaryLocation")} value={selectedBranch?.name ?? "—"} />
               <SummaryRow
                 label={t("summaryDate")}
@@ -1044,20 +1184,18 @@ export default function BookPage() {
                 value={`${fmt(selected.slot.start, LOCALE_BCP47[locale])} – ${fmt(selected.slot.end, LOCALE_BCP47[locale])}`}
               />
               <SummaryRow
-                label={t("summaryPrice")}
-                value={formatPublicCurrency(Number(selectedService?.price ?? 0), detail.salon.currency, locale)}
+                label={t("summaryDuration")}
+                value={`${totalDuration} ${t("minutes")}`}
               />
-              {selectedService?.deposit_amount && Number(selectedService.deposit_amount) > 0 && (
+              <SummaryRow
+                label={t("summaryPrice")}
+                value={formatPublicCurrency(totalPrice, detail.salon.currency, locale)}
+              />
+              {selectedServices.some(s => s.deposit_amount && Number(s.deposit_amount) > 0) && (
                 <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
                   <p className="font-semibold">{t("depositRequired")}</p>
                   <p className="mt-0.5">
-                    {t("depositMessage")
-                      .replace("{deposit}", formatPublicCurrency(Number(selectedService.deposit_amount), detail.salon.currency, locale))
-                      .replace("{remaining}", formatPublicCurrency(
-                        Math.max(0, Number(selectedService.price) - Number(selectedService.deposit_amount)),
-                        detail.salon.currency,
-                        locale,
-                      ))}
+                    {`Deposit required for: ${selectedServices.filter(s => s.deposit_amount && Number(s.deposit_amount) > 0).map(s => s.name).join(", ")}`}
                   </p>
                 </div>
               )}

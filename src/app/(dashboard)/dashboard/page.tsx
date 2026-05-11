@@ -2,7 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CalendarDays, CreditCard, LayoutDashboard, Users, UserCheck } from 'lucide-react';
+import { 
+  CalendarDays, 
+  CreditCard, 
+  LayoutDashboard, 
+  Users, 
+  UserCheck, 
+  TrendingUp, 
+  TrendingDown, 
+  Clock, 
+  Zap, 
+  ArrowRight,
+  Plus,
+  Search,
+  Wallet,
+  Calendar
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -215,7 +230,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
-  /** `null` while resolving locations; `''` if none exist; otherwise selected branch id (dashboard is always branch-scoped). */
+  /** `null` while resolving locations; `'all'` for aggregated view; otherwise selected branch id. */
   const [branchFilter, setBranchFilter] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -250,9 +265,11 @@ export default function DashboardPage() {
       setLocations(locs);
       setBranchFilter((prev) => {
         if (locs.length === 0) return '';
+        // If "all" was selected or explicitly needed, preserve it
+        if (prev === 'all') return 'all';
         const validPrev =
           prev && prev !== '' && locs.some((l) => sameRecordId(l.id, prev)) ? prev : null;
-        return validPrev != null ? String(validPrev) : String(locs[0]!.id);
+        return validPrev != null ? String(validPrev) : 'all'; // Default to "all" for better overview
       });
     });
   }, []);
@@ -287,7 +304,7 @@ export default function DashboardPage() {
       sevenDaysAgoDate.setDate(now.getDate() - 6);
       const sevenDaysAgo = localCalendarDay(sevenDaysAgoDate);
 
-      const locParam = branchFilter;
+      const locParam = branchFilter === 'all' ? undefined : branchFilter;
 
       const canReadStaff = !!user?.permissions?.some((p) => p === 'staff.view' || p === 'staff.manage');
       try {
@@ -332,7 +349,9 @@ export default function DashboardPage() {
         const yesterdaySales = yesterdaySalesRes.data?.transactions ?? [];
         const clients = clientsRes.data?.clients ?? [];
         const staffRaw = staffRes.data ?? [];
-        const staffForKpi = staffRaw.filter((s) => sameRecordId(staffBranchId(s), branchFilter));
+        const staffForKpi = branchFilter === 'all' 
+          ? staffRaw 
+          : staffRaw.filter((s) => sameRecordId(staffBranchId(s), branchFilter));
         const weekSales = weekSalesRes.data?.transactions ?? [];
 
         const salonCurrency = salonRes.data?.salon?.currency;
@@ -449,9 +468,11 @@ export default function DashboardPage() {
   const dataPending = loading || branchLoading;
 
   const locationScopeLabel =
-    branchFilter === null || branchFilter === ''
-      ? ''
-      : locations.find((l) => sameRecordId(l.id, branchFilter))?.name?.trim() || '';
+    branchFilter === 'all'
+      ? 'All Branches'
+      : branchFilter === null || branchFilter === ''
+        ? ''
+        : locations.find((l) => sameRecordId(l.id, branchFilter))?.name?.trim() || '';
 
   if (!branchLoading && noBranches) {
     return (
@@ -471,98 +492,158 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 elite-shell">
-      <DashboardPageHeader
-        title="Dashboard"
-        description={`Today’s overview for this branch — bookings, clients, staff, and revenue.${branchFilter && branchFilter !== '' ? ` Location: ${locationScopeLabel || '…'}.` : ''}`}
-        icon={<LayoutDashboard className="w-5 h-5" />}
-        rightSlot={
-          <div className="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
-            <label htmlFor="dashboard-branch" className="text-xs elite-subtle">
-              Branch
-            </label>
-            <select
-              id="dashboard-branch"
-              value={branchFilter != null && branchFilter !== '' ? String(branchFilter) : ''}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              disabled={branchLoading || locations.length === 0}
-              className="elite-input h-9 w-full min-w-0 px-3 text-sm sm:min-w-[12rem] sm:w-auto"
-            >
-              {locations.map((loc) => (
-                <option key={String(loc.id)} value={String(loc.id)}>
-                  {loc.name}
-                </option>
-              ))}
-            </select>
+    <div className="space-y-8 elite-shell min-h-screen pb-12">
+      <div className="relative overflow-hidden rounded-3xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-8 shadow-2xl shadow-black/5 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 size-80 rounded-full bg-[var(--elite-orange-dim)] blur-[100px] opacity-20 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-60 rounded-full bg-[var(--elite-teal)]/10 blur-[80px] opacity-10 pointer-events-none" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--elite-orange-dim)] text-[var(--elite-orange)] text-[10px] font-black uppercase tracking-widest mb-2">
+              <Zap className="size-3" /> System Live
+            </div>
+            <h1 className="font-display text-4xl font-black tracking-tight elite-title">
+              Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.name?.split(' ')[0] || 'Admin'}
+            </h1>
+            <p className="elite-subtle text-lg max-w-xl font-medium">
+              Everything is running smoothly at <span className="text-[var(--elite-text-strong)]">{locationScopeLabel || 'your salon'}</span>. Here is what's happening today.
+            </p>
           </div>
-        }
-      />
+          
+          <div className="flex flex-wrap gap-3">
+            <div className="bg-[var(--elite-surface)] rounded-2xl border border-[var(--elite-border)] p-1 flex items-center gap-2 shadow-sm focus-within:ring-2 focus-within:ring-[var(--elite-orange)] transition-all">
+              <span className="pl-3 text-[10px] font-bold uppercase tracking-wider elite-subtle whitespace-nowrap border-r border-[var(--elite-border)] pr-3 mr-1">Switch Branch</span>
+              <select
+                id="dashboard-branch"
+                value={branchFilter != null ? String(branchFilter) : ''}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                disabled={branchLoading || locations.length === 0}
+                className="bg-transparent h-9 min-w-[140px] px-2 text-sm font-bold elite-title outline-none cursor-pointer"
+              >
+                <option value="all">All Branches</option>
+                {locations.map((loc) => (
+                  <option key={String(loc.id)} value={String(loc.id)}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 border-t border-[var(--elite-border)] pt-8">
+          <Button variant="ghost" className="h-auto flex-col items-center gap-2 py-4 rounded-2xl hover:bg-[var(--elite-surface)] group transition-all">
+            <div className="p-3 rounded-xl bg-[var(--elite-surface)] border border-[var(--elite-border)] text-[var(--elite-orange)] group-hover:scale-110 transition-transform shadow-sm">
+              <Calendar className="size-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest elite-title">New Booking</span>
+          </Button>
+          <Button variant="ghost" className="h-auto flex-col items-center gap-2 py-4 rounded-2xl hover:bg-[var(--elite-surface)] group transition-all">
+            <div className="p-3 rounded-xl bg-[var(--elite-surface)] border border-[var(--elite-border)] text-[var(--elite-teal)] group-hover:scale-110 transition-transform shadow-sm">
+              <Wallet className="size-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest elite-title">Quick Sale</span>
+          </Button>
+          <Button variant="ghost" className="h-auto flex-col items-center gap-2 py-4 rounded-2xl hover:bg-[var(--elite-surface)] group transition-all">
+            <div className="p-3 rounded-xl bg-[var(--elite-surface)] border border-[var(--elite-border)] text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
+              <Plus className="size-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest elite-title">Add Client</span>
+          </Button>
+          <Button variant="ghost" className="h-auto flex-col items-center gap-2 py-4 rounded-2xl hover:bg-[var(--elite-surface)] group transition-all">
+            <div className="p-3 rounded-xl bg-[var(--elite-surface)] border border-[var(--elite-border)] text-[var(--elite-muted)] group-hover:scale-110 transition-transform shadow-sm">
+              <Search className="size-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest elite-title">Search History</span>
+          </Button>
+        </div>
+      </div>
 
       {/* KPI row */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="elite-panel min-h-[132px]">
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="elite-panel border-none shadow-xl shadow-black/5 bg-gradient-to-br from-[var(--elite-card)] to-[var(--elite-surface)] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[var(--elite-orange)] opacity-80" />
           <CardHeader className="pb-2">
-            <CardDescription>Today’s Revenue</CardDescription>
-            <CardTitle className="text-2xl">
-              {dataPending ? <Skeleton className="h-8 w-28" /> : money(stats.todayRevenue)}
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-[var(--elite-orange-dim)] text-[var(--elite-orange)]">
+                <CreditCard className="size-4" />
+              </div>
+              {stats.revenueDeltaPct !== 0 && (
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black ${stats.revenueDeltaPct > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                  {stats.revenueDeltaPct > 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                  {Math.abs(stats.revenueDeltaPct).toFixed(1)}%
+                </div>
+              )}
+            </div>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest elite-subtle">Today's Revenue</CardDescription>
+            <CardTitle className="text-3xl font-black tracking-tighter elite-title">
+              {dataPending ? <Skeleton className="h-9 w-32" /> : money(stats.todayRevenue)}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            {dataPending ? (
-              <Skeleton className="h-3 w-24" />
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                {stats.revenueDeltaPct >= 0 ? '+' : ''}
-                {stats.revenueDeltaPct.toFixed(1)}% vs yesterday
-              </span>
-            )}
-            <CreditCard className="text-[var(--elite-orange)]" />
+          <CardContent>
+            <p className="text-[10px] elite-subtle font-medium">Net earnings from processed sales today</p>
           </CardContent>
         </Card>
-        <Card className="elite-panel min-h-[132px]">
+
+        <Card className="elite-panel border-none shadow-xl shadow-black/5 bg-gradient-to-br from-[var(--elite-card)] to-[var(--elite-surface)] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[var(--elite-teal)] opacity-80" />
           <CardHeader className="pb-2">
-            <CardDescription>Total Bookings</CardDescription>
-            <CardTitle className="text-2xl">
-              {dataPending ? <Skeleton className="h-8 w-14" /> : stats.totalBookings}
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-emerald-50 text-[var(--elite-teal)]">
+                <CalendarDays className="size-4" />
+              </div>
+              <div className="px-2 py-0.5 rounded-full bg-emerald-50 text-[var(--elite-teal)] text-[9px] font-black">
+                ACTIVE
+              </div>
+            </div>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest elite-subtle">Bookings</CardDescription>
+            <CardTitle className="text-3xl font-black tracking-tighter elite-title">
+              {dataPending ? <Skeleton className="h-9 w-16" /> : stats.totalBookings}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            {dataPending ? (
-              <Skeleton className="h-3 w-20" />
-            ) : (
-              <span className="text-xs text-muted-foreground">{stats.upcomingBookings} upcoming</span>
-            )}
-            <CalendarDays className="text-[var(--elite-orange)]" />
+          <CardContent>
+            <p className="text-[10px] elite-subtle font-medium">{stats.upcomingBookings} sessions remaining today</p>
           </CardContent>
         </Card>
-        <Card className="elite-panel min-h-[132px]">
+
+        <Card className="elite-panel border-none shadow-xl shadow-black/5 bg-gradient-to-br from-[var(--elite-card)] to-[var(--elite-surface)] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-80" />
           <CardHeader className="pb-2">
-            <CardDescription>Active Clients</CardDescription>
-            <CardTitle className="text-2xl">
-              {dataPending ? <Skeleton className="h-8 w-14" /> : stats.activeClients}
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-blue-50 text-blue-500">
+                <Users className="size-4" />
+              </div>
+            </div>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest elite-subtle">Client Pool</CardDescription>
+            <CardTitle className="text-3xl font-black tracking-tighter elite-title">
+              {dataPending ? <Skeleton className="h-9 w-16" /> : stats.activeClients}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Live customer records</span>
-            <Users className="text-[var(--elite-orange)]" />
+          <CardContent>
+            <p className="text-[10px] elite-subtle font-medium">Total registered customers in branch</p>
           </CardContent>
         </Card>
-        <Card className="elite-panel min-h-[132px]">
+
+        <Card className="elite-panel border-none shadow-xl shadow-black/5 bg-gradient-to-br from-[var(--elite-card)] to-[var(--elite-surface)] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[var(--elite-text-strong)] opacity-80" />
           <CardHeader className="pb-2">
-            <CardDescription>
-              {dataPending ? 'Staff' : stats.staffCardMode === 'schedule' ? 'On duty now' : 'Active staff'}
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-2 rounded-lg bg-[var(--elite-surface)] text-[var(--elite-text-strong)]">
+                <UserCheck className="size-4" />
+              </div>
+              <div className="px-2 py-0.5 rounded-full bg-[var(--elite-orange-dim)] text-[var(--elite-orange)] text-[9px] font-black uppercase">
+                Shift
+              </div>
+            </div>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest elite-subtle">
+              {stats.staffCardMode === 'schedule' ? 'On Duty Now' : 'Total Staff'}
             </CardDescription>
-            <CardTitle className="text-2xl">
-              {dataPending ? <Skeleton className="h-8 w-14" /> : stats.staffMain}
+            <CardTitle className="text-3xl font-black tracking-tighter elite-title">
+              {dataPending ? <Skeleton className="h-9 w-16" /> : stats.staffMain}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-between gap-2">
-            {dataPending ? (
-              <Skeleton className="h-3 w-28" />
-            ) : (
-              <span className="text-xs text-muted-foreground leading-snug">{stats.staffSub}</span>
-            )}
-            <UserCheck className="shrink-0 text-[var(--elite-orange)]" />
+          <CardContent>
+            <p className="text-[10px] elite-subtle font-medium truncate">{stats.staffSub}</p>
           </CardContent>
         </Card>
       </div>
@@ -654,34 +735,55 @@ export default function DashboardPage() {
         </Card>
 
         {/* Activity feed */}
-        <Card className="elite-panel">
-          <CardHeader>
-            <CardTitle>Activity</CardTitle>
-            <CardDescription>
-              This branch only — bookings and payments from the last 7 days, newest first.
+        <Card className="elite-panel border-none shadow-xl shadow-black/5 overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+            <Clock className="size-12" />
+          </div>
+          <CardHeader className="border-b border-[var(--elite-border)] bg-[var(--elite-surface)]/30">
+            <CardTitle className="text-lg font-black tracking-tight">Recent Activity</CardTitle>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest elite-subtle">
+              Live updates from {locationScopeLabel || 'this branch'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="elite-scrollbar max-h-80 space-y-3 overflow-y-auto overflow-x-hidden text-sm pr-1">
-            {dataPending ? (
-              <div className="space-y-3">
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-              </div>
-            ) : activity.length === 0 ? (
-              <p className="text-muted-foreground">No recent activity.</p>
-            ) : (
-              activity.map((row) => (
-                <div key={row.id} className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium">{row.title}</div>
-                    <div className="text-muted-foreground">{row.text}</div>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{row.when}</span>
+          <CardContent className="p-0">
+            <div className="elite-scrollbar max-h-[500px] overflow-y-auto overflow-x-hidden">
+              {dataPending ? (
+                <div className="p-6 space-y-6">
+                  <Skeleton className="h-14 w-full rounded-xl" />
+                  <Skeleton className="h-14 w-full rounded-xl" />
+                  <Skeleton className="h-14 w-full rounded-xl" />
                 </div>
-              ))
-            )}
+              ) : activity.length === 0 ? (
+                <div className="py-20 text-center space-y-3">
+                  <div className="inline-flex p-4 rounded-full bg-[var(--elite-surface)] text-[var(--elite-muted)]">
+                    <Zap className="size-8 opacity-20" />
+                  </div>
+                  <p className="text-sm font-bold elite-subtle">No recent activity detected.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[var(--elite-border)]">
+                  {activity.map((row) => (
+                    <div key={row.id} className="p-4 flex items-start gap-4 hover:bg-[var(--elite-surface)]/50 transition-colors group">
+                      <div className={`mt-1 size-2 rounded-full shrink-0 ${row.title === 'Payment received' ? 'bg-[var(--elite-teal)]' : row.title === 'Cancellation' ? 'bg-red-500' : 'bg-[var(--elite-orange)]'} shadow-lg shadow-current/20`} />
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest elite-title">{row.title}</p>
+                          <span className="text-[10px] font-bold text-[var(--elite-muted)] bg-[var(--elite-surface)] px-2 py-0.5 rounded-full">{row.when} ago</span>
+                        </div>
+                        <p className="text-sm font-medium elite-text-strong">{row.text}</p>
+                      </div>
+                      <ArrowRight className="size-4 text-[var(--elite-muted)] opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
+          <div className="p-4 border-t border-[var(--elite-border)] bg-[var(--elite-surface)]/20 text-center">
+            <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-[var(--elite-muted)] hover:text-[var(--elite-orange)] transition-colors">
+              View Detailed Logs
+            </Button>
+          </div>
         </Card>
       </div>
 

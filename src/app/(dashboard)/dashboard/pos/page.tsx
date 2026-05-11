@@ -49,36 +49,46 @@ export default function PosPage() {
   }
 
   return (
-    <div className="space-y-4 elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4">
+    <div className="elite-shell min-h-[calc(100vh-120px)] -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 space-y-6">
       <FlowTopbar />
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold elite-title">POS checkout</h1>
-          <p className="elite-subtle text-sm mt-1">
-            Create a sale with multiple payments. Any remaining amount will be recorded as client debt.
+      
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-[var(--elite-border)]">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-3xl font-black tracking-tight elite-title">Point of Sale</h1>
+            <span className="px-2 py-0.5 rounded-full bg-[var(--elite-orange-dim)] text-[var(--elite-orange)] text-[10px] font-bold uppercase tracking-wider">Live Terminal</span>
+          </div>
+          <p className="elite-subtle text-sm max-w-xl">
+            Complete transactions, manage client debt, and process payments across services and products.
           </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <Link
             href="/dashboard/transactions"
-            className="inline-flex mt-2 text-sm font-medium text-[var(--elite-orange)] hover:opacity-80 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--elite-muted)] hover:text-[var(--elite-orange)] transition-colors"
           >
-            ← Back to POS / Sales
+            <span className="text-lg">←</span> View History
           </Link>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          <div className="w-full sm:w-56">
-            <p className="text-xs font-semibold elite-subtle mb-1">Location</p>
-            <Combobox
-              value={locationId}
-              onValueChange={setLocationId}
-              options={locationOptions}
-              placeholder="Select location"
-              searchPlaceholder="Search locations..."
-            />
+          <div className="w-full sm:w-64 bg-[var(--elite-card)] rounded-xl border border-[var(--elite-border)] p-1 flex items-center gap-2 shadow-sm">
+            <span className="pl-3 text-[10px] font-bold uppercase tracking-wider elite-subtle whitespace-nowrap">Location:</span>
+            <div className="flex-1">
+              <Combobox
+                value={locationId}
+                onValueChange={setLocationId}
+                options={locationOptions}
+                placeholder="Select location"
+                searchPlaceholder="Search..."
+                className="border-none shadow-none focus-visible:ring-0"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <SaleCheckoutForm locationId={locationId} />
+      <main className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <SaleCheckoutForm locationId={locationId} />
+      </main>
     </div>
   );
 }

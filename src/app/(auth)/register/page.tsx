@@ -16,8 +16,11 @@ import { APP_NAME, APP_FULL_NAME, BANNER_IMAGE } from '@/lib/app-name';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Form } from '@/components/ui/form';
 import { RHFTextField } from '@/components/fields/RHFTextField';
+import { RHFPhoneInput } from '@/components/fields/RHFPhoneInput';
+import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/components/LocaleProvider';
+import { Info } from 'lucide-react';
 import { getPublicT } from '@/lib/i18n-public';
 
 const GoogleSignInButton = dynamic(() => import('@/components/auth/GoogleSignInButton'), { ssr: false });
@@ -35,6 +38,9 @@ export default function RegisterPage() {
   const [step, setStep] = useState<Step>('form');
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [registeredName, setRegisteredName] = useState('');
+  const [redirectRole, setRedirectRole] = useState<string | undefined>(undefined);
 
   const schema = useMemo(
     () =>
@@ -73,17 +79,7 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = async (values: Values) => {
-    const otpCode = String(values.otpCode ?? '').trim();
-    if (!otpCode) { toastError(t('otpRequired')); return; }
-
     setLoading(true);
-    const { data: otpData, error: otpError } = await authApi.otpVerify(values.email, otpCode, 'register');
-    if (otpError || !otpData) {
-      setLoading(false);
-      toastError(otpError || t('otpFailed'));
-      return;
-    }
-
     try {
       if (mode === 'customer') {
         const result = await registerCustomer({
@@ -94,8 +90,18 @@ export default function RegisterPage() {
         });
         setLoading(false);
         if ('error' in result) { toastError(result.error); return; }
-        toastSuccess(t('accountCreated'));
-        router.push(getRedirectForRole(result.user.role));
+
+        // Check if walk-in customer records were linked
+        const linkedCount = 'linked_customers_count' in result ? (result.linked_customers_count ?? 0) : 0;
+        if (linkedCount > 0) {
+          setRegisteredName(values.fullName || '');
+          setRedirectRole(result.user.role);
+          setShowWelcomeModal(true);
+          toastSuccess('Welcome back! We found your previous visits.');
+        } else {
+          toastSuccess(t('accountCreated'));
+          router.push(getRedirectForRole(result.user.role));
+        }
       } else {
         if (!String(values.salonName ?? '').trim()) {
           setLoading(false);
@@ -117,11 +123,12 @@ export default function RegisterPage() {
       }
     } catch (err) {
       setLoading(false);
-      toastError(err instanceof Error ? err.message : t('otpFailed'));
+      toastError(err instanceof Error ? err.message : 'Registration failed');
     }
   };
 
   return (
+    <>
     <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--elite-bg)] text-[var(--elite-text)]">
       <div className="lg:w-1/2 relative min-h-[220px] lg:min-h-screen flex-shrink-0">
         {imgError ? (
@@ -205,53 +212,27 @@ export default function RegisterPage() {
 
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(step === 'form' ? handleSendOtp : handleSubmit, () =>
+                  onSubmit={form.handleSubmit(handleSubmit, () =>
                     toastError(t('checkHighlightedFields')),
                   )}
                   className="space-y-4 [&_label]:text-[var(--elite-muted)] [&_label]:font-medium [&_input]:bg-[var(--elite-surface)] [&_input]:border-[var(--elite-border-2)] [&_input]:text-[var(--elite-text)] [&_input]:placeholder:text-[var(--elite-muted)] [&_input]:rounded-xl [&_input:focus]:border-[var(--elite-orange)] [&_input:focus]:ring-1 [&_input:focus]:ring-[var(--elite-orange-dim)]"
                   autoComplete="off"
                 >
-                  {step === 'form' ? (
+                  {mode === 'salon' && (
                     <>
-                      {mode === 'salon' && (
-                        <>
-                          <RHFTextField control={form.control} name="salonName" label={t('salonName')} placeholder="Luxe Salon & Spa" disabled={loading} />
-                          <RHFTextField control={form.control} name="salonAddress" label={t('salonAddress')} placeholder="Street, city, country" disabled={loading} />
-                        </>
-                      )}
-                      <RHFTextField control={form.control} name="fullName" label={t('fullName')} placeholder={t('yourName')} disabled={loading} />
-                      <RHFTextField control={form.control} name="email" label={t('email')} placeholder="you@example.com" type="email" autoComplete="off" disabled={loading} />
-                      <RHFTextField control={form.control} name="phone" label={t('phoneOptionalLabel')} placeholder="+1 555 123 4567" type="tel" autoComplete="off" disabled={loading} />
-                      <RHFTextField control={form.control} name="password" label={t('password')} placeholder={t('atLeast6Chars')} type="password" autoComplete="new-password" disabled={loading} />
-                    </>
-                  ) : (
-                    <>
-                      <RHFTextField
-                        control={form.control}
-                        name="otpCode"
-                        label={t('verificationCode')}
-                        placeholder={t('enterOtpPlaceholder')}
-                        autoComplete="one-time-code"
-                        inputMode="numeric"
-                        disabled={loading}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="px-0 text-xs text-[var(--elite-muted)] hover:text-[var(--elite-text)]"
-                        onClick={() => { setStep('form'); form.setValue('otpCode', ''); }}
-                      >
-                        {t('changeDetails')}
-                      </Button>
+                      <RHFTextField control={form.control} name="salonName" label={t('salonName')} placeholder="Luxe Salon & Spa" disabled={loading} />
+                      <RHFTextField control={form.control} name="salonAddress" label={t('salonAddress')} placeholder="Street, city, country" disabled={loading} />
                     </>
                   )}
+                  <RHFTextField control={form.control} name="fullName" label={t('fullName')} placeholder={t('yourName')} disabled={loading} />
+                  <RHFTextField control={form.control} name="email" label={t('email')} placeholder="you@example.com" type="email" autoComplete="off" disabled={loading} />
+                  <RHFPhoneInput control={form.control} name="phone" label={t('phoneOptionalLabel')} disabled={loading} />
+                  <RHFTextField control={form.control} name="password" label={t('password')} placeholder={t('atLeast6Chars')} type="password" autoComplete="new-password" disabled={loading} />
 
                   <Button type="submit" disabled={loading} className="w-full h-11 rounded-xl font-semibold">
                     {loading
-                      ? step === 'form' ? t('sendingCode') : t('creatingAccount')
-                      : step === 'form'
-                        ? t('sendVerificationCode')
-                        : mode === 'salon' ? t('createSalonAccount') : t('createGuestAccount')}
+                      ? t('creatingAccount')
+                      : mode === 'salon' ? t('createSalonAccount') : t('createGuestAccount')}
                   </Button>
                 </form>
               </Form>
@@ -273,5 +254,18 @@ export default function RegisterPage() {
         </main>
       </div>
     </div>
+
+    {/* Welcome Back modal for walk-in customers who signed up */}
+    <WelcomeBackModal
+      open={showWelcomeModal}
+      onClose={() => {
+        setShowWelcomeModal(false);
+        if (redirectRole) {
+          router.push(getRedirectForRole(redirectRole));
+        }
+      }}
+      userName={registeredName}
+    />
+    </>
   );
 }

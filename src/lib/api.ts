@@ -29,7 +29,12 @@ export async function api<T>(
   };
   if (token)
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-  if (tenantId) (headers as Record<string, string>)["X-Tenant"] = tenantId;
+  
+  console.log(`[API] ${options.method || 'GET'} ${path}`, { Authorization: (headers as Record<string, string>)["Authorization"], hasTenant: !!tenantId });
+
+  // Only set X-Tenant from storage if not already explicitly provided
+  if (tenantId && !(headers as Record<string, string>)["X-Tenant"]) 
+    (headers as Record<string, string>)["X-Tenant"] = tenantId;
 
   let res: Response;
   try {
@@ -219,7 +224,7 @@ export const authApi = {
     full_name?: string;
     phone?: string;
   }) =>
-    plainRequest<{ user: AuthUser; token: string }>("/api/auth/register/customer", {
+    plainRequest<{ user: AuthUser; token: string; linked_customers_count?: number }>("/api/auth/register/customer", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -240,6 +245,25 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ credential }),
     }),
+  linkedHistory: () =>
+    request<{
+      salons: Array<{
+        salon_id: number;
+        salon_name: string;
+        salon_logo: string | null;
+        customer_name: string;
+        appointments: Array<{
+          id: number;
+          date: string;
+          time: string;
+          status: string;
+          branch: string | null;
+          staff: string | null;
+          services: Array<{ name: string; price: number }>;
+        }>;
+      }>;
+      total_appointments: number;
+    }>("/api/linked-history"),
 };
 
 export const profileApi = {
@@ -298,6 +322,8 @@ export const settingsApi = {
     preferred_locale?: string;
     cancellation_window_hours?: number;
     cancellation_policy_mode?: "soft" | "hard" | "none";
+    annual_leave_limit?: number;
+    sick_leave_limit?: number;
   }) =>
     api<Tenant>("/api/settings", {
       method: "PATCH",
@@ -319,14 +345,14 @@ export const tenantsApi = {
   get: (id: string) => api<Tenant>(`/api/admin/tenants/${id}`).then((r) =>
     r.data ? { data: { tenant: normalizeTenant(r.data) } } : { error: r.error },
   ),
-  create: (body: { name: string; slug?: string; status?: string }) =>
+  create: (body: { name: string; slug?: string; status?: string; latitude?: number | null; longitude?: number | null; [key: string]: any }) =>
     api<Tenant>("/api/admin/tenants", {
       method: "POST",
       body: JSON.stringify(body),
     }).then((r) => (r.data ? { data: normalizeTenant(r.data) } : r)),
   update: (
     id: string,
-    body: { name?: string; slug?: string; status?: string },
+    body: { name?: string; slug?: string; status?: string; latitude?: number | null; longitude?: number | null; [key: string]: any },
   ) =>
     api<Tenant>(`/api/admin/tenants/${id}`, {
       method: "PATCH",
@@ -570,6 +596,7 @@ export const clientsApi = {
     email?: string;
     notes?: string;
     tags?: string;
+    password?: string;
     user_id?: string;
   }) =>
     api<Record<string, unknown>>("/api/customers", {
@@ -580,6 +607,7 @@ export const clientsApi = {
         email: body.email,
         notes: body.notes,
         tags: body.tags,
+        password: body.password,
       }),
     }).then((r) =>
       r.data ? { data: { client: normalizeClient(r.data) } } : { error: r.error },
@@ -592,6 +620,7 @@ export const clientsApi = {
       email?: string;
       notes?: string;
       tags?: string;
+      password?: string;
       user_id?: string;
     },
   ) =>
@@ -603,6 +632,7 @@ export const clientsApi = {
         email: body.email,
         notes: body.notes,
         tags: body.tags,
+        password: body.password,
       }),
     }).then((r) =>
       r.data ? { data: { client: normalizeClient(r.data) } } : { error: r.error },
@@ -723,6 +753,8 @@ export const servicesApi = {
         deposit_amount: (body as any).deposit_amount ?? 0,
         cost: body.cost ?? 0,
         is_active: body.is_active ?? true,
+        pricing_tiers: (body as any).pricing_tiers,
+        product_requirements: (body as any).product_requirements,
       }),
     }).then((r) =>
       r.data ? { data: { service: r.data } } : { error: r.error },
@@ -1435,8 +1467,8 @@ export const transactionsApi = {
         appointment_id: body.appointment_id ?? null,
         package_template_id: body.package_template_id ?? null,
         membership_plan_id: body.membership_plan_id ?? null,
-        payment_method:
-          paymentMethod === "card"
+        payment_method: (body.payments ?? []).length > 0
+          ? (paymentMethod === "card"
             ? "card"
             : paymentMethod === "bank_transfer" || paymentMethod === "transfer"
               ? "bank_transfer"
@@ -1446,7 +1478,8 @@ export const transactionsApi = {
                   ? "whish"
                   : paymentMethod === "omt"
                     ? "omt"
-                    : "cash",
+                    : "cash")
+          : null,
       }),
     }).then((r) =>
       r.data ? { data: { transaction: r.data } } : { error: r.error },
@@ -1486,6 +1519,33 @@ export const paymentsApi = {
         }
         : { error: r.error },
     ),
+  // New payment management methods
+  unpaidInvoices: async (params?: { branch_id?: string; customer_id?: string; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.branch_id) q.set('branch_id', params.branch_id);
+    if (params?.customer_id) q.set('customer_id', params.customer_id);
+    if (params?.status) q.set('status', params.status);
+    const res = await api<unknown>(`/api/payments/unpaid?${q.toString()}`);
+    return res.error ? { error: res.error } : { data: { invoices: listData(res.data as any) } };
+  },
+  invoiceDetails: (invoiceId: string) =>
+    api<unknown>(`/api/payments/invoice/${invoiceId}`).then((r) =>
+      r.error ? { error: r.error } : { data: { invoice: r.data } }
+    ),
+  recordPayment: (invoiceId: string, body: { amount: number; method: string; reference?: string }) =>
+    api<unknown>(`/api/payments/invoice/${invoiceId}/record`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }).then((r) =>
+      r.error ? { error: r.error } : { data: r.data }
+    ),
+  summary: async (params?: { from?: string; to?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set('from', params.from);
+    if (params?.to) q.set('to', params.to);
+    const res = await api<unknown>(`/api/payments/summary?${q.toString()}`);
+    return res.error ? { error: res.error } : { data: res.data };
+  },
 };
 
 export const cashDrawerApi = {
@@ -2052,7 +2112,7 @@ export const publicApi = {
   book: async (body: {
     tenant_id: string;
     branch_id: string;
-    service_id: string;
+    service_ids: string[];
     staff_id?: string;
     start_at: string;
     client_name: string;
@@ -2250,6 +2310,8 @@ export interface Tenant {
   phone?: string | null;
   address?: string | null;
   logo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   timezone?: string | null;
   currency?: string | null;
   vat_rate?: number | string | null;
@@ -2276,10 +2338,15 @@ export interface Tenant {
 function normalizeTenant(t: Tenant): Tenant {
   const sub = (t as any).subscription_status ?? (t as any).subscriptionStatus ?? null;
   const status = (t as any).status ?? sub ?? null;
+  const lat = t.latitude !== null && t.latitude !== undefined ? parseFloat(t.latitude as any) : null;
+  const lng = t.longitude !== null && t.longitude !== undefined ? parseFloat(t.longitude as any) : null;
+  
   return {
     ...t,
     subscription_status: sub,
     status: status ?? "active",
+    latitude: isNaN(lat as any) ? null : lat,
+    longitude: isNaN(lng as any) ? null : lng,
   };
 }
 
@@ -2355,6 +2422,13 @@ export interface ServiceAddOn {
   is_active: boolean;
 }
 
+export interface ServiceProductRequirement {
+  id?: string | number;
+  product_id: string;
+  name?: string;
+  quantity: number;
+}
+
 export interface Service {
   id: string;
   tenant_id: string;
@@ -2368,6 +2442,7 @@ export interface Service {
   is_active: boolean;
   pricing_tiers?: ServicePricingTier[];
   add_ons?: ServiceAddOn[];
+  product_requirements?: ServiceProductRequirement[];
   created_at?: string;
   updated_at?: string;
 }
@@ -2709,6 +2784,37 @@ export interface TimeOffRequestInput {
   reason?: string;
 }
 
+export interface DepartmentRow {
+  id: string;
+  name: string;
+  description?: string;
+  staff_count?: number;
+  created_at?: string;
+}
+
+export const departmentsApi = {
+  list: async (): Promise<{ data?: DepartmentRow[]; error?: string }> => {
+    const res = await api<DepartmentRow[] | { data: DepartmentRow[] }>('/api/departments');
+    if (res.error) return { error: res.error };
+    const list = Array.isArray(res.data) ? res.data : listData(res.data);
+    return { data: list };
+  },
+  create: (body: { name: string; description?: string }) =>
+    api<DepartmentRow>('/api/departments', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: { name: string; description?: string }) =>
+    api<DepartmentRow>(`/api/departments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) =>
+    api<null>(`/api/departments/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
 export const staffApi = {
   list: async (params?: { branch_id?: string; include_inactive?: boolean }): Promise<{ data?: StaffMember[]; error?: string }> => {
     const res = await api<StaffMember[] | { data: StaffMember[] }>('/api/staff' + qs(params ?? {}));
@@ -2772,6 +2878,40 @@ export const staffTimeApi = {
     api<StaffTimeEntryRow>(`/api/staff-time-entries/${id}/clock-out`, {
       method: 'POST',
     }),
+};
+
+export interface StaffShiftRow {
+  id: string;
+  staff_id: string;
+  branch_id?: string | null;
+  date: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  shift_type: string;
+  notes?: string | null;
+  is_recurring: boolean;
+  recurring_rule?: string | null;
+  staff?: StaffMember;
+  branch?: Location;
+  created_at?: string;
+}
+
+export const staffShiftsApi = {
+  list: (params?: { from?: string; to?: string; staff_id?: string; branch_id?: string }) =>
+    api<StaffShiftRow[] | { data: StaffShiftRow[] }>(`/api/staff-shifts${qs(params ?? {})}`),
+  create: (body: Partial<StaffShiftRow>) =>
+    api<StaffShiftRow>('/api/staff-shifts', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: Partial<StaffShiftRow>) =>
+    api<StaffShiftRow>(`/api/staff-shifts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) =>
+    api<null>(`/api/staff-shifts/${id}`, { method: 'DELETE' }),
 };
 
 export const staffPerformanceApi = {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, CheckCircle2, Clock, DollarSign, Users } from 'lucide-react';
 import FlowTopbar from '@/components/layout/FlowTopbar';
 import CalendarGrid from '@/components/calendar/CalendarGrid';
 import AppointmentDetailPanel from '@/components/calendar/AppointmentDetailPanel';
@@ -9,6 +9,7 @@ import SaleCheckoutForm from '@/components/pos/SaleCheckoutForm';
 import { appointmentsApi, clientsApi, locationsApi, servicesApi, staffApi, settingsApi, type Appointment, type Client, type Location, type Service, type StaffMember } from '@/lib/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Combobox } from '@/components/ui/combobox';
 import { useLocale } from '@/components/LocaleProvider';
 import { getDashboardT } from '@/lib/i18n-dashboard';
 import type { PublicLocale } from '@/lib/i18n-public';
@@ -231,18 +232,6 @@ export default function AppointmentsPage() {
     if (viewMode !== 'list') setRangeMode(viewMode);
   }, [viewMode]);
 
-  // Lightweight "real-time" sync via polling
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (pollInFlightRef.current) return;
-      pollInFlightRef.current = true;
-      void loadAppointments().finally(() => {
-        pollInFlightRef.current = false;
-      });
-    }, 5000);
-    return () => clearInterval(id);
-  }, [viewMode, focusDate, rangeMode]);
-
   // Preload reference data for walk-in bookings + staff colors
   useEffect(() => {
     Promise.all([locationsApi.list(), servicesApi.list(), clientsApi.list(), staffApi.list(), settingsApi.get()]).then(([loc, svc, cls, stf, profile]) => {
@@ -415,53 +404,106 @@ export default function AppointmentsPage() {
       <FlowTopbar />
 
       <div className="cal-layout grid gap-3 xl:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="cal-sidebar elite-panel-soft h-fit p-3 xl:sticky xl:top-20">
-          <div className="cal-date-big rounded-xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-3 text-center">
-            <p className="text-[10px] uppercase tracking-[0.2em] elite-subtle">Today</p>
-            <p className="mt-1 text-4xl font-bold text-[var(--elite-orange)]">{focus.getDate()}</p>
-            <p className="text-xs elite-subtle">{focus.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
+        <aside className="cal-sidebar elite-panel-soft h-fit p-4 xl:sticky xl:top-20 space-y-6">
+          {/* Big Date Card */}
+          <div className="cal-date-big rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] p-5 text-center shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--elite-orange)] mb-1">Today</p>
+            <p className="text-5xl font-black tracking-tighter text-[var(--elite-text-strong)]">{focus.getDate()}</p>
+            <p className="text-xs font-medium elite-subtle mt-1">{focus.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
           </div>
-          <div className="mt-3 space-y-2">
-            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
-              <p className="text-[10px] uppercase elite-subtle">Total Appointments</p>
-              <p className="text-sm font-semibold elite-title">{appointments.length}</p>
+
+          {/* Unified Metrics Card */}
+          <div className="rounded-2xl border border-[var(--elite-border)] bg-[var(--elite-card)] overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]/50">
+              <p className="text-[11px] font-bold uppercase tracking-wider elite-title">Daily Overview</p>
             </div>
-            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
-              <p className="text-[10px] uppercase elite-subtle">Completed</p>
-              <p className="text-sm font-semibold text-[var(--elite-green)]">{doneCount}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
-              <p className="text-[10px] uppercase elite-subtle">Pending Checkout</p>
-              <p className="text-sm font-semibold text-[var(--elite-orange)]">{pendingCount}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--elite-border)] bg-[var(--elite-card)] p-2">
-              <p className="text-[10px] uppercase elite-subtle">Expected Revenue</p>
-              <p className="text-sm font-semibold text-[var(--elite-teal)]">{new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(expectedRevenue)}</p>
+            <div className="divide-y divide-[var(--elite-border)]">
+              <div className="p-4 flex items-center justify-between group transition-colors hover:bg-[var(--elite-surface)]/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[var(--elite-surface)] text-[var(--elite-muted)]">
+                    <Calendar className="size-4" />
+                  </div>
+                  <p className="text-xs font-medium elite-subtle">Total</p>
+                </div>
+                <p className="text-sm font-bold elite-title">{appointments.length}</p>
+              </div>
+              <div className="p-4 flex items-center justify-between group transition-colors hover:bg-[var(--elite-surface)]/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[var(--elite-green-dim)] text-[var(--elite-green)]">
+                    <CheckCircle2 className="size-4" />
+                  </div>
+                  <p className="text-xs font-medium elite-subtle">Completed</p>
+                </div>
+                <p className="text-sm font-bold text-[var(--elite-green)]">{doneCount}</p>
+              </div>
+              <div className="p-4 flex items-center justify-between group transition-colors hover:bg-[var(--elite-surface)]/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[var(--elite-orange-dim)] text-[var(--elite-orange)]">
+                    <Clock className="size-4" />
+                  </div>
+                  <p className="text-xs font-medium elite-subtle">Pending</p>
+                </div>
+                <p className="text-sm font-bold text-[var(--elite-orange)]">{pendingCount}</p>
+              </div>
+              <div className="p-4 flex items-center justify-between bg-[var(--elite-surface)]/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[var(--elite-teal-dim)] text-[var(--elite-teal)]">
+                    <DollarSign className="size-4" />
+                  </div>
+                  <p className="text-xs font-medium elite-subtle">Revenue</p>
+                </div>
+                <p className="text-sm font-bold text-[var(--elite-teal)]">
+                  {new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }).format(expectedRevenue)}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="mb-2 text-[10px] uppercase tracking-[0.2em] elite-subtle">Staff</p>
-            <div className="staff-filter space-y-1">
-              <button type="button" onClick={() => setStaffFilter('all')} className={`staff-chip w-full rounded-lg border px-2 py-2 text-left text-xs ${staffFilter === 'all' ? 'border-[var(--elite-border-2)] bg-[var(--elite-card)] elite-title' : 'border-[var(--elite-border)] bg-transparent elite-subtle'}`}>
-                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--elite-border-2)] text-[10px]">ALL</span>
-                All Staff
+
+          {/* Staff Filter */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Users className="size-3.5 elite-subtle" />
+              <p className="text-[11px] font-bold uppercase tracking-wider elite-title">Staff Members</p>
+            </div>
+            <div className="staff-filter space-y-1.5 max-h-[300px] elite-scrollbar overflow-y-auto pr-1">
+              <button 
+                type="button" 
+                onClick={() => setStaffFilter('all')} 
+                className={`flex items-center w-full rounded-xl px-3 py-2.5 text-left text-xs transition-all ${
+                  staffFilter === 'all' 
+                    ? 'bg-[var(--elite-text-strong)] text-white shadow-md shadow-black/10' 
+                    : 'bg-transparent hover:bg-[var(--elite-border)]/30 elite-subtle'
+                }`}
+              >
+                <div className={`mr-3 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${
+                  staffFilter === 'all' ? 'bg-white/20' : 'bg-[var(--elite-border)]'
+                }`}>
+                  ALL
+                </div>
+                <span className="font-semibold uppercase tracking-wide">All Staff</span>
               </button>
               {staffRows.map(([id, name]) => {
                 const hex = staffColorMap.get(id);
+                const isActive = staffFilter === id;
                 return (
-                  <button key={id} type="button" onClick={() => setStaffFilter(id)} className={`staff-chip w-full rounded-lg border px-2 py-2 text-left text-xs ${staffFilter === id ? 'border-[var(--elite-border-2)] bg-[var(--elite-card)] elite-title' : 'border-[var(--elite-border)] bg-transparent elite-subtle'}`}>
-                    <span
-                      className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-white"
-                      style={hex ? { backgroundColor: hex } : { backgroundColor: 'var(--elite-border-2)', color: 'inherit' }}
+                  <button 
+                    key={id} 
+                    type="button" 
+                    onClick={() => setStaffFilter(id)} 
+                    className={`flex items-center w-full rounded-xl px-3 py-2.5 text-left text-xs transition-all ${
+                      isActive 
+                        ? 'bg-[var(--elite-card)] border border-[var(--elite-border)] shadow-sm elite-text-strong' 
+                        : 'bg-transparent hover:bg-[var(--elite-border)]/30 elite-subtle'
+                    }`}
+                  >
+                    <div 
+                      className="mr-3 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-inner"
+                      style={hex ? { backgroundColor: hex } : { backgroundColor: 'var(--elite-border-2)' }}
                     >
-                      {name
-                        .split(' ')
-                        .map((x) => x[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </span>
-                    {name}
+                      {name.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className={`font-medium ${isActive ? 'font-bold' : ''}`}>{name}</span>
+                    {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--elite-orange)]" />}
                   </button>
                 );
               })}
@@ -469,41 +511,53 @@ export default function AppointmentsPage() {
           </div>
         </aside>
 
-        <section className="cal-main">
-          <h1 className="font-display text-2xl font-semibold mb-2 elite-title">Today&apos;s Schedule</h1>
-          <p className="mb-3 text-xs elite-subtle">Click any appointment to see details. Click checkout to process payment.</p>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => moveFocus('prev')} className="size-10 rounded-xl elite-btn-ghost transition-colors" aria-label={td('calNavPrevious')}>
-            <ChevronLeft className="size-4" />
-          </button>
-          <button type="button" onClick={() => moveFocus('today')} className="px-3 py-2 rounded-xl text-sm font-semibold elite-btn-ghost transition-colors" aria-label={td('calNavToday')}>
-            {td('calNavToday')}
-          </button>
-          <button type="button" onClick={() => moveFocus('next')} className="size-10 rounded-xl elite-btn-ghost transition-colors" aria-label={td('calNavNext')}>
-            <ChevronRight className="size-4" />
-          </button>
-          <span className="ml-1 sm:ml-2 text-sm font-medium elite-subtle">{navLabel()}</span>
-        </div>
+        <section className="cal-main space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <h1 className="font-display text-3xl font-black tracking-tight elite-title">Schedule</h1>
+              <p className="text-sm elite-subtle mt-1">Manage your appointments and daily operations.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowWalkIn(true)}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold elite-btn-primary shadow-lg shadow-[var(--elite-orange-dim)] transition-all active:scale-95"
+              >
+                {td('calWalkIn')}
+              </button>
+            </div>
+          </div>
 
-        <div className="flex gap-1">
-          <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'day' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Day</button>
-          <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'week' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Week</button>
-          <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'month' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>Month</button>
-          <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${viewMode === 'list' ? 'elite-btn-primary' : 'elite-btn-ghost'}`}>List</button>
-        </div>
+          <div className="elite-panel p-2 flex flex-wrap items-center justify-between gap-3 bg-[var(--elite-surface)]/50">
+            <div className="flex items-center gap-1 bg-[var(--elite-card)] rounded-xl border border-[var(--elite-border)] p-1 shadow-sm">
+              <button type="button" onClick={() => moveFocus('prev')} className="size-9 rounded-lg elite-btn-ghost border-none hover:bg-[var(--elite-surface)] transition-colors" aria-label={td('calNavPrevious')}>
+                <ChevronLeft className="size-4" />
+              </button>
+              <button type="button" onClick={() => moveFocus('today')} className="px-4 py-1.5 rounded-lg text-xs font-bold elite-btn-ghost border-none hover:bg-[var(--elite-surface)] transition-colors" aria-label={td('calNavToday')}>
+                Today
+              </button>
+              <button type="button" onClick={() => moveFocus('next')} className="size-9 rounded-lg elite-btn-ghost border-none hover:bg-[var(--elite-surface)] transition-colors" aria-label={td('calNavNext')}>
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
 
-        <button
-          type="button"
-          onClick={() => setShowWalkIn(true)}
-          className="sm:ml-auto px-4 py-2 rounded-xl text-sm font-semibold elite-btn-primary transition-colors"
-        >
-          {td('calWalkIn')}
-        </button>
-      </div>
-      {viewMode !== 'list' && (viewMode === 'week' || viewMode === 'month') && (
-        <p className="text-xs text-muted-foreground mb-4">{td('calStaffColumnsHint')}</p>
-      )}
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-bold elite-title">{navLabel()}</span>
+              <div className="h-4 w-px bg-[var(--elite-border)] hidden sm:block" />
+              <div className="flex gap-1 bg-[var(--elite-card)] rounded-xl border border-[var(--elite-border)] p-1 shadow-sm">
+                <button type="button" onClick={() => { setRangeMode('day'); setViewMode('day'); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'day' ? 'bg-[var(--elite-text-strong)] text-white' : 'elite-btn-ghost border-none elite-subtle hover:bg-[var(--elite-surface)]'}`}>Day</button>
+                <button type="button" onClick={() => { setRangeMode('week'); setViewMode('week'); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'week' ? 'bg-[var(--elite-text-strong)] text-white' : 'elite-btn-ghost border-none elite-subtle hover:bg-[var(--elite-surface)]'}`}>Week</button>
+                <button type="button" onClick={() => { setRangeMode('month'); setViewMode('month'); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'month' ? 'bg-[var(--elite-text-strong)] text-white' : 'elite-btn-ghost border-none elite-subtle hover:bg-[var(--elite-surface)]'}`}>Month</button>
+                <button type="button" onClick={() => setViewMode('list')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-[var(--elite-text-strong)] text-white' : 'elite-btn-ghost border-none elite-subtle hover:bg-[var(--elite-surface)]'}`}>List</button>
+              </div>
+            </div>
+          </div>
+
+          {viewMode !== 'list' && (viewMode === 'week' || viewMode === 'month') && (
+            <div className="px-1">
+              <p className="text-[10px] uppercase font-bold tracking-widest text-[var(--elite-orange)] opacity-80">{td('calStaffColumnsHint')}</p>
+            </div>
+          )}
 
       {viewMode !== 'list' &&
         ((viewMode === 'day' || viewMode === 'week') && appointments.length === 0 ? (
@@ -775,48 +829,48 @@ export default function AppointmentsPage() {
             <div className="space-y-3 text-sm">
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Location</label>
-                <select
-                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
+                <Combobox
                   value={walkInForm.location_id}
-                  onChange={(e) => setWalkInForm((f) => ({ ...f, location_id: e.target.value }))}
-                >
-                  <option value="">Select location</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(value) => setWalkInForm((f) => ({ ...f, location_id: value }))}
+                  options={locations.map((l) => ({
+                    value: l.id,
+                    label: l.name,
+                  }))}
+                  placeholder="Select location"
+                  searchPlaceholder="Search locations..."
+                  emptyText="No locations found."
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Client</label>
-                <select
-                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
+                <Combobox
                   value={walkInForm.client_id}
-                  onChange={(e) => setWalkInForm((f) => ({ ...f, client_id: e.target.value }))}
-                >
-                  <option value="">Select client</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.full_name}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(value) => setWalkInForm((f) => ({ ...f, client_id: value }))}
+                  options={clients.map((c) => ({
+                    value: c.id,
+                    label: c.full_name,
+                  }))}
+                  placeholder="Select client"
+                  searchPlaceholder="Search clients..."
+                  emptyText="No clients found."
+                  className="w-full"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Service</label>
-                <select
-                  className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground"
+                <Combobox
                   value={walkInForm.service_id}
-                  onChange={(e) => setWalkInForm((f) => ({ ...f, service_id: e.target.value }))}
-                >
-                  <option value="">Select service</option>
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(value) => setWalkInForm((f) => ({ ...f, service_id: value }))}
+                  options={services.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                  }))}
+                  placeholder="Select service"
+                  searchPlaceholder="Search services..."
+                  emptyText="No services found."
+                  className="w-full"
+                />
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">

@@ -219,24 +219,41 @@ export function AppShell({
       key={i.href}
       href={i.href}
       className={cn(
-        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13.5px] font-medium transition-all duration-200 ease-out",
         isActive(i.href)
-          ? "bg-[var(--elite-orange)] text-white border border-[var(--elite-orange)]"
-          : "text-[color:var(--sidebar-nav-text)] hover:bg-accent hover:text-foreground",
+          ? "bg-[var(--elite-orange)]/10 text-[var(--elite-orange)]"
+          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-100",
         collapsed && mode === "desktop" ? "justify-center" : "",
       )}
       title={collapsed && mode === "desktop" ? i.label : undefined}
     >
+      {/* Active Indicator Bar */}
+      {isActive(i.href) && mode === "desktop" && !collapsed && (
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-[var(--elite-orange)] shadow-[2px_0_8px_rgba(249,115,22,0.3)] animate-in slide-in-from-left-2 duration-300" />
+      )}
+
       <span
         className={cn(
+          "shrink-0 transition-colors duration-200",
           isActive(i.href)
-            ? "text-white"
-            : "text-[color:var(--sidebar-nav-text)] group-hover:text-foreground",
+            ? "text-[var(--elite-orange)]"
+            : "text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200",
         )}
       >
-        {i.icon ?? <Dot className="size-5" />}
+        {i.icon ? (
+          <span className={cn("[&>svg]:size-[18px]")}>{i.icon}</span>
+        ) : (
+          <Dot className="size-5" />
+        )}
       </span>
-      {!collapsed || mode === "mobile" ? <span>{i.label}</span> : null}
+      {!collapsed || mode === "mobile" ? (
+        <span className={cn(
+          "truncate",
+          isActive(i.href) ? "font-semibold" : ""
+        )}>
+          {i.label}
+        </span>
+      ) : null}
     </Link>
   );
 
@@ -266,8 +283,8 @@ export function AppShell({
                       type="button"
                       onClick={() => toggleGroupFold(group.id)}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide",
-                        "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                        "flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-[10px] font-bold uppercase tracking-[0.08em]",
+                        "text-zinc-400 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900/30 hover:text-zinc-600 transition-colors",
                       )}
                       aria-expanded={!folded}
                     >
@@ -309,14 +326,14 @@ export function AppShell({
       {/* Sidebar desktop */}
       <aside
         className={cn(
-          "hidden lg:flex fixed inset-y-0 left-0 z-30 border-r bg-background/80 backdrop-blur-sm",
-          collapsed ? "w-[72px]" : "w-64",
+          "hidden lg:flex fixed inset-y-0 left-0 z-30 border-r border-zinc-200/50 dark:border-zinc-800/50 bg-white dark:bg-zinc-950 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
+          collapsed ? "w-[72px]" : "w-[270px]",
         )}
       >
-        <div className="flex w-full flex-col">
+        <div className="flex w-full flex-col px-3 py-4">
           <div
             className={cn(
-              "h-14 shrink-0 border-b px-3 flex items-center",
+              "h-16 shrink-0 px-3 mb-4 flex items-center bg-zinc-50/50 dark:bg-zinc-900/30 rounded-2xl border border-zinc-100 dark:border-zinc-800/50",
               collapsed ? "justify-center" : "justify-between",
             )}
           >
@@ -376,10 +393,10 @@ export function AppShell({
       </aside>
 
       {/* Main column */}
-      <div className={cn("min-h-screen flex flex-col overflow-x-hidden", "lg:pl-64", collapsed ? "lg:pl-[72px]" : "")}>
+      <div className={cn("min-h-screen flex flex-col overflow-x-hidden", "lg:pl-[270px]", collapsed ? "lg:pl-[72px]" : "")}>
         {/* Topbar */}
-        <header className="sticky top-0 z-30 h-14 border-b bg-background">
-          <div className="h-full px-4 sm:px-6 flex items-center gap-3">
+        <header className="sticky top-0 z-30 h-16 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl shadow-sm">
+          <div className="h-full px-4 sm:px-8 flex items-center gap-4">
             <Button
               type="button"
               variant="ghost"
@@ -391,12 +408,12 @@ export function AppShell({
               <Menu />
             </Button>
 
-            <div className="flex-1">
-              <div className="relative max-w-xl">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex-1 flex justify-center lg:justify-start">
+              <div className="relative w-full max-w-md group">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-zinc-400 group-focus-within:text-[var(--elite-orange)] transition-colors" />
                 <Input
-                  placeholder="Search… (Ctrl+K)"
-                  className="pl-10 pr-24 h-9"
+                  placeholder="Quick search… (Ctrl+K)"
+                  className="pl-10 pr-24 h-10 rounded-xl bg-zinc-100/50 dark:bg-zinc-900/50 border-transparent focus:bg-white dark:focus:bg-zinc-950 focus:ring-[var(--elite-orange)]/20 focus:border-[var(--elite-orange)]/30 transition-all placeholder:text-zinc-400"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const lock = document.body.getAttribute("data-ui-lock") ?? "";
@@ -407,20 +424,22 @@ export function AppShell({
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium tracking-wider uppercase text-zinc-400 inline-flex items-center gap-1 rounded-lg border border-zinc-200/60 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 px-2 py-1 shadow-sm"
                   onClick={() => onOpenCommandPalette?.()}
                 >
-                  <CommandIcon className="size-3" />
-                  K
+                  <span className="text-xs opacity-70">⌘</span>
+                  <span>K</span>
                 </button>
               </div>
             </div>
 
-            <Button type="button" variant="ghost" size="icon" aria-label="Notifications">
-              <Bell />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors text-zinc-500 hover:text-zinc-900" aria-label="Notifications">
+                <Bell className="size-5" />
+              </Button>
 
-            <ThemeToggle className="size-9 shrink-0 border-transparent bg-transparent shadow-none hover:bg-accent" />
+              <ThemeToggle className="size-9 shrink-0 border-transparent bg-transparent shadow-none rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 hover:text-zinc-900" />
+            </div>
 
             {/* User menu dropdown */}
             <UserMenu

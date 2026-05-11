@@ -313,7 +313,7 @@ export default function CalendarGrid({
   const copy = { ...defaultCalendarCopy, ...calendarCopy };
   const dowLabels = (copy.dowLabels?.length === 7 ? copy.dowLabels : DEFAULT_DOW) as readonly string[];
 
-  const HOUR_HEIGHT = 64;
+  const HOUR_HEIGHT = 80;
   const pad2 = (n: number) => String(n).padStart(2, '0');
 
   const staffPalette = [
@@ -393,6 +393,7 @@ export default function CalendarGrid({
   const isActiveStatus = (status: string) => (ACTIVE_STATUSES as readonly string[]).includes(status);
 
   const dateKeyLocal = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const todayKey = dateKeyLocal(new Date());
 
   const minutesFromDate = (d: Date) => d.getHours() * 60 + d.getMinutes();
 
@@ -600,13 +601,14 @@ export default function CalendarGrid({
                     const more = Math.max(0, dayAppointments.length - top.length);
                     const dk = dateKeyLocal(d);
 
+                    const isToday = dk === todayKey;
                     return (
                       <MonthDayDroppable
                         key={idx}
                         id={`month-cell-${dk}`}
                         day={d}
-                        className={`p-2 text-left border-r border-b border-border hover:bg-muted/20 transition-colors cursor-pointer ${
-                          inMonth ? 'bg-card' : 'bg-muted/20'
+                        className={`p-2 text-left border-r border-b border-[var(--elite-border)] hover:bg-[var(--elite-card-2)]/40 transition-colors cursor-pointer ${
+                          isToday ? 'bg-[var(--elite-orange-dim)]' : inMonth ? 'bg-[var(--elite-card)]' : 'bg-[var(--elite-surface)]'
                         }`}
                         title={fmtMonthDay(d)}
                         onPointerClick={() => onDayClick?.(d)}
@@ -616,7 +618,12 @@ export default function CalendarGrid({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span
-                            className={`text-sm font-medium ${inMonth ? 'text-salon-espresso' : 'text-salon-stone/60'}`}
+                            className={`text-sm font-bold leading-none ${
+                              isToday
+                                ? 'inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs'
+                                : inMonth ? 'elite-title' : 'elite-subtle opacity-50'
+                            }`}
+                            style={isToday ? { backgroundColor: 'var(--elite-orange)' } : undefined}
                           >
                             {d.getDate()}
                           </span>
@@ -639,8 +646,12 @@ export default function CalendarGrid({
                                 disabled={!draggable}
                                 ariaLabel={aria}
                                 onOpen={() => onAppointmentClick?.(a.id)}
-                            className={`w-full text-left rounded-md border px-2 py-1 text-[10px] truncate ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
-                            style={staffMeta.style}
+                            className="w-full text-left rounded-md px-2 py-1 text-[10px] truncate elite-title font-medium"
+                            style={{
+                              background: 'var(--elite-card)',
+                              border: '1px solid var(--elite-border)',
+                              borderLeft: `3px solid ${staffColorMap?.get(getStaffId(a) ?? '') ?? 'var(--elite-orange)'}`,
+                            }}
                               >
                                 {clientName(a)}
                               </MonthDraggableChip>
@@ -664,114 +675,7 @@ export default function CalendarGrid({
     );
   }
 
-  if (view === 'day') {
-    const hours = ['09', '10', '11', '12', '13', '14', '15', '16', '17'];
-    const focusKey = dateKeyLocal(focusDate);
-    const dayAppointments = appointments
-      .filter((a) => {
-        const s = parseStart(a);
-        return s ? dateKeyLocal(s) === focusKey : false;
-      })
-      .sort((a, b) => {
-        const sa = parseStart(a)?.getTime() ?? 0;
-        const sb = parseStart(b)?.getTime() ?? 0;
-        return sa - sb;
-      });
-
-    const byHour = new Map<string, Appointment[]>();
-    for (const h of hours) byHour.set(h, []);
-    for (const appt of dayAppointments) {
-      const s = parseStart(appt);
-      if (!s) continue;
-      const key = pad2(s.getHours());
-      if (byHour.has(key)) byHour.get(key)!.push(appt);
-    }
-
-    return (
-      <DndContext sensors={sensors} onDragEnd={handleDayDragEnd}>
-        <div className="elite-panel overflow-hidden">
-          <div className="border-b border-[var(--elite-border)] px-4 py-3">
-            <p className="text-xs elite-subtle">{copy.dayStaffSubtitle}</p>
-          </div>
-          <div>
-            {hours.map((hour) => (
-              <DayHourDroppable
-                key={hour}
-                id={`day-hour-${hour}`}
-                data={{ kind: 'day-hour', day: focusDate, hour: parseInt(hour, 10) }}
-                className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border-b border-[var(--elite-border)] px-4 py-3 transition-colors"
-              >
-                <div className="pt-1 text-right text-[11px] elite-subtle">{hour}:00</div>
-                <div className="space-y-2">
-                  {(byHour.get(hour) ?? []).length === 0 ? (
-                    <div className="h-5" />
-                  ) : (
-                    (byHour.get(hour) ?? []).map((a) => {
-                      const st = statusMeta(a.status);
-                      const staffMeta = staffColorMeta(getStaffId(a));
-                      const start = parseStart(a);
-                      const timeText = start ? `${pad2(start.getHours())}:${pad2(start.getMinutes())}` : '--:--';
-                      const draggable = isActiveStatus(a.status) && changingId !== a.id;
-                      return (
-                        <DayDraggableCard
-                          key={a.id}
-                          appt={a}
-                          disabled={!draggable}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-[var(--elite-border-2)] bg-[var(--elite-card-2)] p-3 touch-none"
-                          onOpen={() => onAppointmentClick?.(a.id)}
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="w-12 shrink-0 text-xs elite-subtle">{timeText}</div>
-                            <div
-                              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
-                              style={staffMeta.style}
-                            >
-                              {(clientName(a) || '--')
-                                .split(' ')
-                                .map((x) => x[0])
-                                .join('')
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="block truncate text-left text-sm font-semibold elite-title">
-                                {clientName(a)}
-                              </p>
-                              <p className="truncate text-xs elite-subtle">{serviceName(a)}</p>
-                              <p className="truncate text-[11px] elite-subtle">
-                                {staffName(a)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${st.bg} ${st.text}`}>
-                              {st.label}
-                            </span>
-                            {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onAppointmentCheckout(a.id);
-                                }}
-                                className="rounded-md bg-[var(--elite-orange)] px-3 py-1 text-[11px] font-semibold text-white"
-                              >
-                                {copy.checkout}
-                              </button>
-                            )}
-                          </div>
-                        </DayDraggableCard>
-                      );
-                    })
-                  )}
-                </div>
-              </DayHourDroppable>
-            ))}
-          </div>
-        </div>
-      </DndContext>
-    );
-  }
+  // day view previously had a card list layout, now it falls through to the grid layout.
 
   const days = getDayColumns();
 
@@ -861,40 +765,58 @@ export default function CalendarGrid({
         key={a.id}
         appt={a}
         disabled={!draggable}
-        className={`absolute rounded-lg border shadow-sm p-2 text-left cursor-pointer touch-none ${staffMeta.bg} ${staffMeta.border} ${staffMeta.text}`}
-        style={{ top, height, left: 6, right: 6, ...staffMeta.style } as React.CSSProperties}
-        title={`${clientName(a)} - ${serviceName(a)} - ${staffName(a)}`}
+        className="absolute rounded-lg text-left cursor-pointer touch-none overflow-hidden"
+        style={{
+          top,
+          height,
+          left: 3,
+          right: 3,
+          background: 'var(--elite-card)',
+          border: '1px solid var(--elite-border-2)',
+          borderLeft: `3px solid ${staffColorMap?.get(getStaffId(a) ?? '') ?? 'var(--elite-orange)'}`,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+        } as React.CSSProperties}
+        title={`${clientName(a)} — ${serviceName(a)} — ${staffName(a)}`}
         ariaLabel={`${copy.ariaAppointment.replace('{id}', a.id)} (${staffName(a)})`}
         onOpen={() => onAppointmentClick?.(a.id)}
       >
-        <div className="text-[11px] font-medium truncate">{clientName(a)}</div>
-        <div className="text-[10px] truncate opacity-90">
-          {serviceName(a)} • {staffName(a)}
-        </div>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="text-[10px] font-medium">{statusMetaForBlock.label}</span>
-        </div>
-        {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && (
-          <div className="mt-1 pt-1 border-t border-black/10">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAppointmentCheckout(a.id);
-              }}
-              className="text-[10px] px-2 py-0.5 rounded border bg-salon-gold text-white border-salon-gold hover:opacity-90"
-            >
-              {copy.checkout}
-            </button>
+        <div className="px-2 py-1.5 h-full flex flex-col min-h-0 gap-px">
+          <div className="flex items-center gap-1">
+            <span
+              className="shrink-0 w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: statusMetaForBlock.text.includes('gold') || statusMetaForBlock.text.includes('orange') ? 'var(--elite-orange)' : statusMetaForBlock.text.includes('blue') ? 'var(--elite-blue)' : statusMetaForBlock.text.includes('emerald') || statusMetaForBlock.text.includes('green') ? 'var(--elite-green)' : '#9ca3af' }}
+            />
+            <span className="text-[9px] font-semibold elite-subtle truncate">
+              {`${pad2(clampedStart.getHours())}:${pad2(clampedStart.getMinutes())}`}–{`${pad2(clampedEnd.getHours())}:${pad2(clampedEnd.getMinutes())}`}
+            </span>
           </div>
-        )}
+          <div className="text-[11px] font-semibold leading-tight truncate elite-title">{clientName(a)}</div>
+          {height > 52 && (
+            <div className="text-[10px] truncate elite-subtle">{serviceName(a)}</div>
+          )}
+          {onAppointmentCheckout && (a.status === 'scheduled' || a.status === 'checked_in') && height > 72 && (
+            <div className="mt-auto pt-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAppointmentCheckout(a.id);
+                }}
+                className="text-[9px] px-2 py-0.5 rounded font-semibold text-white leading-none"
+                style={{ backgroundColor: staffColorMap?.get(getStaffId(a) ?? '') ?? 'var(--elite-orange)' }}
+              >
+                {copy.checkout}
+              </button>
+            </div>
+          )}
+        </div>
       </TimeDraggableBlock>
     );
   };
 
   const anyVisible = visibleAppointments.length > 0;
 
-  const dayViewStaffMode = false;
+  const dayViewStaffMode = view === 'day';
   const singleDay = days[0];
   const dayAppointmentsForStaff = singleDay ? appointmentsForDay(singleDay) : [];
   const staffColumns = dayViewStaffMode ? buildStaffColumnsForDay(dayAppointmentsForStaff) : [];
@@ -908,14 +830,17 @@ export default function CalendarGrid({
     hourHeight: HOUR_HEIGHT,
   });
 
+  const nowDate = new Date();
+  const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+  const nowTopPx = ((nowMinutes - TIME_START * 60) / 60) * HOUR_HEIGHT;
+  const showNow = nowMinutes >= TIME_START * 60 && nowMinutes < TIME_END * 60;
+
   return (
     <DndContext sensors={sensors} onDragEnd={handleTimeDragEnd}>
       <div className="elite-panel overflow-hidden">
-        <div className="flex flex-col gap-1 px-5 py-4 border-b border-[var(--elite-border)] sm:flex-row sm:items-center sm:gap-2">
-          <span className="text-[var(--elite-orange)] font-display font-semibold capitalize">{view}</span>
-          <span className="text-xs elite-subtle">
-            {dayViewStaffMode ? copy.dayStaffSubtitle : copy.weekSubtitle}
-          </span>
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-[var(--elite-border)] bg-[var(--elite-surface)]">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--elite-orange)]">{view === 'day' ? 'Day — Staff Columns' : 'Week'}</span>
+          <span className="text-[10px] elite-subtle hidden sm:inline">{dayViewStaffMode ? copy.dayStaffSubtitle : copy.weekSubtitle}</span>
         </div>
 
         <div className="elite-scrollbar overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
@@ -927,47 +852,66 @@ export default function CalendarGrid({
               <div />
               {dayViewStaffMode && singleDay
                 ? staffColumns.map((col) => {
-                    const chipMeta =
+                    const accentHex =
                       col.staffId && col.staffId !== '__none__'
-                        ? staffColorMeta(col.staffId)
-                        : { bg: 'bg-muted/50', border: 'border-salon-sand/60', text: 'text-salon-stone' };
+                        ? (staffColorMap?.get(col.staffId) ?? '#ff5b04')
+                        : undefined;
+                    const initials = col.label
+                      .split(' ')
+                      .map((x: string) => x[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase();
                     return (
                       <div
                         key={col.key}
-                        className="px-2 py-3 text-left border-b border-border bg-muted/50"
+                        className="px-2 py-3 text-center border-b border-[var(--elite-border)] bg-[var(--elite-surface)] flex flex-col items-center gap-1"
                       >
-                        <p className="text-[10px] font-medium text-salon-stone/80 mb-1">
-                          {singleDay.toLocaleDateString(undefined, {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={`shrink-0 w-2.5 h-2.5 rounded-full border ${chipMeta.bg} ${chipMeta.border}`}
-                            style={chipMeta.style ? { backgroundColor: chipMeta.style.color, borderColor: chipMeta.style.borderColor } : undefined}
-                            aria-hidden
-                          />
-                          <span className="text-xs font-semibold text-salon-stone truncate">{col.label}</span>
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                          style={accentHex
+                            ? { backgroundColor: accentHex, color: '#fff' }
+                            : { backgroundColor: 'var(--elite-border-2)', color: 'var(--elite-text)' }}
+                        >
+                          {initials}
                         </div>
+                        <p className="text-[10px] font-semibold elite-title truncate max-w-[110px] leading-tight">{col.label}</p>
+                        <p className="text-[9px] elite-subtle">
+                          {singleDay.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
                       </div>
                     );
                   })
-                : days.map((d) => (
-                    <div
-                      key={d.toISOString()}
-                    className="px-3 py-3 text-left text-xs font-semibold elite-subtle border-b border-[var(--elite-border)] bg-[var(--elite-surface)]"
-                    >
-                      {d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </div>
-                  ))}
+                : days.map((d) => {
+                    const isColToday = dateKeyLocal(d) === todayKey;
+                    return (
+                      <div
+                        key={d.toISOString()}
+                        className={`px-3 py-2 text-center border-b border-[var(--elite-border)] flex flex-col items-center gap-0.5 ${
+                          isColToday ? 'bg-[var(--elite-orange-dim)]' : 'bg-[var(--elite-surface)]'
+                        }`}
+                      >
+                        <span className="text-[10px] font-semibold elite-subtle uppercase tracking-wide">
+                          {d.toLocaleDateString(undefined, { weekday: 'short' })}
+                        </span>
+                        <span
+                          className={`text-sm font-bold leading-none ${
+                            isColToday ? 'inline-flex items-center justify-center w-6 h-6 rounded-full text-white' : 'elite-title'
+                          }`}
+                          style={isColToday ? { backgroundColor: 'var(--elite-orange)' } : undefined}
+                        >
+                          {d.getDate()}
+                        </span>
+                      </div>
+                    );
+                  })}
 
-              <div className="bg-muted/50" style={{ height: totalHeight }}>
+              <div className="bg-[var(--elite-surface)]" style={{ height: totalHeight }}>
                 {hours.map((h) => (
                   <div
                     key={h}
-                    className="h-[64px] border-b border-[var(--elite-border)] flex items-start justify-end pr-2 pt-2 text-[10px] elite-subtle"
+                    className="border-b border-[var(--elite-border)] flex items-start justify-end pr-2 pt-1.5 text-[10px] font-medium elite-subtle"
+                    style={{ height: HOUR_HEIGHT }}
                   >
                     {h}:00
                   </div>
@@ -987,12 +931,26 @@ export default function CalendarGrid({
                         staffColumnLayout
                       >
                         {hours.map((h, i) => (
-                          <div
-                            key={h}
-                            className="absolute left-0 right-0 border-t border-border"
-                            style={{ top: i * HOUR_HEIGHT }}
-                          />
+                          <React.Fragment key={h}>
+                            <div
+                              className="absolute left-0 right-0 border-t border-[var(--elite-border)]"
+                              style={{ top: i * HOUR_HEIGHT }}
+                            />
+                            <div
+                              className="absolute left-0 right-0 border-t border-dashed border-[var(--elite-border)]"
+                              style={{ top: i * HOUR_HEIGHT + HOUR_HEIGHT / 2, opacity: 0.4 }}
+                            />
+                          </React.Fragment>
                         ))}
+                        {showNow && (
+                          <div
+                            className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+                            style={{ top: nowTopPx - 1 }}
+                          >
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 -ml-1 shadow-sm" />
+                            <div className="flex-1 border-t-2 border-red-500" />
+                          </div>
+                        )}
                         {dayAppointmentsForStaff
                           .filter((a) => appointmentInStaffColumn(a, col))
                           .map((a) => renderAppointmentBlock(a, singleDay))}
@@ -1009,12 +967,26 @@ export default function CalendarGrid({
                         height={totalHeight}
                       >
                         {hours.map((h, i) => (
-                          <div
-                            key={h}
-                            className="absolute left-0 right-0 border-t border-border"
-                            style={{ top: i * HOUR_HEIGHT }}
-                          />
+                          <React.Fragment key={h}>
+                            <div
+                              className="absolute left-0 right-0 border-t border-[var(--elite-border)]"
+                              style={{ top: i * HOUR_HEIGHT }}
+                            />
+                            <div
+                              className="absolute left-0 right-0 border-t border-dashed border-[var(--elite-border)]"
+                              style={{ top: i * HOUR_HEIGHT + HOUR_HEIGHT / 2, opacity: 0.4 }}
+                            />
+                          </React.Fragment>
                         ))}
+                        {showNow && dateKeyLocal(day) === todayKey && (
+                          <div
+                            className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+                            style={{ top: nowTopPx - 1 }}
+                          >
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 -ml-1 shadow-sm" />
+                            <div className="flex-1 border-t-2 border-red-500" />
+                          </div>
+                        )}
                         {appointmentsForDay(day).map((a) => renderAppointmentBlock(a, day))}
                       </TimeColumnDroppable>
                     );

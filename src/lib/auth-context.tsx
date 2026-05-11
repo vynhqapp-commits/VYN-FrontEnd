@@ -38,7 +38,7 @@ interface AuthContextValue {
   loginWithOtp: (email: string, code: string) => Promise<{ user: AuthUser } | { error: string }>;
   loginWithGoogle: (credential: string) => Promise<{ user: AuthUser } | { error: string }>;
   sendOtp: (email: string, locale?: string) => Promise<string | null>;
-  registerCustomer: (body: { email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser } | { error: string }>;
+  registerCustomer: (body: { email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser; linked_customers_count?: number } | { error: string }>;
   registerSalonOwner: (body: { salon_name: string; salon_address?: string; email: string; password: string; full_name?: string; phone?: string }) => Promise<{ user: AuthUser } | { error: string }>;
   logout: () => void;
   setUser: (user: AuthUser | null) => void;
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
     setToken(data.token);
     setTenantId(null);
-    return { user: data.user };
+    return { user: data.user, linked_customers_count: data.linked_customers_count ?? 0 };
   };
 
   const registerSalonOwner = async (body: {

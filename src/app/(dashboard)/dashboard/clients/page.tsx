@@ -1,11 +1,139 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X } from 'lucide-react';
+import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X, ChevronDown, Check, Search } from 'lucide-react';
 import { clientsApi, debtApi, settingsApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
+import * as React from 'react';
+import { usePhoneInput, defaultCountries, parseCountry, FlagImage, CountryIso2 } from 'react-international-phone';
+import 'react-international-phone/style.css';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const parsedCountries = defaultCountries.map(c => parseCountry(c));
+
+function GenericPhoneInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
+  const phoneInput = usePhoneInput({
+    defaultCountry: 'us',
+    value: value || '',
+    onChange: ({ phone }) => onChange(phone),
+  });
+
+  const [open, setOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const filteredCountries = React.useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return parsedCountries;
+    return parsedCountries.filter(c => 
+      c.name.toLowerCase().includes(q) || 
+      c.dialCode.includes(q) || 
+      c.iso2.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  return (
+    <div className={cn(
+      "flex h-11 w-full items-center rounded-xl border border-[var(--elite-border)] bg-[var(--elite-surface)] pl-1.5 pr-1 transition-all focus-within:ring-2 focus-within:ring-orange-500/30 focus-within:border-orange-600/50",
+      className
+    )}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            type="button"
+            variant="ghost" 
+            role="combobox"
+            aria-expanded={open}
+            className="h-8 flex items-center gap-1.5 px-2 rounded-lg hover:bg-[var(--elite-card)] shrink-0 text-[var(--elite-text)]"
+          >
+            <div className="flex items-center gap-1">
+              <FlagImage iso2={phoneInput.country.iso2} size="20px" className="rounded-sm shrink-0 pointer-events-none shadow-sm" />
+              <ChevronDown className="w-3 h-3 text-[var(--elite-muted)] opacity-50 shrink-0" />
+            </div>
+          </Button>
+        </PopoverTrigger>
+        
+        <PopoverContent 
+          className="p-0 w-[280px] sm:w-[320px] overflow-hidden bg-[var(--elite-card)] border border-[var(--elite-border)] shadow-xl rounded-xl z-[9999]" 
+          align="start" 
+          side="bottom" 
+          sideOffset={8}
+        >
+          <div className="flex flex-col h-[350px]">
+            <div className="flex items-center border-b border-[var(--elite-border)] px-3 py-2 bg-[var(--elite-surface)]/50">
+              <Search className="w-4 h-4 text-[var(--elite-muted)] shrink-0 mr-2" />
+              <input
+                type="text"
+                placeholder="Search country..."
+                autoFocus
+                className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm font-medium py-1 placeholder:text-[var(--elite-muted)]/60 text-[var(--elite-text)]"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto elite-scrollbar p-1 space-y-0.5">
+              {filteredCountries.length === 0 ? (
+                <div className="py-6 text-center text-sm text-[var(--elite-muted)]">No country found.</div>
+              ) : (
+                filteredCountries.map((c) => {
+                  const isSelected = phoneInput.country.iso2 === c.iso2;
+                  return (
+                    <button
+                      key={c.iso2}
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center justify-between py-2 px-3 cursor-pointer text-sm font-medium rounded-md transition-colors hover:bg-[var(--elite-surface)] hover:text-[var(--elite-text)] text-[var(--elite-text)]",
+                        isSelected && "bg-[var(--elite-surface)]"
+                      )}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        phoneInput.setCountry(c.iso2 as CountryIso2);
+                        setOpen(false);
+                        setSearchQuery('');
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        phoneInput.setCountry(c.iso2 as CountryIso2);
+                        setOpen(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      <div className="flex items-center gap-2.5 pointer-events-none overflow-hidden text-left">
+                        <FlagImage iso2={c.iso2} size="20px" className="rounded-sm shrink-0 shadow-sm pointer-events-none" />
+                        <span className="truncate">{c.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 pointer-events-none">
+                        <span className="text-xs text-[var(--elite-muted)]">+{c.dialCode}</span>
+                        <div className={cn("w-4 flex justify-center", isSelected ? "opacity-100" : "opacity-0")}>
+                          <Check className="h-3 w-3 text-orange-500" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <input
+        type="tel"
+        ref={phoneInput.inputRef}
+        value={phoneInput.inputValue}
+        onChange={phoneInput.handlePhoneValueChange}
+        placeholder="Phone number"
+        className="flex-1 h-full bg-transparent px-2 py-1 text-sm font-medium text-[var(--elite-text)] placeholder:text-[var(--elite-muted)]/60 focus:outline-none focus:ring-0 border-none ring-0 shadow-none transition-none"
+      />
+    </div>
+  );
+}
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -40,6 +168,28 @@ export default function ClientsPage() {
   const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
   const [currency, setCurrency] = useState('USD');
 
+  // Add client modal
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [addClientForm, setAddClientForm] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    password: '',
+    tags: '',
+  });
+  const [addingClient, setAddingClient] = useState(false);
+
+  // Edit mode
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editClientForm, setEditClientForm] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    password: '',
+    tags: '',
+  });
+  const [updatingClient, setUpdatingClient] = useState(false);
+
   useEffect(() => {
     settingsApi.get().then((r) => {
       if (!('error' in r) && r.data?.salon?.currency) setCurrency(r.data.salon.currency);
@@ -64,6 +214,7 @@ export default function ClientsPage() {
 
   const openDetails = async (c: Client) => {
     setOpenClient(c);
+    setEditingClientId(null);
     setTags(c.tags ?? '');
     setNotes([]);
     setNoteText('');
@@ -241,6 +392,70 @@ export default function ClientsPage() {
     }
   };
 
+  const handleAddClient = async () => {
+    if (!addClientForm.full_name.trim()) {
+      toastError('Please enter client name');
+      return;
+    }
+    setAddingClient(true);
+    const res = await clientsApi.create({
+      full_name: addClientForm.full_name.trim(),
+      phone: addClientForm.phone.trim() || undefined,
+      email: addClientForm.email.trim() || undefined,
+      password: addClientForm.password.trim() || undefined,
+      tags: addClientForm.tags.trim() || undefined,
+    });
+    setAddingClient(false);
+    if ('error' in res && res.error) {
+      toastError(res.error);
+      return;
+    }
+    toastSuccess(`Client "${addClientForm.full_name}" added successfully`);
+    setAddClientForm({ full_name: '', phone: '', email: '', password: '', tags: '' });
+    setShowAddClientModal(false);
+    loadClients();
+  };
+
+  const startEditingClient = (c: Client) => {
+    setEditingClientId(c.id);
+    setEditClientForm({
+      full_name: c.full_name,
+      phone: c.phone || '',
+      email: c.email || '',
+      password: '',
+      tags: c.tags || '',
+    });
+  };
+
+  const handleUpdateClient = async () => {
+    if (!editClientForm.full_name.trim()) {
+      toastError('Please enter client name');
+      return;
+    }
+    if (!openClient) return;
+    setUpdatingClient(true);
+    const res = await clientsApi.update(openClient.id, {
+      full_name: editClientForm.full_name.trim(),
+      phone: editClientForm.phone.trim() || undefined,
+      email: editClientForm.email.trim() || undefined,
+      password: editClientForm.password.trim() || undefined,
+      tags: editClientForm.tags.trim() || undefined,
+    });
+    setUpdatingClient(false);
+    if ('error' in res && res.error) {
+      toastError(res.error);
+      return;
+    }
+    toastSuccess(`Client updated successfully`);
+    setEditingClientId(null);
+    loadClients();
+    
+    // Refresh the open client details with the fresh response data from the API
+    if ('data' in res && res.data?.client) {
+      openDetails(res.data.client);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -259,6 +474,14 @@ export default function ClientsPage() {
         className="mb-4"
         title="Clients"
         icon={<Users className="w-5 h-5" />}
+        rightSlot={
+          <button
+            onClick={() => setShowAddClientModal(true)}
+            className="px-4 py-2 bg-orange-600 text-white rounded-lg font-medium text-sm hover:bg-orange-700 transition"
+          >
+            + Add Client
+          </button>
+        }
       />
       {/* Mobile list (cards) */}
       <div className="md:hidden space-y-3">
@@ -351,15 +574,31 @@ export default function ClientsPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">{c.tags ?? '—'}</td>
                 <td className="px-4 py-3 text-sm">
-                  <button
-                    type="button"
-                    onClick={() => openDetails(c)}
-                    aria-label="View client details"
-                    title="View client details"
-                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
-                  >
-                    <Eye className="size-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openDetails(c)}
+                      aria-label="View client details"
+                      title="View client details"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
+                    >
+                      <Eye className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        openDetails(c);
+                        setTimeout(() => startEditingClient(c), 100);
+                      }}
+                      aria-label="Edit client"
+                      title="Edit client"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
+                    >
+                      <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -400,6 +639,91 @@ export default function ClientsPage() {
 
             <div className="px-4 sm:px-6 py-6 grid gap-6 lg:grid-cols-12">
               <div className="lg:col-span-4 space-y-6">
+                {/* Edit Profile Section */}
+                {editingClientId === openClient.id ? (
+                  <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-foreground mb-4">Edit Profile</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={editClientForm.full_name}
+                          onChange={(e) => setEditClientForm({ ...editClientForm, full_name: e.target.value })}
+                          className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
+                          placeholder="Client name"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Phone</label>
+                        <GenericPhoneInput 
+                          value={editClientForm.phone}
+                          onChange={(val) => setEditClientForm({ ...editClientForm, phone: val })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={editClientForm.email}
+                          onChange={(e) => setEditClientForm({ ...editClientForm, email: e.target.value })}
+                          className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
+                          placeholder="email@example.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Password</label>
+                        <input
+                          type="password"
+                          value={editClientForm.password}
+                          onChange={(e) => setEditClientForm({ ...editClientForm, password: e.target.value })}
+                          className="w-full border border-border rounded-xl px-3 py-2 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary"
+                          placeholder="Leave empty to keep current password"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Leave empty to keep the current password unchanged</p>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingClientId(null)}
+                          className="flex-1 px-4 py-2 rounded-xl border border-border text-foreground font-semibold text-sm hover:bg-accent transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleUpdateClient}
+                          disabled={updatingClient}
+                          className="flex-1 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 disabled:opacity-40"
+                        >
+                          {updatingClient ? 'Saving…' : 'Save changes'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">Profile</h3>
+                        <p className="text-xs text-muted-foreground">View and update client information</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => startEditingClient(openClient)}
+                        className="px-3 py-1.5 rounded-lg border border-border text-foreground text-xs font-semibold hover:bg-accent transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                    <div className="mt-3 space-y-2 text-xs">
+                      <p><span className="text-muted-foreground">Name:</span> <span className="text-foreground font-medium">{openClient.full_name}</span></p>
+                      <p><span className="text-muted-foreground">Phone:</span> <span className="text-foreground font-medium">{openClient.phone || '—'}</span></p>
+                      <p><span className="text-muted-foreground">Email:</span> <span className="text-foreground font-medium">{openClient.email || '—'}</span></p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
                   <h3 className="text-sm font-semibold text-foreground mb-1">Tags</h3>
                   <p className="text-xs text-muted-foreground mb-3">Comma separated (e.g. VIP, color, prefers_morning)</p>
@@ -721,6 +1045,89 @@ export default function ClientsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Client Modal */}
+      {showAddClientModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[1px]" onClick={() => setShowAddClientModal(false)}>
+          <div className="relative bg-[var(--elite-surface)] border border-[var(--elite-border)] rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-lg font-semibold elite-title">Add New Client</h3>
+              <button
+                onClick={() => setShowAddClientModal(false)}
+                className="rounded-lg p-1.5 hover:bg-[var(--elite-card)]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium elite-title mb-1">
+                  Full Name <span className="text-orange-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={addClientForm.full_name}
+                  onChange={(e) => setAddClientForm({ ...addClientForm, full_name: e.target.value })}
+                  placeholder="Client name"
+                  className="w-full elite-input rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium elite-title mb-1">Phone</label>
+                <GenericPhoneInput 
+                  value={addClientForm.phone}
+                  onChange={(val) => setAddClientForm({ ...addClientForm, phone: val })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium elite-title mb-1">Email</label>
+                <input
+                  type="email"
+                  value={addClientForm.email}
+                  onChange={(e) => setAddClientForm({ ...addClientForm, email: e.target.value })}
+                  placeholder="client@example.com"
+                  className="w-full elite-input rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium elite-title mb-1">Password</label>
+                <input
+                  type="password"
+                  value={addClientForm.password}
+                  onChange={(e) => setAddClientForm({ ...addClientForm, password: e.target.value })}
+                  placeholder="Optional password for login"
+                  className="w-full elite-input rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium elite-title mb-1">Tags</label>
+                <input
+                  type="text"
+                  value={addClientForm.tags}
+                  onChange={(e) => setAddClientForm({ ...addClientForm, tags: e.target.value })}
+                  placeholder="e.g. VIP, Referral"
+                  className="w-full elite-input rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowAddClientModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-[var(--elite-border)] text-foreground text-sm font-medium hover:bg-[var(--elite-card)]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddClient}
+                disabled={addingClient}
+                className="flex-1 px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 disabled:opacity-50"
+              >
+                {addingClient ? 'Adding...' : 'Add Client'}
+              </button>
             </div>
           </div>
         </div>

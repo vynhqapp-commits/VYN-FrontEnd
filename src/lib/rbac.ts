@@ -25,17 +25,6 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
     items: [{ href: "/dashboard", fallbackLabel: "Dashboard" }],
   },
   {
-    id: "scheduling",
-    fallbackCategory: "Scheduling",
-    items: [
-      {
-        href: "/dashboard/appointments",
-        fallbackLabel: "Calendar",
-        anyPermission: ["booking.view"],
-      },
-    ],
-  },
-  {
     id: "clients",
     fallbackCategory: "Client management",
     items: [
@@ -47,6 +36,68 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
     ],
   },
   {
+    id: "sales",
+    fallbackCategory: "Sales & Transactions",
+    items: [
+      {
+        href: "/dashboard/transactions",
+        fallbackLabel: "Sales History",
+        anyPermission: ["pos.view"],
+      },
+      {
+        href: "/dashboard/pos",
+        fallbackLabel: "New Sale",
+        anyPermission: ["pos.view"],
+      },
+      {
+        href: "/dashboard/payments",
+        fallbackLabel: "Payments",
+        anyPermission: ["pos.view", "erp.view"],
+      },
+      {
+        href: "/dashboard/invoices",
+        fallbackLabel: "Invoices",
+        anyPermission: ["erp.view", "pos.view"],
+      },
+      {
+        href: "/dashboard/cash-drawer",
+        fallbackLabel: "Cash Drawer",
+        anyPermission: ["pos.view"],
+      },
+      {
+        href: "/dashboard/debt-aging",
+        fallbackLabel: "Debt Aging",
+        anyPermission: ["erp.view"],
+      },
+      {
+        href: "/dashboard/gift-cards",
+        fallbackLabel: "Gift Cards",
+        anyPermission: ["erp.view"],
+      },
+      {
+        href: "/dashboard/expenses",
+        fallbackLabel: "Expenses",
+        anyPermission: ["erp.view"],
+      },
+      {
+        href: "/dashboard/ledger",
+        fallbackLabel: "Ledger",
+        anyPermission: ["erp.view"],
+      },
+    ],
+  },
+  {
+    id: "scheduling",
+    fallbackCategory: "Scheduling",
+    items: [
+      {
+        href: "/dashboard/appointments",
+        fallbackLabel: "Calendar",
+        anyPermission: ["booking.view"],
+      },
+    ],
+  },
+  {
     id: "staff",
     fallbackCategory: "Staff & HR",
     items: [
@@ -54,15 +105,6 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
         href: "/dashboard/staff",
         fallbackLabel: "Staff",
         anyPermission: ["staff.view"],
-      },
-      {
-        href: "/dashboard/commission",
-        fallbackLabel: "Commission",
-        anyPermission: [
-          "commission.view_own",
-          "staff.manage",
-          "reports.view",
-        ],
       },
     ],
   },
@@ -84,58 +126,6 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
         href: "/dashboard/locations",
         fallbackLabel: "Locations",
         anyPermission: ["salon.photos.manage"],
-      },
-    ],
-  },
-  {
-    id: "pos",
-    fallbackCategory: "Point of sale",
-    items: [
-      {
-        href: "/dashboard/transactions",
-        fallbackLabel: "POS / Sales",
-        anyPermission: ["pos.view"],
-      },
-      {
-        href: "/dashboard/pos",
-        fallbackLabel: "New sale",
-        anyPermission: ["pos.view"],
-      },
-      {
-        href: "/dashboard/cash-drawer",
-        fallbackLabel: "Cash drawer",
-        anyPermission: ["pos.view"],
-      },
-    ],
-  },
-  {
-    id: "finance",
-    fallbackCategory: "Finance",
-    items: [
-      {
-        href: "/dashboard/invoices",
-        fallbackLabel: "Invoices",
-        anyPermission: ["erp.view"],
-      },
-      {
-        href: "/dashboard/expenses",
-        fallbackLabel: "Expenses",
-        anyPermission: ["erp.view"],
-      },
-      {
-        href: "/dashboard/debt-aging",
-        fallbackLabel: "Debt aging",
-        anyPermission: ["erp.view"],
-      },
-      {
-        href: "/dashboard/gift-cards",
-        fallbackLabel: "Gift cards",
-        anyPermission: ["erp.view"],
-      },
-      {
-        href: "/dashboard/ledger",
-        fallbackLabel: "Ledger",
-        anyPermission: ["erp.view"],
       },
     ],
   },
@@ -257,8 +247,8 @@ const managerMenu: NavItem[] = ownerMenu.filter(
 
 const receptionistMenu: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/appointments", label: "Calendar" },
   { href: "/dashboard/clients", label: "Clients" },
+  { href: "/dashboard/appointments", label: "Calendar" },
   { href: "/dashboard/services", label: "Services" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/transactions", label: "POS / Sales" },
@@ -268,7 +258,6 @@ const receptionistMenu: NavItem[] = [
 const staffMenu: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/appointments", label: "My Calendar" },
-  { href: "/dashboard/commission", label: "My Earnings" },
 ];
 
 export const menuByRole: Record<AppRole, NavItem[]> = {

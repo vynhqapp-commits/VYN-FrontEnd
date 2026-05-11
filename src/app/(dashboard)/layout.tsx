@@ -37,6 +37,7 @@ import {
   Package,
   Receipt,
   Settings2,
+  TrendingUp,
   UserCog,
   Users,
   Wallet,
@@ -54,10 +55,11 @@ function iconForHref(href: string): React.ReactNode {
   if (href === "/dashboard/inventory") return <Boxes className="size-5" />;
   if (href === "/dashboard/transactions") return <Receipt className="size-5" />;
   if (href === "/dashboard/pos") return <CreditCard className="size-5" />;
+  if (href === "/dashboard/payments") return <CreditCard className="size-5" />;
   if (href === "/dashboard/invoices") return <FileText className="size-5" />;
   if (href === "/dashboard/cash-drawer") return <Wallet className="size-5" />;
   if (href === "/dashboard/debt-aging")
-    return <BriefcaseBusiness className="size-5" />;
+    return <TrendingUp className="size-5" />;
   if (href === "/dashboard/commission") return <BarChart3 className="size-5" />;
   if (href === "/dashboard/gift-cards") return <Gift className="size-5" />;
   if (href === "/dashboard/expenses") return <Receipt className="size-5" />;

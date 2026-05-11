@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { adminUsersApi, tenantsApi, type AdminUserRow, type Tenant } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { type PaginationMeta } from '@/lib/api';
@@ -13,7 +14,16 @@ import { RHFTextField } from '@/components/fields/RHFTextField';
 import { RHFTextareaField } from '@/components/fields/RHFTextareaField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, UserPlus, Users, X } from 'lucide-react';
+import { Loader2, Pencil, UserPlus, Users, X } from 'lucide-react';
+
+const MapLocationPicker = dynamic(() => import('@/components/fields/MapLocationPicker'), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-56 bg-muted flex items-center justify-center rounded-xl border border-border animate-pulse">
+      <span className="text-xs text-muted-foreground">Preparing map interface...</span>
+    </div>
+  )
+});
 
 const statusClass: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
@@ -53,17 +63,32 @@ function TenantUsersPanel({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
+
+  const editSchema = z.object({
+    name:     z.string().optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
+    role:     z.enum(['salon_owner', 'manager', 'staff', 'customer']),
+  });
+  type EditValues = z.infer<typeof editSchema>;
+
+  const editForm = useForm<EditValues>({
+    resolver: zodResolver(editSchema),
+    defaultValues: { name: '', password: '', role: 'staff' },
+    mode: 'onSubmit',
+  });
 
   const inviteSchema = z.object({
     email: z.string().email('Enter a valid email'),
     name:  z.string().optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
     role:  z.enum(['salon_owner', 'manager', 'staff', 'customer']),
   });
   type InviteValues = z.infer<typeof inviteSchema>;
 
   const inviteForm = useForm<InviteValues>({
     resolver: zodResolver(inviteSchema),
-    defaultValues: { email: '', name: '', role: 'staff' },
+    defaultValues: { email: '', name: '', password: '', role: 'staff' },
     mode: 'onSubmit',
   });
 
@@ -76,26 +101,52 @@ function TenantUsersPanel({
   };
 
   useEffect(() => {
+    if (editingUser) {
+      editForm.reset({
+        name:     editingUser.name ?? '',
+        password: '',
+        role:     (editingUser.role ?? 'staff') as EditValues['role'],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingUser]);
+
+  useEffect(() => {
     loadUsers();
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showInvite) onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showInvite && !editingUser) onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenant.id, showInvite]);
+  }, [tenant.id, showInvite, editingUser]);
 
   const invite = async (values: InviteValues) => {
     setActionLoading(true);
     const { error } = await adminUsersApi.invite({
       email:     values.email.trim(),
       name:      values.name?.trim() || undefined,
+      password:  values.password?.trim() || undefined,
       role:      values.role,
       tenant_id: String(tenant.id),
     });
     setActionLoading(false);
     if (error) { toastError(error); return; }
-    toastSuccess('User invited.');
+    toastSuccess('User created successfully.');
     setShowInvite(false);
-    inviteForm.reset({ email: '', name: '', role: 'staff' });
+    inviteForm.reset({ email: '', name: '', password: '', role: 'staff' });
+    await loadUsers();
+  };
+
+  const saveEdit = async (values: EditValues) => {
+    if (!editingUser) return;
+    setActionLoading(true);
+    const body: Record<string, string> = { role: values.role };
+    if (values.name?.trim()) body.name = values.name.trim();
+    if (values.password?.trim()) body.password = values.password.trim();
+    const { error } = await adminUsersApi.update(editingUser.id, body);
+    setActionLoading(false);
+    if (error) { toastError(error); return; }
+    toastSuccess('User updated successfully.');
+    setEditingUser(null);
     await loadUsers();
   };
 
@@ -141,7 +192,7 @@ function TenantUsersPanel({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-colors shadow-sm disabled:opacity-50"
             >
               <UserPlus className="w-3.5 h-3.5" />
-              Invite user
+              Add user
             </button>
             <button
               type="button"
@@ -194,6 +245,17 @@ function TenantUsersPanel({
                   {/* Role badge */}
                   <RoleBadge role={u.role} />
 
+                  {/* Edit */}
+                  <button
+                    type="button"
+                    onClick={() => setEditingUser(u)}
+                    disabled={actionLoading}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg border border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 transition-all"
+                    title="Edit user"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+
                   {/* Delete */}
                   <button
                     type="button"
@@ -217,6 +279,102 @@ function TenantUsersPanel({
         )}
       </div>
 
+      {/* ── Edit User Modal (layered above drawer) ── */}
+      {editingUser && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          onClick={() => setEditingUser(null)}
+        >
+          <div
+            className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-border overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <Pencil className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-semibold text-foreground">Edit user</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[220px]">{editingUser.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors mt-0.5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="px-6 py-5">
+              <Form {...editForm}>
+                <form
+                  onSubmit={editForm.handleSubmit(saveEdit, () => toastError('Please check the highlighted fields.'))}
+                  className="space-y-4"
+                >
+                  <RHFTextField
+                    control={editForm.control}
+                    name="name"
+                    label="Full name"
+                    placeholder="Jane Smith"
+                    disabled={actionLoading}
+                  />
+                  <RHFTextField
+                    control={editForm.control}
+                    name="password"
+                    label="New password (leave blank to keep current)"
+                    placeholder="••••••••"
+                    type="password"
+                    disabled={actionLoading}
+                  />
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</label>
+                    <select
+                      value={editForm.watch('role')}
+                      onChange={(e) => editForm.setValue('role', e.target.value as EditValues['role'])}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground
+                        focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors"
+                      disabled={actionLoading}
+                    >
+                      <option value="salon_owner">Salon owner</option>
+                      <option value="manager">Manager</option>
+                      <option value="staff">Staff</option>
+                      <option value="customer">Customer</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingUser(null)}
+                      disabled={actionLoading}
+                      className="rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={actionLoading}
+                      className="rounded-xl"
+                    >
+                      {actionLoading
+                        ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Saving…</>
+                        : <><Pencil className="w-4 h-4 mr-1.5" />Save changes</>
+                      }
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Invite Modal (layered above drawer) ── */}
       {showInvite && (
         <div
@@ -234,7 +392,7 @@ function TenantUsersPanel({
                   <UserPlus className="w-4.5 h-4.5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-display text-base font-semibold text-foreground">Invite user</h3>
+                  <h3 className="font-display text-base font-semibold text-foreground">Add user</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Adding to <span className="font-medium text-foreground">{tenant.name}</span>
                   </p>
@@ -271,6 +429,14 @@ function TenantUsersPanel({
                     placeholder="Jane Smith"
                     disabled={actionLoading}
                   />
+                  <RHFTextField
+                    control={inviteForm.control}
+                    name="password"
+                    label="Password (optional, min 8 chars)"
+                    placeholder="••••••••"
+                    type="password"
+                    disabled={actionLoading}
+                  />
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</label>
                     <select
@@ -303,8 +469,8 @@ function TenantUsersPanel({
                       className="rounded-xl"
                     >
                       {actionLoading
-                        ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Inviting…</>
-                        : <><UserPlus className="w-4 h-4 mr-1.5" />Send invite</>
+                        ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Creating…</>
+                        : <><UserPlus className="w-4 h-4 mr-1.5" />Create user</>
                       }
                     </Button>
                   </div>
@@ -328,6 +494,7 @@ export default function AdminTenantsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'trial'>('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [statusActionTenantId, setStatusActionTenantId] = useState<string | null>(null);
 
@@ -346,6 +513,8 @@ export default function AdminTenantsPage() {
       .default('USD'),
     phone: z.string().optional(),
     address: z.string().optional(),
+    latitude: z.number().optional().nullable(),
+    longitude: z.number().optional().nullable(),
   });
 
   type CreateValues = z.infer<typeof createSchema>;
@@ -360,9 +529,39 @@ export default function AdminTenantsPage() {
       currency: 'USD',
       phone: '',
       address: '',
+      latitude: null,
+      longitude: null,
     },
     mode: 'onSubmit',
   });
+
+  useEffect(() => {
+    if (editingTenant) {
+      createForm.reset({
+        name: editingTenant.name ?? '',
+        domain: editingTenant.domain ?? '',
+        plan: (editingTenant.plan as any) || 'basic',
+        timezone: editingTenant.timezone ?? '',
+        currency: editingTenant.currency ?? 'USD',
+        phone: editingTenant.phone ?? '',
+        address: editingTenant.address ?? '',
+        latitude: editingTenant.latitude ?? null,
+        longitude: editingTenant.longitude ?? null,
+      });
+    } else {
+      createForm.reset({
+        name: '',
+        domain: '',
+        plan: 'basic',
+        timezone: '',
+        currency: 'USD',
+        phone: '',
+        address: '',
+        latitude: null,
+        longitude: null,
+      });
+    }
+  }, [editingTenant, createForm]);
 
   const load = async (p = page) => {
     setLoading(true);
@@ -405,25 +604,35 @@ export default function AdminTenantsPage() {
   const activeCount = tenants.filter((t) => t.status === 'active').length;
   const suspendedCount = tenants.filter((t) => t.status === 'suspended').length;
 
-  const createTenant = async (values: CreateValues) => {
+  const saveTenant = async (values: CreateValues) => {
     setActionLoading(true);
     const payload: any = { name: values.name.trim() };
     if (values.domain?.trim()) payload.domain = values.domain.trim();
+    else if (editingTenant) payload.domain = null; // Explicitly clear existing domain on edit only
     if (values.plan) payload.plan = values.plan;
     if (values.timezone?.trim()) payload.timezone = values.timezone.trim();
     if (values.currency?.trim()) payload.currency = values.currency.trim().toUpperCase().slice(0, 3);
     if (values.phone?.trim()) payload.phone = values.phone.trim();
     if (values.address?.trim()) payload.address = values.address.trim();
+    if (typeof values.latitude === 'number') payload.latitude = values.latitude;
+    if (typeof values.longitude === 'number') payload.longitude = values.longitude;
 
-    const res = await tenantsApi.create(payload);
+    let res;
+    if (editingTenant) {
+      res = await tenantsApi.update(String(editingTenant.id), payload);
+    } else {
+      res = await tenantsApi.create(payload);
+    }
+    
     setActionLoading(false);
     if ((res as any).error) {
       toastError((res as any).error);
     } else {
       setShowCreate(false);
+      setEditingTenant(null);
       createForm.reset();
       await load();
-      toastSuccess('Tenant created.');
+      toastSuccess(editingTenant ? 'Tenant updated.' : 'Tenant created.');
     }
   };
 
@@ -569,6 +778,15 @@ export default function AdminTenantsPage() {
                         Users
                       </button>
 
+                      <button
+                        type="button"
+                        onClick={() => setEditingTenant(t)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted/40 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+
                       {/* Suspend / Activate */}
                       {String(t.status ?? '').toLowerCase() === 'active' ? (
                         <button
@@ -624,6 +842,14 @@ export default function AdminTenantsPage() {
                     <Users className="w-3.5 h-3.5" />
                     Users
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTenant(t)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted/40 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
                   {String(t.status ?? '').toLowerCase() === 'active' ? (
                     <button
                       type="button"
@@ -654,18 +880,18 @@ export default function AdminTenantsPage() {
 
     </div>
 
-    {/* Create tenant modal — outside space-y-6 so fixed overlay gets no margin from parent */}
-    {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-[1px] p-2 sm:p-4">
-          <div className="bg-card rounded-2xl shadow-xl w-full max-w-2xl border border-border">
+    {/* Create/Edit tenant modal — outside space-y-6 so fixed overlay gets no margin from parent */}
+    {(showCreate || editingTenant) && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-[1px] p-2 sm:p-4" onClick={() => { setShowCreate(false); setEditingTenant(null); }}>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-2xl border border-border" onClick={(e) => e.stopPropagation()}>
             <div className="p-5 border-b border-border flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="font-display text-xl font-semibold text-foreground">Create tenant</h2>
-                <p className="text-xs text-muted-foreground mt-1">Add a new salon to the platform.</p>
+                <h2 className="font-display text-xl font-semibold text-foreground">{editingTenant ? 'Edit tenant' : 'Create tenant'}</h2>
+                <p className="text-xs text-muted-foreground mt-1">{editingTenant ? `Updating details for ${editingTenant.name}.` : 'Add a new salon to the platform.'}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setShowCreate(false)}
+                onClick={() => { setShowCreate(false); setEditingTenant(null); }}
                 disabled={actionLoading}
                 className="p-2 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50"
                 aria-label="Close"
@@ -677,7 +903,7 @@ export default function AdminTenantsPage() {
             <div className="p-5 space-y-4">
               <Form {...createForm}>
                 <form
-                  onSubmit={createForm.handleSubmit(createTenant, () =>
+                  onSubmit={createForm.handleSubmit(saveTenant, () =>
                     toastError('Please check the highlighted fields.'),
                   )}
                   className="space-y-4"
@@ -705,14 +931,33 @@ export default function AdminTenantsPage() {
                     <RHFTextField control={createForm.control} name="timezone" label="Timezone" placeholder="UTC" disabled={actionLoading} />
                     <RHFTextField control={createForm.control} name="phone" label="Phone" placeholder="+1 555 000 0000" disabled={actionLoading} />
                   </div>
-                  <RHFTextareaField control={createForm.control} name="address" label="Address" placeholder="Street, city, country" disabled={actionLoading} rows={3} />
+                  <RHFTextareaField control={createForm.control} name="address" label="Address" placeholder="Street, city, country" disabled={actionLoading} rows={2} />
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium leading-none">Location on Map</label>
+                      {createForm.watch('latitude') && (
+                        <span className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                          {createForm.watch('latitude')?.toFixed(5)}, {createForm.watch('longitude')?.toFixed(5)}
+                        </span>
+                      )}
+                    </div>
+                    <MapLocationPicker
+                      lat={createForm.watch('latitude')}
+                      lng={createForm.watch('longitude')}
+                      onChange={(lat, lng) => {
+                        createForm.setValue('latitude', lat);
+                        createForm.setValue('longitude', lng);
+                      }}
+                    />
+                  </div>
 
                   <div className="pt-1 flex flex-col sm:flex-row gap-2 sm:justify-end">
-                    <Button type="button" variant="outline" onClick={() => setShowCreate(false)} disabled={actionLoading} className="rounded-xl">
+                    <Button type="button" variant="outline" onClick={() => { setShowCreate(false); setEditingTenant(null); }} disabled={actionLoading} className="rounded-xl">
                       Cancel
                     </Button>
                     <Button type="submit" disabled={actionLoading} className="rounded-xl">
-                      {actionLoading ? 'Creating…' : 'Create'}
+                      {actionLoading ? 'Saving…' : editingTenant ? 'Save changes' : 'Create'}
                     </Button>
                   </div>
                 </form>
