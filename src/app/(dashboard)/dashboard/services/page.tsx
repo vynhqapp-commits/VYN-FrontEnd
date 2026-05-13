@@ -104,6 +104,7 @@ export default function ServicesPage() {
   const [couponModalOpen, setCouponModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [couponSaving, setCouponSaving] = useState(false);
+  const [couponType, setCouponType] = useState<'flat' | 'percent'>('flat');
 
   /* ── Add-ons state ── */
   const [addOnsOpen, setAddOnsOpen] = useState(false);
@@ -635,7 +636,7 @@ export default function ServicesPage() {
           ) : activeTab === 'packages' ? (
             <Button onClick={() => { setEditingPkg(null); setPkgModalOpen(true); }} className="rounded-xl h-11">New package</Button>
           ) : activeTab === 'coupons' ? (
-            <Button onClick={() => { setEditingCoupon(null); setCouponModalOpen(true); }} className="rounded-xl h-11">New coupon</Button>
+            <Button onClick={() => { setEditingCoupon(null); setCouponType('flat'); setCouponModalOpen(true); }} className="rounded-xl h-11">New coupon</Button>
           ) : (
             <Button onClick={() => { setEditingMem(null); setMemModalOpen(true); }} className="rounded-xl h-11">New membership</Button>
           )
@@ -1563,7 +1564,7 @@ export default function ServicesPage() {
                       {canManageCatalog && (
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-2">
-                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingCoupon(c); setCouponModalOpen(true); }} title="Edit">
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingCoupon(c); setCouponType(c.type as any); setCouponModalOpen(true); }} title="Edit">
                             <Pencil className="size-4" />
                           </Button>
                           <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deleteCoupon(c)} title="Delete">
@@ -1601,14 +1602,8 @@ export default function ServicesPage() {
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Type</label>
                       <Combobox
-                        value={editingCoupon?.type ?? 'flat'}
-                        onValueChange={(value) => {
-                          const form = document.querySelector('form');
-                          if (form) {
-                            const typeInput = form.querySelector('select[name="type"]') as HTMLSelectElement;
-                            if (typeInput) typeInput.value = value;
-                          }
-                        }}
+                        value={couponType}
+                        onValueChange={(value) => setCouponType(value as any)}
                         options={[
                           { value: 'flat', label: 'Flat ($)' },
                           { value: 'percent', label: 'Percent (%)' },
@@ -1618,7 +1613,7 @@ export default function ServicesPage() {
                         emptyText="No types found."
                         className="w-full"
                       />
-                      <select name="type" defaultValue={editingCoupon?.type ?? 'flat'} className="hidden" />
+                      <input type="hidden" name="type" value={couponType} />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Value</label>

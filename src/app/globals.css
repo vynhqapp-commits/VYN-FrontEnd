@@ -135,6 +135,21 @@
 }
 
 @layer components {
+  .vyn-tab-wrapper {
+    background-color: var(--elite-card-2);
+    border: 1px solid var(--elite-border-2);
+  }
+  .vyn-tab-btn-active {
+    background-color: var(--elite-card);
+    color: var(--elite-text-strong);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  .vyn-tab-btn-inactive {
+    color: var(--elite-muted);
+  }
+  .vyn-tab-btn-inactive:hover {
+    color: var(--elite-text-strong);
+  }
   .elite-shell {
     background: transparent;
     color: var(--elite-text);

@@ -2109,6 +2109,19 @@ export const publicApi = {
     publicRequest<{ slots: { start: string; end: string; staff_id: string }[] }>(
       `/api/public/availability?branch_id=${branchId}&service_id=${serviceId}&date=${date}`,
     ),
+  salonPackages: (slug: string) =>
+    publicRequest<{ id: string; name: string; description?: string | null; price: number; total_sessions: number; validity_days?: number | null }[]>(
+      `/api/public/salons/${slug}/packages`,
+    ).then(r => ({ data: Array.isArray(r.data) ? r.data : [], error: r.error })),
+  salonMemberships: (slug: string) =>
+    publicRequest<{ id: string; name: string; description?: string | null; price: number; interval_months: number; credits_per_renewal: number }[]>(
+      `/api/public/salons/${slug}/memberships`,
+    ).then(r => ({ data: Array.isArray(r.data) ? r.data : [], error: r.error })),
+  validateCoupon: (body: { tenant_id: string; code: string; subtotal?: number }) =>
+    publicRequest<{ id: string; code: string; type: 'flat' | 'percent'; value: number; discount: number; name?: string | null; description?: string | null }>(
+      '/api/public/coupons/validate',
+      { method: 'POST', body: JSON.stringify(body) },
+    ).then(r => r.data ? { data: r.data } : { error: r.error }),
   book: async (body: {
     tenant_id: string;
     branch_id: string;
@@ -2118,6 +2131,7 @@ export const publicApi = {
     client_name: string;
     client_phone?: string;
     client_email?: string;
+    coupon_code?: string;
     locale?: string;
   }): Promise<{
     data?: { appointment: PublicAppointment };
@@ -2703,14 +2717,18 @@ export interface StaffMember {
   branch_id?: string | null;
   user_id?: string | null;
   name: string;
+  last_name?: string | null;
+  email?: string | null;
   phone?: string | null;
   specialization?: string | null;
   photo_url?: string | null;
   color?: string | null;
   is_active: boolean;
   branch?: { id: string; name: string } | null;
+  branches?: { id: string; name: string }[];
   schedules?: StaffScheduleRow[];
   services?: { id: string; name: string }[];
+  user?: { id: string; name?: string; email?: string } | null;
 }
 
 export interface StaffScheduleRow {
@@ -2917,6 +2935,52 @@ export const staffShiftsApi = {
 export const staffPerformanceApi = {
   list: (params?: { from?: string; to?: string }) =>
     api<StaffPerformanceRow[] | { data: StaffPerformanceRow[] }>(`/api/staff/performance${qs(params ?? {})}`),
+};
+
+/* ─── Staff Invitations ─────────────────────────────────────────────── */
+
+export interface StaffInvitationRow {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  expires_at?: string | null;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
+  invited_by?: { id: string; name: string; email: string } | null;
+  created_at?: string | null;
+}
+
+export const staffInvitationsApi = {
+  list: async (params?: { status?: string }) => {
+    const res = await api<StaffInvitationRow[] | { data: StaffInvitationRow[] }>(
+      '/api/staff-invitations' + qs(params ?? {}),
+    );
+    if (res.error) return { error: res.error };
+    const list = Array.isArray(res.data) ? res.data : listData(res.data);
+    return { data: list };
+  },
+  send: (body: { email: string; name?: string; role: string; branch_id?: string }) =>
+    api<StaffInvitationRow>('/api/staff-invitations', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  resend: (id: string) =>
+    api<StaffInvitationRow>(`/api/staff-invitations/${id}/resend`, {
+      method: 'POST',
+    }),
+  revoke: (id: string) =>
+    api<StaffInvitationRow>(`/api/staff-invitations/${id}/revoke`, {
+      method: 'POST',
+    }),
+  accept: (body: { token: string; name: string; password: string; password_confirmation: string }) =>
+    plainRequest<{ message: string }>('/api/auth/staff-invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };
 
 export interface InvoiceData {

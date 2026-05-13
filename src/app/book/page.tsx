@@ -1,9 +1,11 @@
 "use client";
 
+import React from "react";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X, Star } from "lucide-react";
+import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X, Star, Tag, Package, CreditCard, BadgePercent, Loader2 } from "lucide-react";
 import {
   publicApi,
   customerApi,
@@ -27,6 +29,10 @@ const LOCALE_BCP47: Record<PublicLocale, string> = {
 };
 
 type Slot = { start: string; end: string; staff_id: string };
+
+type SalonPackage = { id: string; name: string; description?: string | null; price: number; total_sessions: number; validity_days?: number | null };
+type SalonMembership = { id: string; name: string; description?: string | null; price: number; interval_months: number; credits_per_renewal: number };
+type AppliedCoupon = { id: string; code: string; type: 'flat' | 'percent'; value: number; discount: number; name?: string | null };
 
 type SalonDetail = {
   salon: Tenant & { slug: string };
@@ -160,6 +166,15 @@ export default function BookPage() {
   const [prefillServiceId, setPrefillServiceId] = useState<string>("");
   const [favoriteSalonIds, setFavoriteSalonIds] = useState<Set<string>>(() => new Set());
   const [favoriteToggleBusy, setFavoriteToggleBusy] = useState(false);
+
+  // Packages, memberships, coupon
+  const [salonPackages, setSalonPackages] = useState<SalonPackage[]>([]);
+  const [salonMemberships, setSalonMemberships] = useState<SalonMembership[]>([]);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [catalogTab, setCatalogTab] = useState<'services' | 'packages' | 'memberships'>('services');
 
   // Pre-fill form from auth context when user is logged in
   useEffect(() => {
@@ -380,11 +395,23 @@ export default function BookPage() {
     setDate("");
     setSlots([]);
     setSelected(null);
+    setSalonPackages([]);
+    setSalonMemberships([]);
+    setCatalogTab('services');
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError(null);
     setStep(2);
     publicApi.salon(slug).then(({ data, error: err }) => {
       setLoadingDetail(false);
       if (err) { setError(err); setStep(1); }
-      else if (data) setDetail(data as SalonDetail);
+      else if (data) {
+        setDetail(data as SalonDetail);
+        // Load packages + memberships in parallel
+        const s = data as SalonDetail;
+        publicApi.salonPackages(s.salon.slug).then(r => { if (r.data) setSalonPackages(r.data); });
+        publicApi.salonMemberships(s.salon.slug).then(r => { if (r.data) setSalonMemberships(r.data); });
+      }
     });
   };
 
@@ -440,6 +467,7 @@ export default function BookPage() {
       client_name: form.client_name,
       client_phone: form.client_phone || undefined,
       client_email: form.client_email || undefined,
+      coupon_code: appliedCoupon?.code || undefined,
       locale,
     });
     setSubmitting(false);
@@ -451,6 +479,27 @@ export default function BookPage() {
   const selectedServices = detail?.services.filter((s) => selectedServiceIds.includes(String(s.id))) ?? [];
   const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price ?? 0), 0);
+  const discountedPrice = appliedCoupon ? Math.max(0, totalPrice - appliedCoupon.discount) : totalPrice;
+
+  const applyOrValidateCoupon = async () => {
+    if (!detail || !couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    setAppliedCoupon(null);
+    const { data, error: err } = await publicApi.validateCoupon({
+      tenant_id: String(detail.salon.id),
+      code: couponCode.trim(),
+      subtotal: totalPrice,
+    });
+    setCouponLoading(false);
+    if (err) {
+      setCouponError(err);
+      return;
+    }
+    if (data) {
+      setAppliedCoupon(data);
+    }
+  };
 
   // ── Step 5: Confirmation ─────────────────────────────────────────────────
   if (step === 5 && confirmed) {
@@ -1011,58 +1060,160 @@ export default function BookPage() {
                     </div>
                   </div>
 
-                  {/* Services (Multi-select) */}
+                  {/* ── Catalog tabs: Services / Packages / Memberships ── */}
                   <div>
-                    <SectionLabel>{t("service")}</SectionLabel>
-                    <div className="space-y-3">
-                      {detail.services.map((s, i) => {
-                        const isSelected = selectedServiceIds.includes(String(s.id));
-                        return (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedServiceIds((prev) =>
-                                prev.includes(String(s.id))
-                                  ? prev.filter((id) => id !== String(s.id))
-                                  : [...prev, String(s.id)]
-                              );
-                            }}
-                            className={`w-full text-start p-5 rounded-2xl border shadow-sm transition-all animate-fade-in-up ${
-                              isSelected
-                                ? "border-salon-gold/50 bg-salon-gold/5 shadow-md"
-                                : "border-gray-100 bg-card hover:border-salon-gold/30"
-                            }`}
-                            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className={`w-5 h-5 rounded-md border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
+                    <div className="flex gap-1 vyn-tab-wrapper p-1 rounded-xl mb-4">
+                      {([
+                        { key: 'services' as const, label: 'Services', icon: <Clock className="w-3.5 h-3.5" /> },
+                        ...(salonPackages.length > 0 ? [{ key: 'packages' as const, label: 'Packages', icon: <Package className="w-3.5 h-3.5" /> }] : []),
+                        ...(salonMemberships.length > 0 ? [{ key: 'memberships' as const, label: 'Memberships', icon: <CreditCard className="w-3.5 h-3.5" /> }] : []),
+                      ] as { key: typeof catalogTab; label: string; icon: React.ReactNode }[]).map(tab => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setCatalogTab(tab.key)}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                            catalogTab === tab.key
+                              ? 'vyn-tab-btn-active'
+                              : 'vyn-tab-btn-inactive'
+                          }`}
+                        >
+                          {tab.icon}{tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {catalogTab === 'services' && (
+                      <div className="space-y-3">
+                        {detail.services.map((s, i) => {
+                          const isSelected = selectedServiceIds.includes(String(s.id));
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedServiceIds((prev) =>
+                                  prev.includes(String(s.id))
+                                    ? prev.filter((id) => id !== String(s.id))
+                                    : [...prev, String(s.id)]
+                                );
+                              }}
+                              className={`w-full text-start p-5 rounded-2xl border shadow-sm transition-all animate-fade-in-up ${
                                 isSelected
-                                  ? "border-salon-gold bg-salon-gold"
-                                  : "border-gray-300"
-                              }`}>
-                                {isSelected && (
-                                  <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-salon-espresso text-sm truncate">{s.name}</p>
-                                <p className="flex items-center gap-1 text-gray-400 text-xs mt-0.5">
-                                  <Clock className="w-3 h-3 shrink-0" />
-                                  {s.duration_minutes} {t("minutes")}
-                                  {s.description ? ` · ${s.description}` : ""}
+                                  ? "border-salon-gold/50 bg-salon-gold/5 shadow-md"
+                                  : "border-gray-100 bg-card hover:border-salon-gold/30"
+                              }`}
+                              style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`w-5 h-5 rounded-md border-2 mt-0.5 shrink-0 flex items-center justify-center transition-colors ${
+                                  isSelected ? "border-salon-gold bg-salon-gold" : "border-gray-300"
+                                }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-salon-espresso text-sm truncate">{s.name}</p>
+                                  <p className="flex items-center gap-1 text-gray-400 text-xs mt-0.5">
+                                    <Clock className="w-3 h-3 shrink-0" />
+                                    {s.duration_minutes} {t("minutes")}
+                                    {s.description ? ` · ${s.description}` : ""}
+                                  </p>
+                                </div>
+                                <p className={`text-base font-bold shrink-0 transition-colors ${
+                                  isSelected ? "text-salon-gold" : "text-salon-espresso"
+                                }`}>
+                                  {formatPublicCurrency(Number(s.price), detail.salon.currency, locale)}
                                 </p>
                               </div>
-                              <p className={`text-base font-bold shrink-0 transition-colors ${
-                                isSelected ? "text-salon-gold" : "text-salon-espresso"
-                              }`}>
-                                {formatPublicCurrency(Number(s.price), detail.salon.currency, locale)}
-                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {catalogTab === 'packages' && (
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-gray-200 bg-card p-3">
+                          <p className="text-xs text-gray-500">
+                            💡 <strong>Packages</strong> are pre-paid bundles of sessions. To purchase, contact the salon directly or ask at the front desk.
+                          </p>
+                        </div>
+                        {salonPackages.map((pkg, i) => (
+                          <div
+                            key={pkg.id}
+                            className="p-5 rounded-2xl border border-gray-100 bg-card shadow-sm animate-fade-in-up"
+                            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="w-7 h-7 rounded-lg bg-salon-gold/10 flex items-center justify-center shrink-0">
+                                    <Package className="w-3.5 h-3.5 text-salon-gold" />
+                                  </div>
+                                  <p className="font-semibold text-salon-espresso text-sm">{pkg.name}</p>
+                                </div>
+                                {pkg.description && <p className="text-gray-400 text-xs mt-1">{pkg.description}</p>}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-salon-gold/10 text-salon-gold px-2 py-0.5 rounded-full">
+                                    {pkg.total_sessions} sessions
+                                  </span>
+                                  {pkg.validity_days && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                      Valid {pkg.validity_days} days
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-lg font-bold text-salon-espresso">{formatPublicCurrency(pkg.price, detail.salon.currency, locale)}</p>
+                                <p className="text-[10px] text-gray-400">package price</p>
+                              </div>
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {catalogTab === 'memberships' && (
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-gray-200 bg-card p-3">
+                          <p className="text-xs text-gray-500">
+                            💳 <strong>Memberships</strong> give you recurring credits each month. Ask at the salon to sign up.
+                          </p>
+                        </div>
+                        {salonMemberships.map((mem, i) => (
+                          <div
+                            key={mem.id}
+                            className="p-5 rounded-2xl border border-gray-100 bg-card shadow-sm animate-fade-in-up"
+                            style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                                    <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                                  </div>
+                                  <p className="font-semibold text-salon-espresso text-sm">{mem.name}</p>
+                                </div>
+                                {mem.description && <p className="text-gray-400 text-xs mt-1">{mem.description}</p>}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                                    {mem.credits_per_renewal} credits/month
+                                  </span>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                    Billed every {mem.interval_months} month{mem.interval_months !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-lg font-bold text-salon-espresso">{formatPublicCurrency(mem.price, detail.salon.currency, locale)}</p>
+                                <p className="text-[10px] text-gray-400">/month</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {selectedServiceIds.length > 0 && (
@@ -1187,17 +1338,91 @@ export default function BookPage() {
                 label={t("summaryDuration")}
                 value={`${totalDuration} ${t("minutes")}`}
               />
-              <SummaryRow
-                label={t("summaryPrice")}
-                value={formatPublicCurrency(totalPrice, detail.salon.currency, locale)}
-              />
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-gray-400">{t("summaryPrice")}</span>
+                <div className="flex items-center gap-2">
+                  {appliedCoupon && (
+                    <span className="text-gray-400 line-through text-xs">
+                      {formatPublicCurrency(totalPrice, detail.salon.currency, locale)}
+                    </span>
+                  )}
+                  <span className="text-salon-espresso font-semibold">
+                    {formatPublicCurrency(discountedPrice, detail.salon.currency, locale)}
+                  </span>
+                </div>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between items-center gap-4 text-salon-gold">
+                  <span className="text-xs flex items-center gap-1.5">
+                    <BadgePercent className="w-3.5 h-3.5" />
+                    Coupon <strong>{appliedCoupon.code}</strong>
+                  </span>
+                  <span className="text-xs font-semibold">
+                    −{formatPublicCurrency(appliedCoupon.discount, detail.salon.currency, locale)}
+                  </span>
+                </div>
+              )}
               {selectedServices.some(s => s.deposit_amount && Number(s.deposit_amount) > 0) && (
-                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                  <p className="font-semibold">{t("depositRequired")}</p>
+                <div className="mt-2 p-3 border border-gray-200 bg-card rounded-xl text-xs text-gray-500">
+                  <p className="font-semibold text-salon-gold">{t("depositRequired")}</p>
                   <p className="mt-0.5">
                     {`Deposit required for: ${selectedServices.filter(s => s.deposit_amount && Number(s.deposit_amount) > 0).map(s => s.name).join(", ")}`}
                   </p>
                 </div>
+              )}
+            </div>
+
+            {/* Coupon input */}
+            <div className="mb-6">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                <span className="flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" />Have a coupon?</span>
+              </label>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between gap-3 p-3 bg-salon-gold/5 border border-salon-gold/30 rounded-xl animate-fade-in-up">
+                  <div className="flex items-center gap-2">
+                    <BadgePercent className="w-4 h-4 text-salon-gold shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-salon-gold">{appliedCoupon.code}</p>
+                      <p className="text-xs text-gray-500">
+                        {appliedCoupon.type === 'percent'
+                          ? `${appliedCoupon.value}% off`
+                          : `${formatPublicCurrency(appliedCoupon.value, detail.salon.currency, locale)} off`}
+                        {appliedCoupon.name ? ` · ${appliedCoupon.name}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setAppliedCoupon(null); setCouponCode(""); setCouponError(null); }}
+                    className="text-xs font-semibold text-gray-400 hover:text-salon-gold transition-colors shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+                    onKeyDown={e => e.key === 'Enter' && applyOrValidateCoupon()}
+                    className="flex-1 bg-card border border-gray-200 rounded-xl px-4 py-2.5 text-salon-espresso placeholder-gray-300 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-salon-gold/40 focus:border-salon-gold transition-shadow"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyOrValidateCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-4 py-2.5 bg-salon-espresso text-white rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shrink-0 flex items-center gap-1.5"
+                  >
+                    {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                  </button>
+                </div>
+              )}
+              {couponError && (
+                <p className="mt-2 text-xs text-red-500 flex items-center gap-1.5">
+                  <X className="w-3.5 h-3.5 shrink-0" />{couponError}
+                </p>
               )}
             </div>
 

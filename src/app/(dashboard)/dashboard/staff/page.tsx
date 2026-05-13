@@ -24,6 +24,10 @@ import {
   Building,
   Briefcase,
   CalendarOff,
+  Mail,
+  Send,
+  RotateCcw,
+  XCircle,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +42,7 @@ import {
   settingsApi,
   departmentsApi,
   staffShiftsApi,
+  staffInvitationsApi,
   type StaffShiftRow,
   type DepartmentRow,
   type StaffPerformanceRow,
@@ -45,6 +50,7 @@ import {
   type StaffScheduleRow,
   type StaffTimeEntryRow,
   type TimeOffRequestRow,
+  type StaffInvitationRow,
   type Location,
   type Service,
 } from "@/lib/api";
@@ -247,6 +253,15 @@ export default function StaffPage() {
   );
   const [performanceLoading, setPerformanceLoading] = useState(false);
 
+  /* ── Invite State ── */
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteStaff, setInviteStaff] = useState<StaffMember | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"staff" | "receptionist">("staff");
+  const [inviteBranchId, setInviteBranchId] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [invitations, setInvitations] = useState<StaffInvitationRow[]>([]);
+
   const form = useForm<StaffValues>({
     resolver: zodResolver(staffSchema),
     defaultValues: {
@@ -290,6 +305,7 @@ export default function StaffPage() {
     loadTimeOffRequests();
     loadTimeEntries();
     loadPerformance();
+    loadInvitations();
   }, []);
 
   const loadSettings = () => {
@@ -484,6 +500,68 @@ export default function StaffPage() {
     });
   };
 
+  const loadInvitations = async () => {
+    const { data, error } = await staffInvitationsApi.list();
+    if (!error && data) setInvitations(data);
+  };
+
+  const getInvitationForStaff = (s: StaffMember): StaffInvitationRow | null => {
+    const staffEmail = s.email || s.user?.email;
+    if (!staffEmail) return null;
+    return invitations.find(inv => inv.email.toLowerCase() === staffEmail.toLowerCase()) ?? null;
+  };
+
+  const openInviteModal = (s: StaffMember) => {
+    setInviteStaff(s);
+    setInviteEmail(s.email || s.user?.email || "");
+    setInviteRole("staff");
+    setInviteBranchId(s.branch?.id ? String(s.branch.id) : (branches[0]?.id ? String(branches[0].id) : ""));
+    setIsInviteModalOpen(true);
+  };
+
+  const sendInvite = async () => {
+    if (!inviteEmail.trim()) {
+      toast.error("Email is required to send an invitation.");
+      return;
+    }
+    setInviteSending(true);
+    const { error } = await staffInvitationsApi.send({
+      email: inviteEmail.trim(),
+      name: inviteStaff?.name,
+      role: inviteRole,
+      branch_id: inviteBranchId || undefined,
+    });
+    setInviteSending(false);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    toast.success(`Invitation sent to ${inviteEmail}`);
+    setIsInviteModalOpen(false);
+    loadInvitations();
+  };
+
+  const resendInvite = async (invitationId: string) => {
+    const { error } = await staffInvitationsApi.resend(invitationId);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    toast.success("Invitation resent successfully");
+    loadInvitations();
+  };
+
+  const revokeInvite = async (invitationId: string) => {
+    if (!confirm("Are you sure you want to revoke this invitation?")) return;
+    const { error } = await staffInvitationsApi.revoke(invitationId);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    toast.success("Invitation revoked");
+    loadInvitations();
+  };
+
   const filteredStaff = useMemo(() => {
     let list = staffList;
     if (filterServiceId) {
@@ -491,7 +569,7 @@ export default function StaffPage() {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(s => s.name.toLowerCase().includes(q) || (s.user?.email ?? '').toLowerCase().includes(q) || (s.phone ?? '').includes(q));
+      list = list.filter(s => s.name.toLowerCase().includes(q) || (s.email ?? '').toLowerCase().includes(q) || (s.user?.email ?? '').toLowerCase().includes(q) || (s.phone ?? '').includes(q));
     }
     return list;
   }, [staffList, filterServiceId, searchQuery]);
@@ -1265,7 +1343,7 @@ export default function StaffPage() {
                               </div>
                             </TableCell>
                             <TableCell className="elite-subtle text-sm font-light">
-                              {s.user?.email || '—'}
+                              {s.email || s.user?.email || '—'}
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1.5 max-w-[200px]">
@@ -1299,7 +1377,53 @@ export default function StaffPage() {
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Invite button */}
+                                {(() => {
+                                  const inv = getInvitationForStaff(s);
+                                  const staffEmail = s.email || s.user?.email;
+                                  if (inv?.status === 'accepted') {
+                                    return (
+                                      <span title="Invitation accepted" className="p-2 rounded-lg text-green-500">
+                                        <Check className="w-4 h-4" />
+                                      </span>
+                                    );
+                                  }
+                                  if (inv?.status === 'pending') {
+                                    return (
+                                      <div className="flex items-center gap-0.5">
+                                        <button
+                                          title="Resend invitation"
+                                          onClick={() => resendInvite(inv.id)}
+                                          className="p-2 rounded-lg hover:bg-blue-500/10 text-amber-500 hover:text-blue-500 transition-all"
+                                        >
+                                          <RotateCcw className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          title="Revoke invitation"
+                                          onClick={() => revokeInvite(inv.id)}
+                                          className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-400 hover:text-red-500 transition-all"
+                                        >
+                                          <XCircle className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <button
+                                      title={staffEmail ? "Send invitation email" : "Add email first to invite"}
+                                      onClick={() => staffEmail ? openInviteModal(s) : toast.error("This staff member has no email address. Please edit their profile and add an email first.")}
+                                      className={cn(
+                                        "p-2 rounded-lg transition-all",
+                                        staffEmail 
+                                          ? "hover:bg-blue-500/10 elite-subtle hover:text-blue-500" 
+                                          : "opacity-40 cursor-not-allowed elite-subtle"
+                                      )}
+                                    >
+                                      <Mail className="w-4 h-4" />
+                                    </button>
+                                  );
+                                })()}
                                 <button
                                   title="Edit schedule"
                                   onClick={() => openSchedule(s)}
@@ -2147,6 +2271,97 @@ export default function StaffPage() {
                 {deptSaving ? "Saving..." : editingDepartment ? "Update Changes" : "Create Department"}
               </Button>
               <Button variant="outline" onClick={() => setIsDepartmentModalOpen(false)} className="px-6 border-[var(--elite-border)] h-11 rounded-xl hover:bg-[var(--elite-card-2)]">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Send Invitation Modal ── */}
+      {isInviteModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[var(--elite-card)] border border-[var(--elite-border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-[var(--elite-border)] flex items-center justify-between bg-[var(--elite-card-2)]/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
+                  <Send className="size-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold elite-title leading-none">Send Invitation</h2>
+                  <p className="text-xs elite-subtle mt-1.5">
+                    Invite <strong className="text-[var(--elite-text)]">{inviteStaff?.name}</strong> to join the platform
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setIsInviteModalOpen(false)} className="p-2 hover:bg-[var(--elite-card-2)] rounded-lg transition-colors">
+                <X className="size-5 elite-subtle" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Info banner */}
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                <Mail className="size-4 text-blue-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-300/80 leading-relaxed">
+                  A welcome email with a sign-in link will be sent. The staff member must accept the invitation before they can access their account.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider elite-subtle">Email Address</label>
+                <Input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="staff@example.com"
+                  className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-11 focus:ring-[var(--elite-orange)]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider elite-subtle">Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as "staff" | "receptionist")}
+                  className="w-full bg-[var(--elite-card-2)] border border-[var(--elite-border)] rounded-xl h-11 px-3 text-sm elite-title focus:ring-0 focus:border-[var(--elite-orange)]/50 transition-all"
+                >
+                  <option value="staff">Staff</option>
+                  <option value="receptionist">Receptionist</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider elite-subtle">
+                  Branch <span className="text-[10px] font-normal opacity-50">(Optional)</span>
+                </label>
+                <select
+                  value={inviteBranchId}
+                  onChange={(e) => setInviteBranchId(e.target.value)}
+                  className="w-full bg-[var(--elite-card-2)] border border-[var(--elite-border)] rounded-xl h-11 px-3 text-sm elite-title focus:ring-0 focus:border-[var(--elite-orange)]/50 transition-all"
+                >
+                  <option value="">No specific branch</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={String(b.id)}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-[var(--elite-border)] bg-[var(--elite-card-2)]/20 flex gap-3">
+              <Button
+                onClick={sendInvite}
+                disabled={inviteSending || !inviteEmail.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl shadow-md transition-all gap-2"
+              >
+                <Send className="size-4" />
+                {inviteSending ? "Sending..." : "Send Invitation"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsInviteModalOpen(false)}
+                className="px-6 border-[var(--elite-border)] h-11 rounded-xl hover:bg-[var(--elite-card-2)]"
+              >
                 Cancel
               </Button>
             </div>
