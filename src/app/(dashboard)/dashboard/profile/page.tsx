@@ -263,7 +263,7 @@ export default function SalonProfilePage() {
                 </label>
                 <Combobox
                   value={form.watch('gender_preference')}
-                  onValueChange={(value) => form.setValue('gender_preference', value)}
+                  onValueChange={(value) => form.setValue('gender_preference', value as any)}
                   options={GENDER_PREFS.map((g) => ({
                     value: g.value,
                     label: g.label,
@@ -308,7 +308,7 @@ export default function SalonProfilePage() {
                     </label>
                     <Combobox
                       value={form.watch('cancellation_policy_mode')}
-                      onValueChange={(value) => form.setValue('cancellation_policy_mode', value)}
+                      onValueChange={(value) => form.setValue('cancellation_policy_mode', value as any)}
                       options={POLICY_MODES.map((m) => ({
                         value: m.value,
                         label: m.label,

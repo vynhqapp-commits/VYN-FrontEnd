@@ -88,8 +88,12 @@ export default function ServicesPage() {
   const [packages, setPackages] = useState<PackageTemplate[]>([]);
   const [pkgLoading, setPkgLoading] = useState(false);
   const [pkgModalOpen, setPkgModalOpen] = useState(false);
+  const [pkgServiceIds, setPkgServiceIds] = useState<string[]>([]);
+  const [pkgServiceSessions, setPkgServiceSessions] = useState<Record<string, number>>({});
   const [editingPkg, setEditingPkg] = useState<PackageTemplate | null>(null);
   const [pkgSaving, setPkgSaving] = useState(false);
+  const [pkgSearch, setPkgSearch] = useState('');
+  const [pkgTotalSessions, setPkgTotalSessions] = useState<string>('10');
 
   /* ── Memberships state ── */
   const [memberships, setMemberships] = useState<MembershipPlanTemplate[]>([]);
@@ -142,6 +146,16 @@ export default function ServicesPage() {
     },
     mode: 'onSubmit',
   });
+ 
+  // Auto-calculate total sessions when specific services are selected
+  useEffect(() => {
+    if (pkgServiceIds.length > 0) {
+      const sum = pkgServiceIds.reduce((acc, sid) => {
+        return acc + (pkgServiceSessions[sid] ?? 1);
+      }, 0);
+      setPkgTotalSessions(String(sum));
+    }
+  }, [pkgServiceIds, pkgServiceSessions]);
 
   const load = async (p = page) => {
     setLoading(true);
@@ -309,9 +323,14 @@ export default function ServicesPage() {
       name: String(fd.get('name') ?? ''),
       description: String(fd.get('description') ?? '') || undefined,
       price: Number(fd.get('price') ?? 0),
-      total_sessions: Number(fd.get('total_sessions') ?? 1),
+      total_sessions: Number(pkgTotalSessions),
       validity_days: fd.get('validity_days') ? Number(fd.get('validity_days')) : null,
       is_active: fd.get('is_active') === 'on',
+      service_ids: pkgServiceIds.length > 0 ? pkgServiceIds : [],
+      services: pkgServiceIds.map(sid => ({
+        service_id: sid,
+        sessions: pkgServiceSessions[sid] ?? 1
+      }))
     };
     if (!body.name) { toastError('Name is required'); return; }
     setPkgSaving(true);
@@ -634,7 +653,14 @@ export default function ServicesPage() {
           ) : activeTab === 'services' ? (
             <Button onClick={openCreate} className="rounded-xl h-11" disabled={saving}>New service</Button>
           ) : activeTab === 'packages' ? (
-            <Button onClick={() => { setEditingPkg(null); setPkgModalOpen(true); }} className="rounded-xl h-11">New package</Button>
+            <Button onClick={() => { 
+              setEditingPkg(null); 
+              setPkgServiceIds([]); 
+              setPkgServiceSessions({});
+              setPkgSearch('');
+              setPkgTotalSessions('10');
+              setPkgModalOpen(true); 
+            }} className="rounded-xl h-11">New package</Button>
           ) : activeTab === 'coupons' ? (
             <Button onClick={() => { setEditingCoupon(null); setCouponType('flat'); setCouponModalOpen(true); }} className="rounded-xl h-11">New coupon</Button>
           ) : (
@@ -1315,6 +1341,7 @@ export default function ServicesPage() {
                     <TableHead>Name</TableHead>
                     <TableHead className="w-[120px]">Price</TableHead>
                     <TableHead className="w-[100px]">Sessions</TableHead>
+                    <TableHead className="w-[140px]">Services</TableHead>
                     <TableHead className="w-[120px]">Validity</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
                     {canManageCatalog && <TableHead className="text-right w-[140px]">Actions</TableHead>}
@@ -1333,6 +1360,9 @@ export default function ServicesPage() {
                         {Number(p.price).toLocaleString('en-US', { style: 'currency', currency })}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.total_sessions}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {p.services?.length ? `${p.services.length} services` : 'All services'}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{p.validity_days ? `${p.validity_days} days` : 'No expiry'}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${p.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
@@ -1342,7 +1372,18 @@ export default function ServicesPage() {
                       {canManageCatalog && (
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-2">
-                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingPkg(p); setPkgModalOpen(true); }} title="Edit">
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { 
+                            setEditingPkg(p); 
+                            setPkgServiceIds(p.services?.map(s => String(s.id)) ?? []); 
+                            const sessions: Record<string, number> = {};
+                            p.services?.forEach(s => {
+                              sessions[String(s.id)] = s.pivot?.sessions_count ?? 1;
+                            });
+                            setPkgServiceSessions(sessions);
+                            setPkgTotalSessions(String(p.total_sessions));
+                            setPkgSearch('');
+                            setPkgModalOpen(true); 
+                          }} title="Edit">
                             <Pencil className="size-4" />
                           </Button>
                           <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deletePkg(p)} title="Delete">
@@ -1381,14 +1422,86 @@ export default function ServicesPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Total sessions</label>
-                      <Input name="total_sessions" type="number" min="1" defaultValue={editingPkg?.total_sessions ?? ''} placeholder="10" required />
+                      <Input 
+                        name="total_sessions" 
+                        type="number" 
+                        min="1" 
+                        value={pkgTotalSessions}
+                        onChange={(e) => setPkgTotalSessions(e.target.value)}
+                        placeholder="10" 
+                        required 
+                        disabled={pkgServiceIds.length > 0}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1.5">Validity (days)</label>
                       <Input name="validity_days" type="number" min="1" defaultValue={editingPkg?.validity_days ?? ''} placeholder="Leave empty for no expiry" />
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-foreground">Applicable Services <span className="text-[10px] text-muted-foreground ml-1">(Check to include)</span></label>
+                      <div className="relative w-40">
+                        <Input 
+                          placeholder="Search..." 
+                          value={pkgSearch} 
+                          onChange={(e) => setPkgSearch(e.target.value)} 
+                          className="h-8 text-[10px] rounded-lg pr-8"
+                        />
+                        {pkgSearch && <X className="size-3 absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground" onClick={() => setPkgSearch('')} />}
+                      </div>
+                    </div>
+                    
+                    <div className="elite-panel-soft p-1 space-y-1 rounded-xl border border-[var(--elite-border)] bg-muted/10 max-h-[250px] overflow-y-auto">
+                      {services.filter(s => s.name.toLowerCase().includes(pkgSearch.toLowerCase())).map(svc => {
+                        const sid = String(svc.id);
+                        const isSelected = pkgServiceIds.includes(sid);
+                        return (
+                          <div key={sid} className={`flex items-center justify-between gap-3 p-2 rounded-lg transition-colors ${isSelected ? 'bg-background/80 shadow-sm border border-[var(--elite-border)]/20' : 'hover:bg-background/40'}`}>
+                            <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setPkgServiceIds(prev => [...prev, sid]);
+                                    if (pkgServiceSessions[sid] === undefined) {
+                                      setPkgServiceSessions(prev => ({ ...prev, [sid]: 1 }));
+                                    }
+                                  } else {
+                                    setPkgServiceIds(prev => prev.filter(id => id !== sid));
+                                  }
+                                }}
+                                className="size-4 rounded border-muted"
+                              />
+                              <span className="text-xs font-medium">{svc.name}</span>
+                            </label>
+                            {isSelected && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-tight">Sessions:</span>
+                                <Input 
+                                  type="number" 
+                                  min="1" 
+                                  className="w-16 h-8 text-xs rounded-md border-[var(--elite-orange)]/30 focus:border-[var(--elite-orange)]"
+                                  value={pkgServiceSessions[sid] ?? 1}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value) || 1;
+                                    setPkgServiceSessions(prev => ({ ...prev, [sid]: val }));
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {services.filter(s => s.name.toLowerCase().includes(pkgSearch.toLowerCase())).length === 0 && (
+                        <p className="text-[10px] text-muted-foreground text-center py-6">No services found matching &quot;{pkgSearch}&quot;</p>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">Note: If no services are selected, the package applies to all services with the total session count above.</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm pt-2">
                     <input type="checkbox" name="is_active" defaultChecked={editingPkg?.is_active ?? true} className="size-4" />
                     <span>Active</span>
                   </label>

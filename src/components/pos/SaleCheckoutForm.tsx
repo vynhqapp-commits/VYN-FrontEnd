@@ -178,6 +178,9 @@ export default function SaleCheckoutForm({
     { id: "p-1", method: "cash", amount: 0 },
   ]);
 
+  const [eligiblePackages, setEligiblePackages] = useState<any[]>([]);
+  const [redeemPackageId, setRedeemPackageId] = useState<string>("");
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
@@ -281,6 +284,36 @@ export default function SaleCheckoutForm({
     if (!appointmentId) return;
     pickAppointment(appointmentId);
   }, [appointmentId, appointments.length]);
+
+  useEffect(() => {
+    if (!clientId) {
+      setEligiblePackages([]);
+      setRedeemPackageId("");
+      return;
+    }
+
+    const serviceIds = lines
+      .filter(l => l.type === 'service' && l.service_id)
+      .map(l => l.service_id as string);
+
+    if (serviceIds.length === 0) {
+      setEligiblePackages([]);
+      setRedeemPackageId("");
+      return;
+    }
+
+    clientsApi.eligiblePackages(clientId, serviceIds).then((res) => {
+      if (!('error' in res) && res.data?.packages) {
+        setEligiblePackages(res.data.packages);
+        // Automatically pre-select if exactly one is found and none is currently selected
+        if (res.data.packages.length === 1 && !redeemPackageId) {
+          setRedeemPackageId(String(res.data.packages[0].id));
+        } else if (res.data.packages.length === 0) {
+          setRedeemPackageId("");
+        }
+      }
+    });
+  }, [clientId, lines]);
 
   const clientOptions = useMemo(
     () =>
@@ -534,6 +567,7 @@ export default function SaleCheckoutForm({
                 amount: tipMode === "custom" ? r.amount : undefined,
               }))
           : undefined,
+      redeem_package_id: redeemPackageId || undefined,
       package_template_id: lines.find((l) => l.type === "package")?.package_template_id || undefined,
       membership_plan_id: lines.find((l) => l.type === "membership")?.membership_plan_id || undefined,
       items: lines
@@ -730,9 +764,32 @@ export default function SaleCheckoutForm({
           </div>
           
           {lines.length > 0 && (
-            <div className="p-4 bg-[var(--elite-surface)]/50 border-t border-[var(--elite-border)] flex justify-between items-center">
-              <p className="text-xs font-bold elite-subtle uppercase tracking-wider">Subtotal Items</p>
-              <p className="text-sm font-black elite-title">${subtotal.toFixed(2)}</p>
+            <div className="p-4 bg-[var(--elite-surface)]/50 border-t border-[var(--elite-border)] flex flex-col gap-3">
+              {eligiblePackages.length > 0 && (
+                <div className="p-3 bg-gradient-to-r from-[var(--elite-orange-dim)] to-transparent border border-[var(--elite-orange)]/30 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-2">
+                    <Package className="size-4 text-[var(--elite-orange)]" />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-[var(--elite-orange)] uppercase tracking-wide">Active Package Found</span>
+                      <span className="text-[10px] text-muted-foreground font-medium">Use a package session for this service.</span>
+                    </div>
+                  </div>
+                  <select
+                    className="elite-input bg-white/50 dark:bg-black/20 h-8 rounded-lg text-xs font-medium border-[var(--elite-orange)]/30 w-48"
+                    value={redeemPackageId}
+                    onChange={(e) => setRedeemPackageId(e.target.value)}
+                  >
+                    <option value="">Do not redeem</option>
+                    {eligiblePackages.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.remaining_services} left)</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-bold elite-subtle uppercase tracking-wider">Subtotal Items</p>
+                <p className="text-sm font-black elite-title">${subtotal.toFixed(2)}</p>
+              </div>
             </div>
           )}
         </div>

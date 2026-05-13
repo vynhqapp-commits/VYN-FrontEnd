@@ -666,7 +666,7 @@ export default function StaffPage() {
       console.log("[Staff] Sending payload:", payload);
       const res = editing
         ? await staffApi.update(editing.id, payload)
-        : await staffApi.create(payload);
+        : await staffApi.create(payload as any);
       console.log("[Staff] API response:", res);
       setSaving(false);
       if (res.error) {
@@ -961,7 +961,7 @@ export default function StaffPage() {
                         )}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <div className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: svc.color || 'var(--elite-orange)' }} />
+                          <div className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: (svc as any).color || 'var(--elite-orange)' }} />
                           <span className="truncate">{svc.name}</span>
                         </div>
                         <span className={cn("text-xs", filterServiceId === String(svc.id) ? "text-[var(--elite-orange)]/60" : "elite-subtle group-hover:text-gray-500")}>{count}</span>
@@ -1038,7 +1038,7 @@ export default function StaffPage() {
                           </Avatar>
                           <div className="flex flex-col min-w-0">
                             <span className="text-sm font-semibold elite-title truncate">{s.name} {s.last_name}</span>
-                            <span className="text-[9px] elite-subtle truncate uppercase tracking-widest">{s.role_title || s.specialization || 'Professional'}</span>
+                            <span className="text-[9px] elite-subtle truncate uppercase tracking-widest">{(s as any).role_title || s.specialization || 'Professional'}</span>
                           </div>
                         </div>
                         {weekDates.map((date, i) => {
@@ -1116,7 +1116,7 @@ export default function StaffPage() {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'leave_tracker' ? (
+          ) : (activeTab as string) === 'leave_tracker' ? (
             <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -1160,12 +1160,12 @@ export default function StaffPage() {
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <Avatar className="size-9 rounded-xl">
-                                  <AvatarImage src={staffMember.photo_url} />
+                                  <AvatarImage src={staffMember.photo_url || undefined} />
                                   <AvatarFallback className="rounded-xl bg-[var(--elite-orange)]/10 text-[var(--elite-orange)] font-bold">{staffMember.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <div className="font-medium elite-title text-sm">{staffMember.name} {staffMember.last_name}</div>
-                                  <div className="text-[10px] elite-subtle uppercase tracking-wider">{staffMember.role_title || 'Staff'}</div>
+                                  <div className="text-[10px] elite-subtle uppercase tracking-wider">{(staffMember as any).role_title || 'Staff'}</div>
                                 </div>
                               </div>
                             </TableCell>
@@ -1512,12 +1512,12 @@ export default function StaffPage() {
                   {formTab === 'basic' && (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-6">
-                        <RHFTextField control={form.control} name="name" label="First Name *" placeholder="e.g. Sara" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
-                        <RHFTextField control={form.control} name="last_name" label="Last Name *" placeholder="e.g. Ahmed" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
+                        <RHFTextField control={form.control} name="name" label="First Name *" placeholder="e.g. Sara" />
+                        <RHFTextField control={form.control} name="last_name" label="Last Name *" placeholder="e.g. Ahmed" />
                       </div>
-                      <RHFTextField control={form.control} name="email" label="Email" placeholder="sara.ahmed@example.com" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
-                      <RHFTextField control={form.control} name="phone" label="Phone" placeholder="+966XXXXXXXXX" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
-                      <RHFTextField control={form.control} type="date" name="dob" label="Date of Birth" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
+                      <RHFTextField control={form.control} name="email" label="Email" placeholder="sara.ahmed@example.com" />
+                      <RHFTextField control={form.control} name="phone" label="Phone" placeholder="+966XXXXXXXXX" />
+                      <RHFTextField control={form.control} type="date" name="dob" label="Date of Birth" />
                       
                       <div className="space-y-2">
                         <label className="text-sm font-medium elite-subtle">Bio</label>
@@ -1720,11 +1720,11 @@ export default function StaffPage() {
                         />
                       </div>
 
-                      <RHFTextField control={form.control} name="role_title" label="Role/Title" placeholder="e.g., Senior Stylist, Massage Therapist" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
+                      <RHFTextField control={form.control} name="role_title" label="Role/Title" placeholder="e.g., Senior Stylist, Massage Therapist" />
 
                       <div className="grid grid-cols-2 gap-6">
-                        <RHFTextField control={form.control} type="date" name="hire_date" label="Hire Date" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
-                        <RHFTextField control={form.control} type="date" name="start_date" label="Start Date" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
+                        <RHFTextField control={form.control} type="date" name="hire_date" label="Hire Date" />
+                        <RHFTextField control={form.control} type="date" name="start_date" label="Start Date" />
                       </div>
                     </div>
                   )}
@@ -1742,8 +1742,8 @@ export default function StaffPage() {
 
                       <div className="p-6 rounded-2xl border border-[var(--elite-orange)]/20 bg-[var(--elite-orange)]/5 space-y-6">
                         <h3 className="text-sm font-semibold text-[var(--elite-orange)]">Emergency Contact</h3>
-                        <RHFTextField control={form.control} name="emergency_contact_name" label="Contact Name" placeholder="Full name of emergency contact" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
-                        <RHFTextField control={form.control} name="emergency_contact_phone" label="Contact Phone" placeholder="Phone number of emergency contact" className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12" />
+                        <RHFTextField control={form.control} name="emergency_contact_name" label="Contact Name" placeholder="Full name of emergency contact" />
+                        <RHFTextField control={form.control} name="emergency_contact_phone" label="Contact Phone" placeholder="Phone number of emergency contact" />
                       </div>
                     </div>
                   )}
@@ -1836,7 +1836,7 @@ export default function StaffPage() {
                             <Input
                               type="number"
                               {...form.register("commission_value")}
-                              className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12"
+                             
                               placeholder={form.watch("commission_type") === 'percentage' ? "e.g. 15" : "e.g. 50.00"}
                             />
                           </div>
@@ -1849,7 +1849,7 @@ export default function StaffPage() {
                           <Input
                             type="number"
                             {...form.register("salary_value")}
-                            className="bg-[var(--elite-card-2)] border-[var(--elite-border)] h-12"
+                           
                             placeholder="e.g. 3500.00"
                           />
                           <p className="text-[10px] elite-subtle italic">Guaranteed base monthly salary</p>

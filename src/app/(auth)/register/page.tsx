@@ -226,7 +226,7 @@ export default function RegisterPage() {
                   )}
                   <RHFTextField control={form.control} name="fullName" label={t('fullName')} placeholder={t('yourName')} disabled={loading} />
                   <RHFTextField control={form.control} name="email" label={t('email')} placeholder="you@example.com" type="email" autoComplete="off" disabled={loading} />
-                  <RHFPhoneInput control={form.control} name="phone" label={t('phoneOptionalLabel')} disabled={loading} />
+                  <RHFPhoneInput control={form.control as any} name="phone" label={t('phoneOptionalLabel')} disabled={loading} />
                   <RHFTextField control={form.control} name="password" label={t('password')} placeholder={t('atLeast6Chars')} type="password" autoComplete="new-password" disabled={loading} />
 
                   <Button type="submit" disabled={loading} className="w-full h-11 rounded-xl font-semibold">

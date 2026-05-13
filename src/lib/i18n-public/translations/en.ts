@@ -110,6 +110,7 @@ export const publicTranslationsEn = {
   // My Bookings page
   myAppointments: "My Appointments",
   myAppointmentsSubtitle: "View and manage all your bookings.",
+  myPackages: "My Packages",
   bookNew: "Book new",
   upcoming: "Upcoming",
   past: "Past",

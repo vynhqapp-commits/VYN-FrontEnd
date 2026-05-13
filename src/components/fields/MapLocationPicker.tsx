@@ -253,7 +253,7 @@ export default function MapLocationPicker({ lat, lng, onChange }: MapLocationPic
               {searchQuery.length > 0 && (
                 <button type="button" onClick={() => { setSearchQuery(''); setSearchResults([]); setShowDropdown(false); }} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 mr-1"><X className="w-3.5 h-3.5" /></button>
               )}
-              <button type="button" onClick={handleSearch} disabled={isSearching} className="px-4 h-8 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5 shadow-sm">
+              <button type="button" onClick={() => handleSearch()} disabled={isSearching} className="px-4 h-8 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5 shadow-sm">
                 {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Find'}
               </button>
             </div>

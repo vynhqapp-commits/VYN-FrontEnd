@@ -246,7 +246,7 @@ export const authApi = {
       body: JSON.stringify({ credential }),
     }),
   linkedHistory: () =>
-    request<{
+    api<{
       salons: Array<{
         salon_id: number;
         salon_name: string;
@@ -661,6 +661,14 @@ export const clientsApi = {
     return res.error ? { error: res.error } : { data: { packages: packages as any[] } };
   },
 
+  eligiblePackages: async (clientId: string, serviceIds: string[]) => {
+    const query = serviceIds.length ? `?service_ids[]=${serviceIds.join('&service_ids[]=')}` : '';
+    const res = await api<unknown>(`/api/customers/${clientId}/eligible-packages${query}`);
+    const raw = res.data as unknown;
+    const packages = Array.isArray(raw) ? raw : listData(raw as any);
+    return res.error ? { error: res.error } : { data: { packages: packages as any[] } };
+  },
+
   memberships: async (clientId: string) => {
     const res = await api<unknown>(`/api/customers/${clientId}/memberships`);
     const raw = res.data as unknown;
@@ -871,6 +879,12 @@ export interface PackageTemplate {
   total_sessions: number;
   validity_days?: number | null;
   is_active: boolean;
+  service_ids?: string[];
+  services?: { 
+    id: string; 
+    name: string; 
+    pivot?: { sessions_count: number } 
+  }[];
   created_at?: string;
 }
 
@@ -898,6 +912,7 @@ export const catalogApi = {
     total_sessions: number;
     validity_days?: number | null;
     is_active?: boolean;
+    service_ids?: string[];
   }) =>
     api<PackageTemplate>("/api/catalog/packages", {
       method: "POST",
@@ -1423,6 +1438,7 @@ export const transactionsApi = {
     tip_allocations?: { staff_id: string; amount?: number }[];
     package_template_id?: string;
     membership_plan_id?: string;
+    redeem_package_id?: string;
     items: {
       type: "service" | "product";
       service_id?: string;
@@ -1467,6 +1483,7 @@ export const transactionsApi = {
         appointment_id: body.appointment_id ?? null,
         package_template_id: body.package_template_id ?? null,
         membership_plan_id: body.membership_plan_id ?? null,
+        redeem_package_id: (body as any).redeem_package_id ?? null,
         payment_method: (body.payments ?? []).length > 0
           ? (paymentMethod === "card"
             ? "card"
@@ -2175,6 +2192,10 @@ export const customerApi = {
       : listData(res.data as Appointment[] | { data: Appointment[] });
     return res.error ? { error: res.error } : { data: { bookings: list } };
   },
+  myPackages: async () => {
+    const res = await api<{ packages?: unknown[] }>("/api/customer/my-packages");
+    return res.error ? { error: res.error } : { data: { packages: res.data?.packages ?? [] } };
+  },
   getBooking: (id: string) =>
     api<Appointment>(`/api/customer/bookings/${id}`).then((r) =>
       r.data
@@ -2397,6 +2418,7 @@ export interface ClientPackage {
   name?: string | null;
   total_services: number;
   remaining_services: number;
+  service_balances?: Record<string, number> | null;
   expires_at?: string | null;
   status?: string;
   membership_id?: string | null;
@@ -2457,6 +2479,7 @@ export interface Service {
   pricing_tiers?: ServicePricingTier[];
   add_ons?: ServiceAddOn[];
   product_requirements?: ServiceProductRequirement[];
+  assigned_staff?: { id: string }[];
   created_at?: string;
   updated_at?: string;
 }

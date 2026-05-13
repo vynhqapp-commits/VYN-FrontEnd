@@ -81,8 +81,8 @@ export default function PaymentsPage() {
     if ('error' in res && res.error) {
       toastError(res.error);
     } else {
-      setSelectedInvoice(res.data?.invoice);
-      setPaymentForm({ amount: res.data?.invoice?.outstanding || '', method: 'cash', reference: '' });
+      setSelectedInvoice(res.data?.invoice as InvoiceDetail);
+      setPaymentForm({ amount: (res.data?.invoice as InvoiceDetail)?.outstanding || '', method: 'cash', reference: '' });
     }
   };
 
