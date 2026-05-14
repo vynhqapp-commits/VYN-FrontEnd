@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { CalendarCheck, UserCircle, LayoutDashboard, UserRound } from "lucide-react";
-import { Globe } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CalendarCheck, UserCircle, LayoutDashboard, UserRound, Globe, Menu, X, Package, CreditCard, Heart, User } from "lucide-react";
 import { useAuth, ThemeToggle } from "@/lib/auth-context";
 import { getRedirectForRole } from "@/lib/role-redirect";
 import { APP_NAME } from "@/lib/app-name";
@@ -14,166 +13,189 @@ import { cn } from "@/lib/utils";
 
 const LOCALE_LABELS: Record<PublicLocale, string> = { en: "EN", ar: "عربي", fr: "FR" };
 
-/**
- * Shared public-facing header.
- *
- * Used by:
- *  - /book  (the public booking flow)
- *  - (customer) layout  (my-bookings and other customer pages)
- *
- * Renders a different right-side action depending on the auth state:
- *  - Guest            → Register  |  Log in
- *  - Customer         → My Bookings pill  |  name  |  Log out
- *  - Staff/Owner/Admin→ Go to Dashboard  |  Log out
- */
 export default function PublicHeader() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { locale, setLocale } = useLocale();
   const t = getPublicT(locale);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     router.push("/");
+    setMobileMenuOpen(false);
   };
 
   const isCustomer = user?.role === "customer";
   const isSalonRole =
     user && ["salon_owner", "manager", "staff", "super_admin"].includes(user.role);
 
-  return (
-    <header className="bg-background/90 backdrop-blur-sm border-b border-border shadow-sm sticky top-0 z-20">
-      <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
+  const navLinks = [
+    { href: "/my-bookings", label: t("myBookings"), icon: <CalendarCheck className="size-4" />, active: pathname === "/my-bookings" },
+    { href: "/my-packages", label: t("myPackages"), icon: <Package className="size-4" />, active: pathname === "/my-packages" && !searchParams.get('tab') },
+    { href: "/my-packages?tab=memberships", label: "My Memberships", icon: <CreditCard className="size-4" />, active: pathname === "/my-packages" && searchParams.get('tab') === 'memberships' },
+    { href: "/favorites", label: t("favorites"), icon: <Heart className="size-4" />, active: pathname === "/favorites" },
+    { href: "/book", label: t("bookAVisit"), icon: <CalendarCheck className="size-4" />, active: pathname.startsWith("/book") },
+    { href: "/profile", label: t("profile"), icon: <User className="size-4" />, active: pathname === "/profile" },
+  ];
 
-        {/* ── Left: Logo + (customer) nav links ── */}
-        <div className="flex items-center gap-6 min-w-0">
+  return (
+    <>
+    <header className={cn(
+      "bg-background/95 backdrop-blur-md border-b border-border shadow-sm sticky top-0 transition-all",
+      mobileMenuOpen ? "z-[10000]" : "z-50"
+    )}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+
+        {/* ── Left: Logo + Desktop Nav ── */}
+        <div className="flex items-center gap-8 min-w-0">
           <Link
             href="/"
-            className="font-display text-base font-semibold text-foreground hover:text-primary transition-colors shrink-0"
+            className="font-display text-xl font-black tracking-tight text-foreground hover:text-primary transition-all shrink-0"
           >
             {APP_NAME}
           </Link>
 
-          {/* Customer navigation links */}
           {isCustomer && (
-            <nav className="hidden sm:flex items-center gap-5">
-              <NavLink href="/my-bookings" active={pathname === "/my-bookings"}>
-                {t("myBookings")}
-              </NavLink>
-              <NavLink href="/my-packages" active={pathname === "/my-packages"}>
-                {t("myPackages")}
-              </NavLink>
-              <NavLink href="/favorites" active={pathname === "/favorites"}>
-                {t("favorites")}
-              </NavLink>
-              <NavLink href="/book" active={pathname.startsWith("/book")}>
-                {t("bookAVisit")}
-              </NavLink>
-              <NavLink href="/profile" active={pathname === "/profile"}>
-                {t("profile")}
-              </NavLink>
+            <nav className="hidden lg:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <NavLink key={link.href} href={link.href} active={link.active}>
+                  {link.label}
+                </NavLink>
+              ))}
             </nav>
           )}
         </div>
 
-        {/* ── Right: Auth state ── */}
-        <div className="flex items-center gap-3 shrink-0">
-          <ThemeToggle className="size-8 border-border/80" />
-          <LocaleSwitcher locale={locale} setLocale={setLocale} />
+        {/* ── Right: Actions ── */}
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="hidden sm:flex items-center gap-2">
+            <ThemeToggle className="size-9 border-border/50 rounded-xl" />
+            <LocaleSwitcher locale={locale} setLocale={setLocale} />
+          </div>
 
           {user ? (
-            <>
-              {/* User name */}
-              <span className="hidden sm:flex items-center gap-1.5 text-sm text-foreground font-medium">
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-accent/50 border border-border/50">
                 <UserCircle className="w-4 h-4 text-primary" />
-                {user.fullName ?? user.name ?? user.email}
-              </span>
-
-              {/* Role-specific action */}
-              {isCustomer && (
-                <>
-                  <Link
-                    href="/profile"
-                    className="flex items-center justify-center size-8 rounded-lg text-muted-foreground hover:bg-accent transition-colors"
-                    title={t("profile")}
-                  >
-                    <UserRound className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/my-bookings"
-                    className="flex items-center gap-1.5 text-sm font-medium text-primary-foreground
-                      bg-primary hover:opacity-90 px-3 py-1.5 rounded-lg
-                      transition-colors shadow-sm"
-                  >
-                    <CalendarCheck className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{t("myBookings")}</span>
-                    <span className="sm:hidden">{t("myBookings")}</span>
-                  </Link>
-                </>
-              )}
+                <span className="text-xs font-bold text-foreground truncate max-w-[120px]">
+                  {user.fullName ?? user.name ?? user.email}
+                </span>
+              </div>
 
               {isSalonRole && (
                 <Link
                   href={getRedirectForRole(user.role)}
-                  className="flex items-center gap-1.5 text-sm font-medium text-primary-foreground
-                    bg-primary hover:opacity-90 px-3 py-1.5 rounded-lg
-                    transition-colors shadow-sm"
+                  className="hidden sm:flex items-center gap-2 text-xs font-black text-primary-foreground
+                    bg-primary hover:scale-[1.02] active:scale-[0.98] px-4 py-2.5 rounded-xl
+                    transition-all shadow-md"
                 >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <LayoutDashboard className="w-4 h-4" />
                   {t("goToDashboard")}
                 </Link>
               )}
 
-              {/* Log out */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 rounded-xl hover:bg-accent transition-colors"
+              >
+                {mobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+              </button>
+
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="hidden lg:block text-xs font-bold text-muted-foreground hover:text-red-500 transition-colors px-2"
               >
                 {t("logOut")}
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <Link
-                href="/register"
-                className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {t("register")}
-              </Link>
+            <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="text-sm font-medium text-primary-foreground bg-primary
-                  hover:opacity-90 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                className="text-xs font-black text-primary-foreground bg-primary
+                  hover:scale-[1.02] active:scale-[0.98] px-5 py-2.5 rounded-xl transition-all shadow-md"
               >
                 {t("logIn")}
               </Link>
-            </>
+            </div>
           )}
         </div>
       </div>
     </header>
+
+    {/* ── Mobile Menu Overlay ── */}
+    {mobileMenuOpen && (
+      <div className="lg:hidden fixed inset-0 z-[10000] bg-background text-foreground flex flex-col">
+        {/* Mobile Header Inside Menu */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+          <span className="font-display text-xl font-black tracking-tight">{APP_NAME}</span>
+          <button onClick={() => setMobileMenuOpen(false)} className="p-2">
+            <X className="size-8" />
+          </button>
+        </div>
+
+        <nav className="flex flex-col p-4 gap-1 overflow-y-auto flex-1">
+          {isCustomer && navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className={cn(
+                "flex items-center gap-4 p-5 rounded-2xl text-lg font-bold transition-all",
+                link.active 
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:bg-accent"
+              )}
+            >
+              <div className={cn("p-2 rounded-xl", link.active ? "bg-primary/20" : "bg-muted")}>
+                {link.icon}
+              </div>
+              {link.label}
+            </Link>
+          ))}
+          
+          <div className="mt-auto pt-4 border-t border-border/50 flex flex-col gap-6">
+            <div className="flex items-center justify-between px-4">
+              <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Appearance & Language</span>
+              <div className="flex gap-4">
+                <ThemeToggle className="size-11 border-border/50 rounded-2xl bg-accent/50" />
+                <LocaleSwitcher locale={locale} setLocale={setLocale} />
+              </div>
+            </div>
+
+            {user && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-4 p-5 rounded-2xl text-lg font-bold text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100 dark:hover:bg-red-500/10 dark:hover:border-red-500/20"
+              >
+                <div className="p-2 rounded-xl bg-red-50 dark:bg-red-500/10">
+                  <X className="size-5" />
+                </div>
+                {t("logOut")}
+              </button>
+            )}
+          </div>
+        </nav>
+      </div>
+    )}
+    </>
   );
 }
 
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-function NavLink({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
+function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
     <Link
       href={href}
       className={cn(
-        "text-sm font-medium transition-colors",
-        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+        "px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-xl",
+        active 
+          ? "text-orange-600 bg-orange-50/50 dark:text-orange-500 dark:bg-orange-500/10 shadow-sm" 
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
       )}
     >
       {children}
@@ -181,40 +203,31 @@ function NavLink({
   );
 }
 
-function LocaleSwitcher({
-  locale,
-  setLocale,
-}: {
-  locale: PublicLocale;
-  setLocale: (l: PublicLocale) => void;
-}) {
+function LocaleSwitcher({ locale, setLocale }: { locale: PublicLocale; setLocale: (l: PublicLocale) => void }) {
   const [open, setOpen] = useState(false);
-
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="inline-flex items-center justify-center gap-1 size-8 rounded-lg border border-border bg-background/80
-          text-foreground text-xs font-medium shadow-sm transition-colors hover:bg-accent"
-        aria-label="Change language"
+        className="inline-flex items-center justify-center gap-1 size-9 rounded-xl border border-border/50 bg-background/80
+          text-foreground text-xs font-bold shadow-sm transition-all hover:bg-accent"
       >
-        <Globe className="size-3.5" />
+        <Globe className="size-4" />
+        <span className="text-[10px]">{LOCALE_LABELS[locale]}</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute end-0 top-full mt-1 z-40 min-w-[5rem] rounded-lg border border-border bg-background shadow-md py-1">
+          <div className="absolute end-0 top-full mt-2 z-40 min-w-[8rem] rounded-2xl border border-border bg-background/95 backdrop-blur-md shadow-xl py-2 animate-in zoom-in-95">
             {supportedPublicLocales.map((l) => (
               <button
                 key={l}
                 type="button"
                 onClick={() => { setLocale(l); setOpen(false); }}
                 className={cn(
-                  "w-full px-3 py-1.5 text-start text-sm transition-colors",
-                  l === locale
-                    ? "text-primary font-semibold bg-accent/50"
-                    : "text-foreground hover:bg-accent",
+                  "w-full px-4 py-2 text-start text-xs font-bold transition-colors",
+                  l === locale ? "text-primary bg-accent/50" : "text-foreground hover:bg-accent"
                 )}
               >
                 {LOCALE_LABELS[l]}

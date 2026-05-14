@@ -1463,7 +1463,7 @@ export const transactionsApi = {
       method: "POST",
       body: JSON.stringify({
         branch_id: body.location_id,
-        customer_id: body.client_id ?? null,
+        customer_id: (body as any).customer_id ?? body.client_id ?? null,
         staff_id: body.items[0]?.staff_id ?? null,
         items,
         payments: (body.payments ?? []).map((p) => ({
@@ -1484,6 +1484,7 @@ export const transactionsApi = {
         package_template_id: body.package_template_id ?? null,
         membership_plan_id: body.membership_plan_id ?? null,
         redeem_package_id: (body as any).redeem_package_id ?? null,
+        redeem_type: (body as any).redeem_type ?? null,
         payment_method: (body.payments ?? []).length > 0
           ? (paymentMethod === "card"
             ? "card"

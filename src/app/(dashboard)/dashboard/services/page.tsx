@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Trash2, X, Package, CreditCard, Plus, Ticket, Layers } from 'lucide-react';
+import { Pencil, Trash2, X, Package, CreditCard, Plus, Ticket, Layers, Search } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -101,6 +101,10 @@ export default function ServicesPage() {
   const [memModalOpen, setMemModalOpen] = useState(false);
   const [editingMem, setEditingMem] = useState<MembershipPlanTemplate | null>(null);
   const [memSaving, setMemSaving] = useState(false);
+  const [memServiceIds, setMemServiceIds] = useState<string[]>([]);
+  const [memServiceSessions, setMemServiceSessions] = useState<Record<string, number>>({});
+  const [memTotalSessions, setMemTotalSessions] = useState<string>('');
+  const [memSearch, setMemSearch] = useState('');
 
   /* ── Coupons state ── */
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -156,6 +160,15 @@ export default function ServicesPage() {
       setPkgTotalSessions(String(sum));
     }
   }, [pkgServiceIds, pkgServiceSessions]);
+
+  useEffect(() => {
+    if (memServiceIds.length > 0) {
+      const sum = memServiceIds.reduce((acc, sid) => {
+        return acc + (memServiceSessions[sid] ?? 1);
+      }, 0);
+      setMemTotalSessions(String(sum));
+    }
+  }, [memServiceIds, memServiceSessions]);
 
   const load = async (p = page) => {
     setLoading(true);
@@ -368,6 +381,11 @@ export default function ServicesPage() {
       interval_months: Number(fd.get('interval_months') ?? 1),
       credits_per_renewal: Number(fd.get('credits_per_renewal') ?? 0),
       is_active: fd.get('is_active') === 'on',
+      service_ids: memServiceIds.length > 0 ? memServiceIds : [],
+      services: memServiceIds.map(sid => ({
+        service_id: sid,
+        sessions: memServiceSessions[sid] ?? 1
+      })),
     };
     if (!body.name) { toastError('Name is required'); return; }
     setMemSaving(true);
@@ -380,10 +398,16 @@ export default function ServicesPage() {
   };
 
   const deleteMem = async (m: MembershipPlanTemplate) => {
-    if (!window.confirm(`Delete membership "${m.name}"?`)) return;
+    if (!window.confirm(`Delete membership "${m.name}"? Note: This will deactivate the plan.`)) return;
     const res = await catalogApi.deleteMembership(m.id);
     if ('error' in res && res.error) toastError(res.error);
-    else { toastSuccess('Membership deleted.'); loadMemberships(); }
+    else { toastSuccess('Membership deactivated.'); loadMemberships(); }
+  };
+
+  const toggleMemStatus = async (m: MembershipPlanTemplate) => {
+    const res = await catalogApi.updateMembership(m.id, { is_active: !m.is_active });
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess(`Membership ${!m.is_active ? 'activated' : 'deactivated'}.`); loadMemberships(); }
   };
 
   /* ── Coupon CRUD helpers ── */
@@ -664,7 +688,14 @@ export default function ServicesPage() {
           ) : activeTab === 'coupons' ? (
             <Button onClick={() => { setEditingCoupon(null); setCouponType('flat'); setCouponModalOpen(true); }} className="rounded-xl h-11">New coupon</Button>
           ) : (
-            <Button onClick={() => { setEditingMem(null); setMemModalOpen(true); }} className="rounded-xl h-11">New membership</Button>
+            <Button onClick={() => { 
+              setEditingMem(null); 
+              setMemServiceIds([]);
+              setMemServiceSessions({});
+              setMemTotalSessions('');
+              setMemSearch('');
+              setMemModalOpen(true); 
+            }} className="rounded-xl h-11">New membership</Button>
           )
         }
       />
@@ -774,15 +805,17 @@ export default function ServicesPage() {
                     {s.product_requirements && s.product_requirements.length > 0 ? `${s.product_requirements.length}` : '—'}
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                    <button
+                      onClick={() => toggleActive(s)}
+                      disabled={saving}
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:opacity-80 ${
                         s.is_active
                           ? 'bg-green-50 text-emerald-700 border-emerald-200'
                           : 'bg-muted/40 text-foreground border-border'
                       }`}
                     >
                       {s.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    </button>
                   </TableCell>
                   {canManageCatalog && (
                   <TableCell className="text-right">
@@ -1365,9 +1398,12 @@ export default function ServicesPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.validity_days ? `${p.validity_days} days` : 'No expiry'}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${p.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                        <button
+                          onClick={() => togglePkgStatus(p)}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:opacity-80 ${p.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}
+                        >
                           {p.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        </button>
                       </TableCell>
                       {canManageCatalog && (
                       <TableCell className="text-right">
@@ -1554,14 +1590,28 @@ export default function ServicesPage() {
                       <TableCell className="text-muted-foreground">Every {m.interval_months} mo</TableCell>
                       <TableCell className="text-muted-foreground">{m.credits_per_renewal} sessions</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${m.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                        <button
+                          onClick={() => toggleMemStatus(m)}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:opacity-80 ${m.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}
+                        >
                           {m.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        </button>
                       </TableCell>
                       {canManageCatalog && (
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-2">
-                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditingMem(m); setMemModalOpen(true); }} title="Edit">
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { 
+                            setEditingMem(m); 
+                            setMemServiceIds(m.services?.map(s => String(s.id)) ?? []); 
+                            const sessions: Record<string, number> = {};
+                            m.services?.forEach(s => {
+                              sessions[String(s.id)] = s.pivot?.sessions_count ?? 1;
+                            });
+                            setMemServiceSessions(sessions);
+                            setMemTotalSessions(String(m.credits_per_renewal));
+                            setMemSearch('');
+                            setMemModalOpen(true); 
+                          }} title="Edit">
                             <Pencil className="size-4" />
                           </Button>
                           <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg" onClick={() => deleteMem(m)} title="Delete">
@@ -1599,15 +1649,75 @@ export default function ServicesPage() {
                       <Input name="price" type="number" step="0.01" min="0" defaultValue={editingMem ? Number(editingMem.price) : ''} placeholder="80" required />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-foreground mb-1.5">Interval (months)</label>
-                      <Input name="interval_months" type="number" min="1" defaultValue={editingMem?.interval_months ?? 1} required />
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Interval (mo)</label>
+                      <Input name="interval_months" type="number" min="1" defaultValue={editingMem?.interval_months ?? 1} placeholder="1" required />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-foreground mb-1.5">Credits per renewal</label>
-                      <Input name="credits_per_renewal" type="number" min="0" defaultValue={editingMem?.credits_per_renewal ?? 0} required />
+                      <label className="block text-xs font-medium text-foreground mb-1.5">Sessions / Renewal</label>
+                      <Input 
+                        name="credits_per_renewal" 
+                        type="number" 
+                        min="0" 
+                        value={memTotalSessions}
+                        onChange={(e) => setMemTotalSessions(e.target.value)}
+                        placeholder="Unlimited" 
+                        disabled={memServiceIds.length > 0}
+                      />
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-foreground">Applicable Services <span className="text-[10px] text-muted-foreground ml-1">(Check to include)</span></label>
+                      <div className="relative w-40">
+                        <Input 
+                          placeholder="Search..." 
+                          value={memSearch} 
+                          onChange={(e) => setMemSearch(e.target.value)} 
+                          className="h-8 text-[10px] rounded-lg pr-8"
+                        />
+                        <Search className="absolute right-2.5 top-2 size-3.5 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border border-[var(--elite-border)] rounded-xl p-3 space-y-2 bg-black/5">
+                      {services.filter(s => s.name.toLowerCase().includes(memSearch.toLowerCase())).map(s => {
+                        const sid = String(s.id);
+                        const isSelected = memServiceIds.includes(sid);
+                        return (
+                          <div key={sid} className="flex items-center justify-between gap-3 p-1">
+                            <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                              <input 
+                                type="checkbox" 
+                                checked={isSelected} 
+                                onChange={() => {
+                                  if (isSelected) setMemServiceIds(memServiceIds.filter(id => id !== sid));
+                                  else setMemServiceIds([...memServiceIds, sid]);
+                                }}
+                                className="size-3.5 rounded-md border-muted accent-[var(--elite-orange)]"
+                              />
+                              <span className="text-xs text-foreground truncate">{s.name}</span>
+                            </label>
+                            {isSelected && (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[10px] text-muted-foreground">Sessions:</span>
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  value={memServiceSessions[sid] ?? 1}
+                                  onChange={(e) => setMemServiceSessions({...memServiceSessions, [sid]: parseInt(e.target.value) || 1})}
+                                  className="w-10 h-6 text-[10px] bg-white dark:bg-black/40 border border-[var(--elite-border)] rounded px-1 text-center"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {services.length === 0 && (
+                        <p className="text-[10px] text-center text-muted-foreground py-2">No services found.</p>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">Note: If no services are selected, the membership applies to all services with the total session count above.</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm pt-2">
                     <input type="checkbox" name="is_active" defaultChecked={editingMem?.is_active ?? true} className="size-4" />
                     <span>Active</span>
                   </label>
@@ -1670,9 +1780,12 @@ export default function ServicesPage() {
                         {c.starts_at ? new Date(c.starts_at).toLocaleDateString() : '—'} → {c.ends_at ? new Date(c.ends_at).toLocaleDateString() : '—'}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${c.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}>
+                        <button
+                          onClick={() => toggleCouponStatus(c)}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:opacity-80 ${c.is_active ? 'bg-green-50 text-emerald-700 border-emerald-200' : 'bg-muted/40 text-foreground border-border'}`}
+                        >
                           {c.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        </button>
                       </TableCell>
                       {canManageCatalog && (
                       <TableCell className="text-right">

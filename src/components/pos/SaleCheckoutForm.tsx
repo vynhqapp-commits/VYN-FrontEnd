@@ -10,6 +10,7 @@ import {
   servicesApi,
   transactionsApi,
   catalogApi,
+  couponsApi,
   type Appointment,
   type Client,
   type Product,
@@ -17,6 +18,7 @@ import {
   type StaffMember,
   type PackageTemplate,
   type MembershipPlanTemplate,
+  type Coupon,
 } from "@/lib/api";
 import { Plus, Trash2, User, ShoppingBag, CreditCard, Tags, Info, Search, Package, Star, ChevronDown } from "lucide-react";
 import { toastError, toastSuccess } from "@/lib/toast";
@@ -180,6 +182,7 @@ export default function SaleCheckoutForm({
 
   const [eligiblePackages, setEligiblePackages] = useState<any[]>([]);
   const [redeemPackageId, setRedeemPackageId] = useState<string>("");
+  const [redeemType, setRedeemType] = useState<"package" | "membership">("package");
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -307,9 +310,12 @@ export default function SaleCheckoutForm({
         setEligiblePackages(res.data.packages);
         // Automatically pre-select if exactly one is found and none is currently selected
         if (res.data.packages.length === 1 && !redeemPackageId) {
-          setRedeemPackageId(String(res.data.packages[0].id));
+          const first = res.data.packages[0];
+          setRedeemPackageId(String(first.id));
+          setRedeemType(first.type === 'membership' ? 'membership' : 'package');
         } else if (res.data.packages.length === 0) {
           setRedeemPackageId("");
+          setRedeemType("package");
         }
       }
     });
@@ -338,10 +344,20 @@ export default function SaleCheckoutForm({
     [appointments],
   );
 
-  const subtotal = useMemo(
-    () => lines.reduce((sum, l) => sum + l.quantity * l.unit_price, 0),
-    [lines],
-  );
+  const subtotal = useMemo(() => {
+    return lines.reduce((sum, l) => {
+      let price = l.unit_price;
+      // If a package/membership is selected for redemption, covered services are free ($0)
+      if (redeemPackageId && l.type === "service") {
+        const pkg = (eligiblePackages as any[]).find(p => String(p.id) === String(redeemPackageId));
+        if (pkg && pkg.covered_services) {
+          const isCovered = pkg.covered_services.some((cs: any) => String(cs.id) === String(l.service_id));
+          if (isCovered) price = 0;
+        }
+      }
+      return sum + l.quantity * price;
+    }, 0);
+  }, [lines, redeemPackageId, eligiblePackages]);
   const discountAmount = useMemo(() => {
     if (discountValue <= 0) return 0;
     if (discountType === "percent")
@@ -409,6 +425,45 @@ export default function SaleCheckoutForm({
     () => lines.some((l) => l.type === "package" || l.type === "membership"),
     [lines],
   );
+
+  // Auto-fetch coupon details when code is entered
+  useEffect(() => {
+    const code = discountCode.trim().toUpperCase();
+    if (!code || code.length < 2) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        // Broad search by code
+        const res = await couponsApi.list({ q: code });
+        if (!("error" in res) && res.data?.coupons) {
+          // Exact match find
+          const found = res.data.coupons.find(c => c.code.trim().toUpperCase() === code);
+          
+          if (found && found.is_active) {
+            // Validate Dates
+            const now = new Date();
+            if (found.starts_at && new Date(found.starts_at) > now) return;
+            if (found.ends_at && new Date(found.ends_at) < now) {
+               toastError("This coupon has expired");
+               return;
+            }
+
+            // Validate Min Subtotal
+            if (found.min_subtotal && subtotal < Number(found.min_subtotal)) return;
+
+            // Apply it!
+            setDiscountType(found.type as "flat" | "percent");
+            setDiscountValue(Number(found.value));
+            toastSuccess(`Coupon "${found.code}" applied!`);
+          }
+        }
+      } catch (err) {
+        console.error("Coupon lookup failed", err);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [discountCode, subtotal]);
 
   const addLine = (type: LineType, sourceId: string) => {
     if (!sourceId) return;
@@ -550,7 +605,7 @@ export default function SaleCheckoutForm({
 
     setSubmitting(true);
     const body = {
-      client_id: clientId,
+      customer_id: clientId,
       location_id: locationId,
       appointment_id: appointmentId || undefined,
       discount_code: discountCode.trim() || undefined,
@@ -568,17 +623,29 @@ export default function SaleCheckoutForm({
               }))
           : undefined,
       redeem_package_id: redeemPackageId || undefined,
+      redeem_type: redeemPackageId ? redeemType : undefined,
       package_template_id: lines.find((l) => l.type === "package")?.package_template_id || undefined,
       membership_plan_id: lines.find((l) => l.type === "membership")?.membership_plan_id || undefined,
       items: lines
         .filter((l) => l.type === "service" || l.type === "product")
-        .map((l) => ({
-          type: l.type as "service" | "product",
-          service_id: l.service_id,
-          product_id: l.product_id,
-          quantity: l.quantity,
-          unit_price: l.unit_price,
-        })),
+        .map((l) => {
+          let price = l.unit_price;
+          // Apply $0 price for redeemed services in the payload too
+          if (redeemPackageId && l.type === "service") {
+            const pkg = (eligiblePackages as any[]).find(p => String(p.id) === String(redeemPackageId));
+            if (pkg && pkg.covered_services) {
+              const isCovered = pkg.covered_services.some((cs: any) => String(cs.id) === String(l.service_id));
+              if (isCovered) price = 0;
+            }
+          }
+          return {
+            type: l.type as "service" | "product",
+            service_id: l.service_id,
+            product_id: l.product_id,
+            quantity: l.quantity,
+            unit_price: price,
+          };
+        }),
       payments: apiPayments,
     };
     if (!body.items.length && !body.package_template_id && !body.membership_plan_id) {
@@ -776,13 +843,44 @@ export default function SaleCheckoutForm({
                   </div>
                   <select
                     className="elite-input bg-white/50 dark:bg-black/20 h-8 rounded-lg text-xs font-medium border-[var(--elite-orange)]/30 w-48"
-                    value={redeemPackageId}
-                    onChange={(e) => setRedeemPackageId(e.target.value)}
+                    value={redeemPackageId ? `${redeemType}-${redeemPackageId}` : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        setRedeemPackageId('');
+                        setRedeemType('package');
+                      } else {
+                        const [type, id] = val.split('-');
+                        setRedeemPackageId(id);
+                        setRedeemType(type as 'membership' | 'package');
+                      }
+                    }}
                   >
                     <option value="">Do not redeem</option>
-                    {eligiblePackages.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.remaining_services} left)</option>
-                    ))}
+                    {eligiblePackages.map(p => {
+                      let displayBalance = p.remaining_services;
+                      
+                      // For memberships with granular balances, find the most relevant count
+                      if (p.type === 'membership' && p.covered_services?.length > 0) {
+                        // Try to match with a service currently in the cart
+                        const cartServiceIds = lines.filter(l => l.service_id).map(l => String(l.service_id));
+                        const matchingService = p.covered_services.find((s: any) => cartServiceIds.includes(String(s.id)));
+                        
+                        if (matchingService) {
+                          displayBalance = matchingService.remaining_sessions;
+                        } else if (displayBalance === 0) {
+                          // Fallback: show sum of all granular balances
+                          displayBalance = p.covered_services.reduce((acc: number, s: any) => acc + (s.remaining_sessions || 0), 0);
+                        }
+                      }
+
+                      return (
+                        <option key={`${p.type}-${p.id}`} value={`${p.type}-${p.id}`}>
+                          {p.type === 'membership' ? '[Mem] ' : '[Pkg] '}
+                          {p.name} ({displayBalance} left)
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               )}
