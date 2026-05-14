@@ -999,6 +999,13 @@ export const couponsApi = {
     api<unknown>(`/api/coupons/${id}`, { method: "DELETE" }).then((r) =>
       r.error ? { error: r.error } : { data: { deleted: true } },
     ),
+  validate: (code: string, customerId?: string | number, subtotal?: number) =>
+    api<Coupon>("/api/coupons/validate-code", {
+      method: "POST",
+      body: JSON.stringify({ code, customer_id: customerId, subtotal }),
+    }).then((r) =>
+      r.data ? { data: { coupon: r.data } } : { error: r.error },
+    ),
 };
 
 /* ── Service Add-Ons ────────────────────────────────────────────────── */
@@ -1863,10 +1870,10 @@ export const giftCardsApi = {
     api<GiftCard>(`/api/gift-cards/${id}`).then((r) =>
       r.data ? { data: { gift_card: r.data } } : { error: r.error },
     ),
-  getByCode: (code: string) =>
+  getByCode: (code: string, customerId?: string | number) =>
     api<GiftCard>("/api/gift-cards/verify", {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, customer_id: customerId }),
     }).then((r) =>
       r.data ? { data: { gift_card: r.data } } : { error: r.error },
     ),

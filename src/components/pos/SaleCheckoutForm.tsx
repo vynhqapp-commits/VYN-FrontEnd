@@ -11,14 +11,15 @@ import {
   transactionsApi,
   catalogApi,
   couponsApi,
+  giftCardsApi,
   type Appointment,
   type Client,
   type Product,
   type Service,
-  type StaffMember,
   type PackageTemplate,
   type MembershipPlanTemplate,
   type Coupon,
+  type GiftCard,
 } from "@/lib/api";
 import { Plus, Trash2, User, ShoppingBag, CreditCard, Tags, Info, Search, Package, Star, ChevronDown } from "lucide-react";
 import { toastError, toastSuccess } from "@/lib/toast";
@@ -60,6 +61,7 @@ const paymentMethods = [
   { value: "wallet", label: "Wallet" },
   { value: "whish", label: "Whish" },
   { value: "omt", label: "OMT" },
+  { value: "gift_card", label: "Gift Card" },
 ];
 
 function RichSelectMenu({
@@ -189,6 +191,8 @@ export default function SaleCheckoutForm({
   const [discountCode, setDiscountCode] = useState("");
   const [discountType, setDiscountType] = useState<"flat" | "percent">("flat");
   const [discountValue, setDiscountValue] = useState(0);
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [verifyingGC, setVerifyingGC] = useState(false);
   const [tipsAmount, setTipsAmount] = useState(0);
   const [tipMode, setTipMode] = useState<TipMode>("single");
   const [tipRows, setTipRows] = useState<
@@ -430,37 +434,29 @@ export default function SaleCheckoutForm({
   useEffect(() => {
     const code = discountCode.trim().toUpperCase();
     if (!code || code.length < 2) return;
-
     const timer = setTimeout(async () => {
       try {
-        // Broad search by code
-        const res = await couponsApi.list({ q: code });
-        if (!("error" in res) && res.data?.coupons) {
-          // Exact match find
-          const found = res.data.coupons.find(c => c.code.trim().toUpperCase() === code);
-          
-          if (found && found.is_active) {
-            // Validate Dates
-            const now = new Date();
-            if (found.starts_at && new Date(found.starts_at) > now) return;
-            if (found.ends_at && new Date(found.ends_at) < now) {
-               toastError("This coupon has expired");
-               return;
-            }
-
-            // Validate Min Subtotal
-            if (found.min_subtotal && subtotal < Number(found.min_subtotal)) return;
-
-            // Apply it!
-            setDiscountType(found.type as "flat" | "percent");
-            setDiscountValue(Number(found.value));
-            toastSuccess(`Coupon "${found.code}" applied!`);
+        const res = await couponsApi.validate(code, clientId || undefined);
+        
+        if ("error" in res) {
+          // Only show error if it's a "real" error (like already used) and not just "not found"
+          if (res.error?.includes("already redeemed")) {
+            toastError(res.error);
+            setDiscountValue(0);
           }
+          return;
+        }
+
+        const found = res.data?.coupon;
+        if (found) {
+          setDiscountType(found.type);
+          setDiscountValue(Number(found.value));
+          toastSuccess(`Coupon "${found.code}" applied!`);
         }
       } catch (err) {
-        console.error("Coupon lookup failed", err);
+        console.error("Coupon check failed", err);
       }
-    }, 400);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [discountCode, subtotal]);
@@ -557,6 +553,44 @@ export default function SaleCheckoutForm({
     setPayments((prev) =>
       prev.length <= 1 ? prev : prev.filter((p) => p.id !== id),
     );
+  };
+
+  const handleApplyGiftCard = async () => {
+    const code = giftCardCode.trim().toUpperCase();
+    if (!code) return;
+    
+    setVerifyingGC(true);
+    try {
+      const res = await giftCardsApi.getByCode(code, clientId || undefined);
+      if ("error" in res) {
+        console.error("Gift Card Verification Error:", res.error);
+        toastError(res.error || "Gift card not found");
+      } else if (res.data?.gift_card) {
+        const gc = res.data.gift_card;
+        const balance = Number(gc.remaining_balance || 0);
+        if (balance <= 0) {
+          toastError("This gift card has no remaining balance");
+        } else {
+          // Add as a payment row
+          const amountToApply = Math.min(remaining, balance);
+          setPayments(prev => {
+            // Remove any existing gift card payment with the same code or replace empty cash row if only one
+            const filtered = prev.filter(p => p.method !== 'gift_card' || p.reference !== code);
+            const base = (filtered.length === 1 && filtered[0].method === 'cash' && filtered[0].amount === 0) ? [] : filtered;
+            return [
+              ...base,
+              { id: `gc-${Date.now()}`, method: 'gift_card', amount: amountToApply, reference: code }
+            ];
+          });
+          setGiftCardCode("");
+          toastSuccess(`Applied $${amountToApply.toFixed(2)} from Gift Card`);
+        }
+      }
+    } catch (err) {
+      toastError("Failed to verify gift card");
+    } finally {
+      setVerifyingGC(false);
+    }
   };
 
   const buildApiPayments = () => {
@@ -996,6 +1030,31 @@ export default function SaleCheckoutForm({
                 ))}
               </div>
             </div>
+
+            <div className="h-px bg-[var(--elite-border)]" />
+
+            {/* Gift Card Section */}
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold uppercase tracking-wide elite-subtle">Redeem Gift Card</label>
+              <div className="flex gap-2">
+                <Input
+                  value={giftCardCode}
+                  onChange={(e) => setGiftCardCode(e.target.value)}
+                  placeholder="Enter code..."
+                  className="h-9 text-xs font-mono uppercase"
+                />
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleApplyGiftCard}
+                  disabled={verifyingGC || !giftCardCode.trim()}
+                  className="h-9 rounded-lg border-[var(--elite-orange)] text-[var(--elite-orange)] hover:bg-[var(--elite-orange-dim)]"
+                >
+                  {verifyingGC ? "..." : "Apply"}
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Grand Total Area */}
@@ -1070,7 +1129,7 @@ export default function SaleCheckoutForm({
                     )}
                   </div>
                   <Input
-                    placeholder="Reference / Auth code (optional)"
+                    placeholder={p.method === 'gift_card' ? "Gift Card Code" : "Reference / Auth code (optional)"}
                     className="h-8 text-[10px]"
                     value={p.reference ?? ""}
                     onChange={(e) => updatePayment(p.id, { reference: e.target.value })}
