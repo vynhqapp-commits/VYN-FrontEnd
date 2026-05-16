@@ -23,10 +23,14 @@ export async function api<T>(
   const token = getToken();
   const tenantId = getTenantId();
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
     Accept: "application/json",
     ...(options.headers as Record<string, string>),
   };
+  
+  if (!(options.body instanceof FormData)) {
+    (headers as Record<string, string>)["Content-Type"] = "application/json";
+  }
+  
   if (token)
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   
@@ -2340,7 +2344,156 @@ export interface AuthUser {
   fullName?: string | null;
   /** Resolved Spatie permissions for the current user (api guard) */
   permissions?: string[];
-}
+  commission_entries?: any[];
+};
+
+export type Vendor = {
+  id: number;
+  tenant_id: number;
+  name: string;
+  code?: string;
+  phone?: string;
+  email?: string;
+  bank_details?: string;
+  payment_terms?: string;
+  currency: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  return_window_days: number;
+  return_fee: number;
+  return_policy_info?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type VendorContact = {
+  id: number;
+  vendor_id: number;
+  first_name: string;
+  last_name?: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+  is_primary: boolean;
+  is_active: boolean;
+};
+
+export type PurchaseOrderItem = {
+  id?: number;
+  product_id?: number;
+  item_name: string;
+  item_description?: string;
+  unit_price: number;
+  quantity: number;
+  tax_name?: string;
+  tax_rate?: number;
+  tax_value?: number;
+  discount_percentage?: number;
+  discount_value?: number;
+  total: number;
+};
+
+export type PurchaseOrder = {
+  id: number;
+  vendor_id: number;
+  person_in_charge_id?: string | number;
+  branch_id?: string | number;
+  po_number: string;
+  vendor_po_number?: string;
+  description?: string;
+  order_date: string;
+  currency: string;
+  tags?: string;
+  subtotal: number;
+  total_tax: number;
+  total_discount: number;
+  shipping_fee: number;
+  grand_total: number;
+  status: 'draft' | 'sent' | 'received' | 'cancelled';
+  payment_status: 'unpaid' | 'partial' | 'paid';
+  vendor_note?: string;
+  vendor?: Vendor;
+  person_in_charge?: Staff;
+  items?: PurchaseOrderItem[];
+  items_count?: number;
+  payments?: any[];
+  created_at: string;
+};
+
+export type QuotationItem = {
+  id: number;
+  quotation_id: number;
+  product_id?: number;
+  item_name: string;
+  item_description?: string;
+  unit_price: number;
+  quantity: number;
+  tax_name?: string;
+  tax_rate: number;
+  tax_value: number;
+  discount_percentage: number;
+  discount_value: number;
+  total: number;
+};
+
+export type Quotation = {
+  id: number;
+  vendor_id: number;
+  person_in_charge_id?: string | number;
+  branch_id?: string | number;
+  quotation_number: string;
+  description?: string;
+  date: string;
+  expiry_date?: string;
+  currency: string;
+  subtotal: number;
+  total_tax: number;
+  total_discount: number;
+  grand_total: number;
+  status: 'draft' | 'valid' | 'approved' | 'rejected' | 'converted';
+  vendor_note?: string;
+  tags?: string;
+  converted_to_po_id?: number;
+  vendor?: Vendor;
+  person_in_charge?: Staff;
+  items?: QuotationItem[];
+  items_count?: number;
+  purchase_order?: PurchaseOrder;
+  created_at: string;
+};
+
+export type VendorPayment = {
+  id: number;
+  purchase_order_id: number;
+  amount: number;
+  payment_date: string;
+  payment_method: string;
+  reference_number?: string;
+  note?: string;
+  purchase_order?: PurchaseOrder;
+  created_at: string;
+};
+
+export type VendorStatementTransaction = {
+  date: string;
+  type: string;
+  reference: string;
+  description: string;
+  debit: number;
+  credit: number;
+  created_at: string;
+};
+
+export type VendorStatementResponse = {
+  transactions: VendorStatementTransaction[];
+  summary: {
+    total_debit: number;
+    total_credit: number;
+    balance: number;
+  };
+};
 
 export interface Tenant {
   id: string;
@@ -3049,3 +3202,233 @@ export interface LedgerEntryRow {
   is_locked: boolean;
   created_at?: string;
 }
+
+export const vendorsApi = {
+  list: (params?: { search?: string; is_active?: boolean; per_page?: number; page?: number }) =>
+    api<{ data: Vendor[]; meta: PaginationMeta }>("/api/vendors" + qs(params ?? {})),
+  get: (id: string | number) => api<Vendor>(`/api/vendors/${id}`),
+  create: (body: Partial<Vendor>) =>
+    api<Vendor>("/api/vendors", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string | number, body: Partial<Vendor>) =>
+    api<Vendor>(`/api/vendors/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string | number) =>
+    api<{ message: string }>(`/api/vendors/${id}`, { method: "DELETE" }),
+};
+
+export const vendorContactsApi = {
+  list: (vendorId: number | string) =>
+    api<VendorContact[]>(`/api/vendor-contacts?vendor_id=${vendorId}`),
+  create: (body: Partial<VendorContact>) =>
+    api<VendorContact>("/api/vendor-contacts", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string | number, body: Partial<VendorContact>) =>
+    api<VendorContact>(`/api/vendor-contacts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string | number) =>
+    api<{ message: string }>(`/api/vendor-contacts/${id}`, { method: "DELETE" }),
+};
+
+export const purchaseOrdersApi = {
+  list: (params: any = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api<PaginatedResponse<PurchaseOrder>>(`/api/purchase-orders?${q}`);
+  },
+  get: (id: string | number) =>
+    api<PurchaseOrder>(`/api/purchase-orders/${id}`),
+  create: (body: Partial<PurchaseOrder> & { items: Partial<PurchaseOrderItem>[] }) =>
+    api<PurchaseOrder>("/api/purchase-orders", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string | number, body: Partial<PurchaseOrder>) =>
+    api<PurchaseOrder>(`/api/purchase-orders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  recordPayment: (id: string | number, body: any) =>
+    api<{ data: any }>(`/api/purchase-orders/${id}/record-payment`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string | number) =>
+    api<{ message: string }>(`/api/purchase-orders/${id}`, { method: "DELETE" }),
+};
+
+export const quotationsApi = {
+  list: (params: any = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api<PaginatedResponse<Quotation>>(`/api/quotations?${q}`);
+  },
+  get: (id: string | number) =>
+    api<{ data: Quotation }>(`/api/quotations/${id}`),
+  create: (body: Partial<Quotation> & { items: Partial<QuotationItem>[] }) =>
+    api<{ data: Quotation }>("/api/quotations", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string | number, body: Partial<Quotation> & { items?: Partial<QuotationItem>[] }) =>
+    api<{ data: Quotation }>(`/api/quotations/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  convertToPo: (id: string | number) =>
+    api<{ message: string; purchase_order: PurchaseOrder }>(`/api/quotations/${id}/convert-to-po`, {
+      method: "POST",
+    }),
+  delete: (id: string | number) =>
+    api<{ message: string }>(`/api/quotations/${id}`, { method: "DELETE" }),
+};
+
+export const vendorPaymentsApi = {
+  list: (params: any = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api<{ data: VendorPayment[] }>(`/api/vendor-payments?${q}`);
+  },
+  record: (poId: string | number, data: any) => 
+    api<{ data: VendorPayment }>(`/api/purchase-orders/${poId}/record-payment`, { 
+      method: 'POST', 
+      body: JSON.stringify(data) 
+    }),
+  getStatement: (params: any) => {
+    const q = new URLSearchParams(params).toString();
+    return api<VendorStatementResponse>(`/api/vendor-statements?${q}`);
+  },
+  listRefunds: (params: { vendor_id: number }) => {
+    return api<{ data: any[] }>(`/api/vendor-refunds?vendor_id=${params.vendor_id}`);
+  },
+  recordRefund: (body: { 
+    vendor_id: number; 
+    refund_date: string; 
+    amount: number; 
+    payment_method: string; 
+    reference_number?: string; 
+    note?: string; 
+    purchase_order_return_id?: number 
+  }) => api<any>("/api/vendor-refunds", {
+    method: "POST",
+    body: JSON.stringify(body)
+  }),
+};
+
+export type VendorNote = {
+  id: number;
+  vendor_id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VendorAttachment = {
+  id: number;
+  vendor_id: number;
+  purchase_order_id: number | null;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  url: string;
+  created_at: string;
+  purchase_order?: {
+    po_number: string;
+  };
+};
+
+export const vendorNotesApi = {
+  list: (vendorId: number) => api<VendorNote[]>(`/api/vendor-notes?vendor_id=${vendorId}`),
+  create: (body: Partial<VendorNote>) => api<VendorNote>("/api/vendor-notes", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: number, body: Partial<VendorNote>) => api<VendorNote>(`/api/vendor-notes/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  delete: (id: number) => api<{ message: string }>(`/api/vendor-notes/${id}`, { method: "DELETE" }),
+};
+
+export const vendorAttachmentsApi = {
+  list: (params: { vendor_id?: number; purchase_order_id?: number }) => {
+    const q = new URLSearchParams();
+    if (params.vendor_id) q.append('vendor_id', params.vendor_id.toString());
+    if (params.purchase_order_id) q.append('purchase_order_id', params.purchase_order_id.toString());
+    return api<VendorAttachment[]>(`/api/vendor-attachments?${q.toString()}`);
+  },
+  upload: (vendorId: number, file: File, purchaseOrderId?: number) => {
+    const formData = new FormData();
+    formData.append('vendor_id', vendorId.toString());
+    if (purchaseOrderId) formData.append('purchase_order_id', purchaseOrderId.toString());
+    formData.append('file', file);
+    return api<VendorAttachment>("/api/vendor-attachments", { 
+      method: "POST", 
+      body: formData
+    });
+  },
+  delete: (id: number) => api<{ message: string }>(`/api/vendor-attachments/${id}`, { method: "DELETE" }),
+};
+
+export const downloadFile = async (url: string, fileName: string) => {
+  const token = localStorage.getItem("salon_token");
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'X-Tenant': localStorage.getItem("salon_tenant_id") || ''
+    }
+  });
+  const blob = await res.blob();
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+};
+
+export type PurchaseOrderReturnItem = {
+  id: number;
+  purchase_order_return_id: number;
+  purchase_order_item_id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  product?: Product;
+  purchase_order_item?: PurchaseOrderItem;
+};
+
+export type PurchaseOrderReturn = {
+  id: number;
+  purchase_order_id: number;
+  return_number: string;
+  return_date: string;
+  reason: string | null;
+  subtotal: number;
+  total_tax: number;
+  grand_total: number;
+  status: string;
+  refund_status: 'pending' | 'collected';
+  collected_at: string | null;
+  created_at: string;
+  purchase_order?: PurchaseOrder;
+  items?: PurchaseOrderReturnItem[];
+};
+
+export const purchaseOrderReturnsApi = {
+  list: (params?: { purchase_order_id?: number, per_page?: number, page?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.purchase_order_id) q.append('purchase_order_id', params.purchase_order_id.toString());
+    if (params?.per_page) q.append('per_page', params.per_page.toString());
+    if (params?.page) q.append('page', params.page.toString());
+    return api<PaginatedResponse<PurchaseOrderReturn>>(`/api/purchase-order-returns?${q.toString()}`);
+  },
+  get: (id: string | number) => api<PurchaseOrderReturn>(`/api/purchase-order-returns/${id}`),
+  create: (data: any) => api<PurchaseOrderReturn>("/api/purchase-order-returns", {
+    method: "POST",
+    body: JSON.stringify(data)
+  }),
+  collect: (id: string | number) => api<PurchaseOrderReturn>(`/api/purchase-order-returns/${id}/collect`, {
+    method: "POST"
+  }),
+};

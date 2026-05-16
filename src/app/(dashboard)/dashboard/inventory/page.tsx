@@ -47,6 +47,7 @@ const MOVEMENT_FILTER_TYPES = [
   { value: 'theft', label: 'Theft' },
   { value: 'expired', label: 'Expired' },
   { value: 'transfer', label: 'Transfer' },
+  { value: 'purchase_return', label: 'Purchase Return' },
 ];
 
 export default function InventoryPage() {

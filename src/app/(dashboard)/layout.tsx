@@ -36,6 +36,7 @@ import {
   MapPin,
   Package,
   Receipt,
+  RotateCcw,
   Settings2,
   TrendingUp,
   UserCog,
@@ -63,8 +64,13 @@ function iconForHref(href: string): React.ReactNode {
   if (href === "/dashboard/commission") return <BarChart3 className="size-5" />;
   if (href === "/dashboard/gift-cards") return <Gift className="size-5" />;
   if (href === "/dashboard/expenses") return <Receipt className="size-5" />;
+  if (href === "/dashboard/purchase-orders") return <FileText className="size-5" />;
+  if (href === "/dashboard/purchase-orders/returns") return <RotateCcw className="size-5" />;
+  if (href === "/dashboard/purchase-orders/pending-payments") return <Wallet className="size-5" />;
+  if (href === "/dashboard/quotations") return <BookText className="size-5" />;
   if (href === "/dashboard/ledger") return <BookText className="size-5" />;
   if (href === "/dashboard/reports") return <BarChart3 className="size-5" />;
+  if (href === "/dashboard/vendors") return <Users className="size-5" />;
   if (href === "/dashboard/franchise")
     return <BriefcaseBusiness className="size-5" />;
   if (href === "/dashboard/profile") return <Building2 className="size-5" />;

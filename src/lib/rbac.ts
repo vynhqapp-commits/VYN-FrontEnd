@@ -141,6 +141,37 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
     ],
   },
   {
+    id: "purchase",
+    fallbackCategory: "Purchase",
+    items: [
+      {
+        href: "/dashboard/vendors",
+        fallbackLabel: "Vendors",
+        anyRole: ["salon_owner", "manager"],
+      },
+      {
+        href: "/dashboard/purchase-orders",
+        fallbackLabel: "Purchase order",
+        anyRole: ["salon_owner", "manager"],
+      },
+      {
+        href: "/dashboard/quotations",
+        fallbackLabel: "Quotations",
+        anyRole: ["salon_owner", "manager"],
+      },
+      {
+        href: "/dashboard/purchase-orders/returns",
+        fallbackLabel: "Returns",
+        anyRole: ["salon_owner", "manager"],
+      },
+      {
+        href: "/dashboard/purchase-orders/pending-payments",
+        fallbackLabel: "Pending Payments",
+        anyRole: ["salon_owner", "manager"],
+      },
+    ],
+  },
+  {
     id: "reports",
     fallbackCategory: "Reports",
     items: [
