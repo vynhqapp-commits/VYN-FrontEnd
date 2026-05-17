@@ -648,6 +648,8 @@ export const clientsApi = {
     api<unknown>(`/api/customers/${id}`, { method: "DELETE" }).then((r) =>
       r.error ? r : { data: { deleted: true } },
     ),
+  invite: (id: string) =>
+    api<unknown>(`/api/customers/${id}/invite`, { method: "POST" }),
 
   notes: (id: string) =>
     api<{ data?: Array<{ id: string; note: string; created_at?: string; user?: { id: string; email?: string; name?: string } }> }>(

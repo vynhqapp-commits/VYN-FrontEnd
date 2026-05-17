@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X, ChevronDown, Check, Search } from 'lucide-react';
+import { Eye, Mail, MessageCircle, Phone, RefreshCw, Users, X, ChevronDown, Check, Search, Send } from 'lucide-react';
 import { clientsApi, debtApi, settingsApi, type Client, type ClientMembership, type ClientPackage, type ClientStats } from '@/lib/api';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -166,6 +166,7 @@ export default function ClientsPage() {
   const [stats, setStats] = useState<ClientStats | null>(null);
 
   const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
+  const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [currency, setCurrency] = useState('USD');
 
   // Add client modal
@@ -303,6 +304,18 @@ export default function ClientsPage() {
     setNoteText('');
     const refreshed = await clientsApi.notes(openClient.id);
     if (!('error' in refreshed) && refreshed.data?.notes) setNotes(refreshed.data.notes);
+  };
+
+  const sendWelcomeInvite = async (c: Client) => {
+    if (!c || !c.email) return;
+    setInvitingClientId(c.id);
+    const res = await clientsApi.invite(c.id);
+    setInvitingClientId(null);
+    if ('error' in res && res.error) {
+      toastError(res.error);
+    } else {
+      toastSuccess(`Welcome invitation email sent successfully to ${c.email}!`);
+    }
   };
 
   const handleRenewMembership = async (membershipId: string) => {
@@ -598,6 +611,32 @@ export default function ClientsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
+                    {c.email ? (
+                      <button
+                        type="button"
+                        disabled={invitingClientId === c.id}
+                        onClick={() => sendWelcomeInvite(c)}
+                        aria-label="Send welcome email"
+                        title="Send welcome email"
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] disabled:opacity-45 transition-colors"
+                      >
+                        {invitingClientId === c.id ? (
+                          <RefreshCw className="size-4 animate-spin" />
+                        ) : (
+                          <Send className="size-4 text-orange-600" />
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        aria-label="No email recorded"
+                        title="No email recorded"
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-muted-foreground/30 cursor-not-allowed"
+                      >
+                        <Send className="size-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -1037,6 +1076,26 @@ export default function ClientsPage() {
                         <Mail className="w-4 h-4" />
                         Email
                       </a>
+                      {openClient?.email && (
+                        <button
+                          type="button"
+                          disabled={invitingClientId === openClient.id}
+                          onClick={() => sendWelcomeInvite(openClient)}
+                          className="w-full px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-40 inline-flex items-center justify-center gap-2 transition-colors shadow-sm"
+                        >
+                          {invitingClientId === openClient.id ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4" />
+                              Send Welcome Invite
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                     {( !openClient?.phone && !openClient?.email) && (
                       <p className="text-sm text-muted-foreground">No phone/email available.</p>
