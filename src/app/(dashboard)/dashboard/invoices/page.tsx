@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { invoicesApi, InvoiceData, settingsApi } from '@/lib/api';
+import { invoicesApi, InvoiceData, settingsApi, downloadFile } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt } from 'lucide-react';
+import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt, Download } from 'lucide-react';
 import FlowTopbar from '@/components/layout/FlowTopbar';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -186,18 +186,29 @@ function InvoiceDetail({ invoiceId, currency, onClose, onVoided }: { invoiceId: 
             </div>
 
             {/* Actions */}
-            {invoice.status !== 'void' && (
-              <div className="flex justify-end">
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => {
+                  const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/invoices/${invoice.id}/pdf`;
+                  downloadFile(url, `INV-${invoice.invoice_number}.pdf`);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 transition-colors shadow-lg shadow-orange-500/20"
+              >
+                <Download className="size-4" />
+                View as PDF
+              </button>
+
+              {invoice.status !== 'void' && (
                 <button
                   onClick={handleVoid}
                   disabled={voiding}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 transition-colors"
                 >
                   <Ban className="size-3.5" />
                   {voiding ? 'Voiding…' : 'Void invoice'}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         ) : null}
       </div>
@@ -216,6 +227,11 @@ export default function InvoicesPage() {
   const [from, setFrom]         = useState('');
   const [to, setTo]             = useState('');
   const [detailId, setDetailId] = useState<string | null>(null);
+
+  const handleDownloadPdf = (id: string, invoiceNumber: string) => {
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/invoices/${id}/pdf`;
+    downloadFile(url, `INV-${invoiceNumber}.pdf`);
+  };
 
   const load = async (params?: { search?: string; status?: string; from?: string; to?: string }) => {
     setLoading(true);
@@ -329,14 +345,24 @@ export default function InvoicesPage() {
                     </td>
                     <td className="py-3 px-4">{statusBadge(inv.status)}</td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => setDetailId(inv.id)}
-                        aria-label="View invoice details"
-                        title="View invoice details"
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
-                      >
-                        <Eye className="size-4" />
-                      </button>
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={() => setDetailId(inv.id)}
+                          aria-label="View invoice details"
+                          title="View invoice details"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-[var(--elite-text)] hover:bg-[var(--elite-card-2)] transition-colors"
+                        >
+                          <Eye className="size-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPdf(inv.id, inv.invoice_number)}
+                          aria-label="Download PDF Invoice"
+                          title="Download PDF Invoice"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--elite-border-2)] text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
+                        >
+                          <FileText className="size-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

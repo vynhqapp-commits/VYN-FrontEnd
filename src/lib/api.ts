@@ -322,6 +322,8 @@ export const settingsApi = {
     currency?: string;
     vat_rate?: number;
     apply_vat?: boolean;
+    enable_dual_currency?: boolean;
+    exchange_rate?: number;
     logo?: string;
     gender_preference?: "ladies" | "gents" | "unisex";
     preferred_locale?: string;
@@ -2523,6 +2525,8 @@ export interface Tenant {
   currency?: string | null;
   vat_rate?: number | string | null;
   apply_vat?: boolean;
+  enable_dual_currency?: boolean;
+  exchange_rate?: number;
   preferred_locale?: string | null;
   /** Aggregated from approved reviews; used for list filters and display */
   average_rating?: number | string | null;
@@ -2549,6 +2553,8 @@ function normalizeTenant(t: Tenant): Tenant {
   const lat = t.latitude !== null && t.latitude !== undefined ? parseFloat(t.latitude as any) : null;
   const lng = t.longitude !== null && t.longitude !== undefined ? parseFloat(t.longitude as any) : null;
   const applyVat = (t as any).apply_vat !== null && (t as any).apply_vat !== undefined ? !!(t as any).apply_vat : false;
+  const enableDual = (t as any).enable_dual_currency !== null && (t as any).enable_dual_currency !== undefined ? !!(t as any).enable_dual_currency : false;
+  const rate = t.exchange_rate !== null && t.exchange_rate !== undefined ? parseFloat(t.exchange_rate as any) : 89500;
   
   return {
     ...t,
@@ -2557,6 +2563,8 @@ function normalizeTenant(t: Tenant): Tenant {
     latitude: isNaN(lat as any) ? null : lat,
     longitude: isNaN(lng as any) ? null : lng,
     apply_vat: applyVat,
+    enable_dual_currency: enableDual,
+    exchange_rate: isNaN(rate) ? 89500 : rate,
   };
 }
 

@@ -203,6 +203,8 @@ export default function SaleCheckoutForm({
 
   const [applyVat, setApplyVat] = useState<boolean>(false);
   const [vatRate, setVatRate] = useState<number>(0);
+  const [enableDualCurrency, setEnableDualCurrency] = useState<boolean>(false);
+  const [exchangeRate, setExchangeRate] = useState<number>(89500);
 
   useEffect(() => {
     let mounted = true;
@@ -226,6 +228,8 @@ export default function SaleCheckoutForm({
       if (!("error" in settingsRes) && settingsRes.data?.salon) {
         setApplyVat(!!settingsRes.data.salon.apply_vat);
         setVatRate(Number(settingsRes.data.salon.vat_rate ?? 0));
+        setEnableDualCurrency(!!settingsRes.data.salon.enable_dual_currency);
+        setExchangeRate(Number(settingsRes.data.salon.exchange_rate ?? 89500));
       }
 
       setLoading(false);
@@ -1084,19 +1088,36 @@ export default function SaleCheckoutForm({
             )}
             <div className="flex items-center justify-between pt-1">
               <span className="text-xs font-bold elite-subtle uppercase tracking-widest">Grand Total</span>
-              <span className="text-3xl font-black tracking-tighter text-[var(--elite-orange)]">${grandTotal.toFixed(2)}</span>
+              <div className="text-right">
+                <span className="text-3xl font-black tracking-tighter text-[var(--elite-orange)]">${grandTotal.toFixed(2)}</span>
+                {enableDualCurrency && exchangeRate > 0 && (
+                  <div className="text-[10px] font-bold elite-subtle uppercase tracking-wider text-muted-foreground mt-0.5">
+                    LBP {(grandTotal * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-xl bg-[var(--elite-card)] border border-[var(--elite-border)] flex flex-col items-center justify-center gap-1 shadow-sm">
                 <span className="text-[9px] font-black uppercase tracking-widest elite-subtle">Paid</span>
                 <span className="text-sm font-bold elite-title">${paid.toFixed(2)}</span>
+                {enableDualCurrency && exchangeRate > 0 && (
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    LBP {(paid * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                )}
               </div>
               <div className="p-3 rounded-xl bg-[var(--elite-card)] border border-[var(--elite-border)] flex flex-col items-center justify-center gap-1 shadow-sm">
                 <span className="text-[9px] font-black uppercase tracking-widest elite-subtle">Balance</span>
                 <span className={`text-sm font-bold ${remaining > 0 ? 'text-[var(--elite-red)]' : 'text-[var(--elite-green)]'}`}>
                   ${remaining.toFixed(2)}
                 </span>
+                {enableDualCurrency && exchangeRate > 0 && (
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    LBP {(remaining * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                )}
               </div>
             </div>
           </div>

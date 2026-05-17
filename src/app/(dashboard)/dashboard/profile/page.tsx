@@ -57,6 +57,8 @@ const schema = z.object({
   currency: z.string().length(3, 'Must be a 3-letter currency code').optional().or(z.literal('')),
   vat_rate: z.coerce.number().min(0).max(100).optional(),
   apply_vat: z.boolean().optional(),
+  enable_dual_currency: z.boolean().optional(),
+  exchange_rate: z.coerce.number().min(0).optional(),
   logo:     z.string().max(500).optional().or(z.literal('')),
   gender_preference: z.enum(['ladies', 'gents', 'unisex']).optional(),
   preferred_locale: z.string().max(10).optional().or(z.literal('')),
@@ -80,6 +82,8 @@ export default function SalonProfilePage() {
       currency: 'USD',
       vat_rate: 0,
       apply_vat: false,
+      enable_dual_currency: false,
+      exchange_rate: 89500,
       logo: '',
       gender_preference: 'unisex' as const,
       preferred_locale: 'en',
@@ -103,6 +107,8 @@ export default function SalonProfilePage() {
         currency: s.currency ?? 'USD',
         vat_rate: s.vat_rate != null ? Number(s.vat_rate) : 0,
         apply_vat: s.apply_vat ?? false,
+        enable_dual_currency: s.enable_dual_currency ?? false,
+        exchange_rate: s.exchange_rate != null ? Number(s.exchange_rate) : 89500,
         logo:     s.logo ?? '',
         gender_preference: (s.gender_preference ?? 'unisex') as 'ladies' | 'gents' | 'unisex',
         preferred_locale: s.preferred_locale ?? 'en',
@@ -123,6 +129,8 @@ export default function SalonProfilePage() {
       currency: values.currency || undefined,
       vat_rate: values.vat_rate,
       apply_vat: values.apply_vat,
+      enable_dual_currency: values.enable_dual_currency,
+      exchange_rate: values.exchange_rate,
       logo:     values.logo || undefined,
       gender_preference: values.gender_preference,
       preferred_locale: values.preferred_locale || undefined,
@@ -260,6 +268,45 @@ export default function SalonProfilePage() {
                   />
                   {form.formState.errors.vat_rate && (
                     <p className="text-xs text-red-500 mt-1">{form.formState.errors.vat_rate.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end rounded-2xl border border-border bg-muted/20 p-4">
+                <div className="flex items-center justify-between h-full py-2">
+                  <div className="space-y-0.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Enable Dual Currency
+                    </label>
+                    <p className="text-[11px] text-muted-foreground leading-normal">
+                      Display dual-currency (USD & LBP) converted totals on invoices.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={!!form.watch('enable_dual_currency')}
+                      onChange={(e) => form.setValue('enable_dual_currency', e.target.checked, { shouldDirty: true })}
+                      disabled={saving}
+                    />
+                    <div className="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Exchange Rate (1 USD = X LBP)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    {...form.register('exchange_rate', { valueAsNumber: true })}
+                    disabled={saving || !form.watch('enable_dual_currency')}
+                    className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                  />
+                  {form.formState.errors.exchange_rate && (
+                    <p className="text-xs text-red-500 mt-1">{form.formState.errors.exchange_rate.message}</p>
                   )}
                 </div>
               </div>
