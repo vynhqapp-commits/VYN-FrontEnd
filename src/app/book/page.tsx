@@ -1232,10 +1232,27 @@ export default function BookPage() {
                         <span className="text-salon-espresso font-semibold">Total Duration</span>
                         <span className="text-salon-gold font-bold">{totalDuration} {t("minutes")}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-salon-espresso font-semibold">Total Price</span>
-                        <span className="text-salon-gold font-bold">{formatPublicCurrency(totalPrice, detail.salon.currency, locale)}</span>
-                      </div>
+                      {detail.salon.apply_vat && Number(detail.salon.vat_rate ?? 0) > 0 ? (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-salon-espresso font-semibold">Total Price (excl. VAT)</span>
+                            <span className="text-salon-gold font-bold">{formatPublicCurrency(totalPrice, detail.salon.currency, locale)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>VAT ({Number(detail.salon.vat_rate)}%)</span>
+                            <span>{formatPublicCurrency((totalPrice * Number(detail.salon.vat_rate)) / 100, detail.salon.currency, locale)}</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-2 border-t border-salon-gold/10">
+                            <span className="text-salon-espresso font-bold">Total Price (incl. VAT)</span>
+                            <span className="text-salon-gold font-black text-base">{formatPublicCurrency(totalPrice + (totalPrice * Number(detail.salon.vat_rate)) / 100, detail.salon.currency, locale)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <span className="text-salon-espresso font-semibold">Total Price</span>
+                          <span className="text-salon-gold font-bold">{formatPublicCurrency(totalPrice, detail.salon.currency, locale)}</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1338,19 +1355,57 @@ export default function BookPage() {
                 label={t("summaryDuration")}
                 value={`${totalDuration} ${t("minutes")}`}
               />
-              <div className="flex justify-between items-center gap-4">
-                <span className="text-gray-400">{t("summaryPrice")}</span>
-                <div className="flex items-center gap-2">
-                  {appliedCoupon && (
-                    <span className="text-gray-400 line-through text-xs">
-                      {formatPublicCurrency(totalPrice, detail.salon.currency, locale)}
+              {detail.salon.apply_vat && Number(detail.salon.vat_rate ?? 0) > 0 ? (
+                <>
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="text-gray-400">Price (excl. VAT)</span>
+                    <div className="flex items-center gap-2">
+                      {appliedCoupon && (
+                        <span className="text-gray-400 line-through text-xs">
+                          {formatPublicCurrency(totalPrice, detail.salon.currency, locale)}
+                        </span>
+                      )}
+                      <span className="text-salon-espresso font-semibold">
+                        {formatPublicCurrency(discountedPrice, detail.salon.currency, locale)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center gap-4 text-xs text-gray-500 pt-1 border-t border-dashed border-gray-100">
+                    <span>VAT ({Number(detail.salon.vat_rate)}%)</span>
+                    <span>
+                      {formatPublicCurrency(
+                        (discountedPrice * Number(detail.salon.vat_rate)) / 100,
+                        detail.salon.currency,
+                        locale
+                      )}
                     </span>
-                  )}
-                  <span className="text-salon-espresso font-semibold">
-                    {formatPublicCurrency(discountedPrice, detail.salon.currency, locale)}
-                  </span>
+                  </div>
+                  <div className="flex justify-between items-center gap-4 pt-2 border-t border-gray-100">
+                    <span className="font-semibold text-salon-espresso">Total (incl. VAT)</span>
+                    <span className="text-salon-gold font-bold text-base">
+                      {formatPublicCurrency(
+                        discountedPrice + (discountedPrice * Number(detail.salon.vat_rate)) / 100,
+                        detail.salon.currency,
+                        locale
+                      )}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between items-center gap-4">
+                  <span className="text-gray-400">{t("summaryPrice")}</span>
+                  <div className="flex items-center gap-2">
+                    {appliedCoupon && (
+                      <span className="text-gray-400 line-through text-xs">
+                        {formatPublicCurrency(totalPrice, detail.salon.currency, locale)}
+                      </span>
+                    )}
+                    <span className="text-salon-espresso font-semibold">
+                      {formatPublicCurrency(discountedPrice, detail.salon.currency, locale)}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
               {appliedCoupon && (
                 <div className="flex justify-between items-center gap-4 text-salon-gold">
                   <span className="text-xs flex items-center gap-1.5">
