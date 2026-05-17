@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { cashDrawerApi, locationsApi, CashDrawerSession, CashMovement, Location } from '@/lib/api';
+import { cashDrawerApi, locationsApi, settingsApi, CashDrawerSession, CashMovement, Location } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import FlowTopbar from '@/components/layout/FlowTopbar';
 import { useAuth } from '@/lib/auth-context';
@@ -28,6 +28,21 @@ export default function CashDrawerPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [approvalNotes, setApprovalNotes] = useState<string>('');
 
+  const [enableDualCurrency, setEnableDualCurrency] = useState<boolean>(false);
+  const [exchangeRate, setExchangeRate] = useState<number>(89500);
+
+  const [closingUsdPart, setClosingUsdPart] = useState<string>('');
+  const [closingLbpPart, setClosingLbpPart] = useState<string>('');
+
+  useEffect(() => {
+    if (enableDualCurrency && exchangeRate > 0) {
+      const usd = Number(closingUsdPart) || 0;
+      const lbp = Number(closingLbpPart) || 0;
+      const totalUsd = usd + (lbp / exchangeRate);
+      setClosingBalance(totalUsd > 0 ? totalUsd.toFixed(2) : '');
+    }
+  }, [closingUsdPart, closingLbpPart, enableDualCurrency, exchangeRate]);
+
   useEffect(() => {
     locationsApi.list().then((res) => {
       if (res.data?.locations?.length) {
@@ -35,6 +50,13 @@ export default function CashDrawerPage() {
         setLocationId(res.data.locations[0].id);
       }
       if ('error' in res && res.error) setError(res.error);
+    });
+
+    settingsApi.get().then((res) => {
+      if (!('error' in res) && res.data?.salon) {
+        setEnableDualCurrency(!!res.data.salon.enable_dual_currency);
+        setExchangeRate(Number(res.data.salon.exchange_rate ?? 89500));
+      }
     });
   }, []);
 
@@ -64,6 +86,21 @@ export default function CashDrawerPage() {
     }, 0);
     return opening + movementDelta;
   }, [currentOpen]);
+
+  // Auto-calculate LBP needed to reach target expected balance when USD counted changes
+  useEffect(() => {
+    if (enableDualCurrency && exchangeRate > 0) {
+      const target = Number(expectedBalance) || runningExpected || 0;
+      const usdCounted = Number(closingUsdPart) || 0;
+      if (usdCounted > 0 && target > usdCounted) {
+        const remainingUsd = target - usdCounted;
+        const lbpNeeded = Math.round(remainingUsd * exchangeRate);
+        setClosingLbpPart(String(lbpNeeded));
+      } else if (usdCounted >= target && target > 0) {
+        setClosingLbpPart('');
+      }
+    }
+  }, [closingUsdPart, expectedBalance, runningExpected, enableDualCurrency, exchangeRate]);
 
   const handleOpen = async () => {
     if (!locationId) return;
@@ -123,6 +160,8 @@ export default function CashDrawerPage() {
       setActionMessage('Session closed. You can now reconcile.');
       setClosingBalance('');
       setExpectedBalance('');
+      setClosingUsdPart('');
+      setClosingLbpPart('');
       cashDrawerApi
         .list(locationId, status === 'all' ? undefined : status)
         .then(({ data }) => data && setSessions(data.sessions || []));
@@ -158,7 +197,14 @@ export default function CashDrawerPage() {
               </p>
               {m.reason && <p className="text-muted-foreground/70">{m.reason}</p>}
             </div>
-            <span className="text-foreground font-medium">{Number(m.amount).toFixed(2)}</span>
+            <div className="text-right">
+              <span className="text-foreground font-medium">${Number(m.amount).toFixed(2)}</span>
+              {enableDualCurrency && exchangeRate > 0 && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  LBP {(Number(m.amount) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              )}
+            </div>
           </li>
         ))}
       </ul>
@@ -239,13 +285,23 @@ export default function CashDrawerPage() {
                 <p className="text-muted-foreground">
                   Opening balance:{' '}
                   <span className="font-medium text-foreground">
-                    {Number(currentOpen.opening_balance).toFixed(2)}
+                    ${Number(currentOpen.opening_balance).toFixed(2)}
+                    {enableDualCurrency && exchangeRate > 0 && (
+                      <span className="text-xs text-muted-foreground font-normal block mt-0.5">
+                        LBP {(Number(currentOpen.opening_balance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
+                    )}
                   </span>
                 </p>
                 <p className="text-muted-foreground">
                   Running expected:{' '}
                   <span className="font-medium text-foreground">
-                    {runningExpected != null ? runningExpected.toFixed(2) : '-'}
+                    {runningExpected != null ? `$${runningExpected.toFixed(2)}` : '-'}
+                    {runningExpected != null && enableDualCurrency && exchangeRate > 0 && (
+                      <span className="text-xs text-muted-foreground font-normal block mt-0.5">
+                        LBP {(runningExpected * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
+                    )}
                   </span>
                 </p>
               </div>
@@ -269,7 +325,7 @@ export default function CashDrawerPage() {
           <h2 className="font-display text-lg font-semibold elite-title">Open / adjust</h2>
           <div className="space-y-2 text-sm">
             <label className="block">
-              <span className="text-xs font-medium text-muted-foreground">Opening balance</span>
+              <span className="text-xs font-medium text-muted-foreground">Opening balance ($)</span>
               <input
                 type="number"
                 value={openingBalance}
@@ -277,6 +333,11 @@ export default function CashDrawerPage() {
                 placeholder="0.00"
                 className="mt-1 w-full elite-input rounded-xl px-3 py-2 text-sm"
               />
+              {openingBalance && Number(openingBalance) > 0 && enableDualCurrency && exchangeRate > 0 && (
+                <p className="text-[11px] text-emerald-600 mt-1 font-medium">
+                  Equivalent: LBP {(Number(openingBalance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              )}
             </label>
             <button
               type="button"
@@ -303,14 +364,21 @@ export default function CashDrawerPage() {
                 <option value="in">Cash in</option>
                 <option value="out">Cash out</option>
               </select>
-              <input
-                type="number"
-                value={movementAmount}
-                onChange={(e) => setMovementAmount(e.target.value)}
-                placeholder="Amount"
-                className="flex-1 elite-input rounded-xl px-3 py-2 text-sm"
-              />
+              <div className="flex-1">
+                <input
+                  type="number"
+                  value={movementAmount}
+                  onChange={(e) => setMovementAmount(e.target.value)}
+                  placeholder="Amount ($)"
+                  className="w-full elite-input rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
             </div>
+            {movementAmount && Number(movementAmount) > 0 && enableDualCurrency && exchangeRate > 0 && (
+              <p className="text-[11px] text-emerald-600 font-medium mt-1">
+                Equivalent: LBP {(Number(movementAmount) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+            )}
             <input
               type="text"
               value={movementReason}
@@ -335,8 +403,35 @@ export default function CashDrawerPage() {
             Count the cash at end of day and record the actual amount. Compare with the expected balance to identify
             overages or shortages.
           </p>
+          {enableDualCurrency && exchangeRate > 0 && (
+            <div className="space-y-2 border border-border/80 p-3 rounded-xl bg-muted/20">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Lebanon Bill Counter</p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">USD bills ($)</span>
+                  <input
+                    type="number"
+                    value={closingUsdPart}
+                    onChange={(e) => setClosingUsdPart(e.target.value)}
+                    placeholder="0.00"
+                    className="mt-1 w-full elite-input rounded-xl px-3 py-2 text-xs"
+                  />
+                </label>
+                <label className="block text-xs">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">LBP bills (ل.ل.)</span>
+                  <input
+                    type="number"
+                    value={closingLbpPart}
+                    onChange={(e) => setClosingLbpPart(e.target.value)}
+                    placeholder="0"
+                    className="mt-1 w-full elite-input rounded-xl px-3 py-2 text-xs"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
           <label className="block text-sm">
-            <span className="text-xs font-medium text-muted-foreground">Closing balance (physical cash)</span>
+            <span className="text-xs font-medium text-muted-foreground">Closing balance (physical cash $)</span>
             <input
               type="number"
               value={closingBalance}
@@ -344,9 +439,14 @@ export default function CashDrawerPage() {
               placeholder="0.00"
               className="mt-1 w-full elite-input rounded-xl px-3 py-2 text-sm"
             />
+            {closingBalance && Number(closingBalance) > 0 && enableDualCurrency && exchangeRate > 0 && (
+              <p className="text-[11px] text-emerald-600 mt-1 font-medium">
+                Equivalent: LBP {(Number(closingBalance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+            )}
           </label>
           <label className="block text-sm">
-            <span className="text-xs font-medium text-muted-foreground">Expected balance (optional)</span>
+            <span className="text-xs font-medium text-muted-foreground">Expected balance (optional $)</span>
             <input
               type="number"
               value={expectedBalance}
@@ -354,6 +454,11 @@ export default function CashDrawerPage() {
               placeholder={runningExpected != null ? runningExpected.toFixed(2) : "System-calculated"}
               className="mt-1 w-full elite-input rounded-xl px-3 py-2 text-sm"
             />
+            {expectedBalance && Number(expectedBalance) > 0 && enableDualCurrency && exchangeRate > 0 && (
+              <p className="text-[11px] text-emerald-600 mt-1 font-medium">
+                Equivalent: LBP {(Number(expectedBalance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+            )}
           </label>
           <button
             type="button"
@@ -438,16 +543,36 @@ export default function CashDrawerPage() {
                       {s.closed_at ? new Date(s.closed_at).toLocaleString() : '-'}
                     </td>
                     <td className="py-2 text-right text-foreground">
-                      {Number(s.opening_balance).toFixed(2)}
+                      <div>${Number(s.opening_balance).toFixed(2)}</div>
+                      {enableDualCurrency && exchangeRate > 0 && (
+                        <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                          LBP {(Number(s.opening_balance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 text-right text-foreground">
-                      {s.closing_balance != null ? Number(s.closing_balance).toFixed(2) : '-'}
+                      <div>{s.closing_balance != null ? `$${Number(s.closing_balance).toFixed(2)}` : '-'}</div>
+                      {s.closing_balance != null && enableDualCurrency && exchangeRate > 0 && (
+                        <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                          LBP {(Number(s.closing_balance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 text-right text-muted-foreground">
-                      {s.expected_balance != null ? Number(s.expected_balance).toFixed(2) : '-'}
+                      <div>{s.expected_balance != null ? `$${Number(s.expected_balance).toFixed(2)}` : '-'}</div>
+                      {s.expected_balance != null && enableDualCurrency && exchangeRate > 0 && (
+                        <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                          LBP {(Number(s.expected_balance) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 text-right text-muted-foreground">
-                      {s.discrepancy != null ? Number(s.discrepancy).toFixed(2) : '-'}
+                      <div>{s.discrepancy != null ? `${Number(s.discrepancy) >= 0 ? '+' : ''}$${Number(s.discrepancy).toFixed(2)}` : '-'}</div>
+                      {s.discrepancy != null && enableDualCurrency && exchangeRate > 0 && (
+                        <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                          LBP {(Number(s.discrepancy) * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 text-left">
                       <span

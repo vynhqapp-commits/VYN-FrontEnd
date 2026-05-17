@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { invoicesApi, InvoiceData, settingsApi, downloadFile } from '@/lib/api';
+import { invoicesApi, paymentsApi, InvoiceData, settingsApi, downloadFile } from '@/lib/api';
 import { toast } from 'sonner';
 import { FileText, Search, X, Ban, Eye, CheckCircle2, AlertCircle, Clock, Receipt, Download } from 'lucide-react';
 import FlowTopbar from '@/components/layout/FlowTopbar';
@@ -16,6 +16,7 @@ function statusBadge(status: string) {
     partial:  { label: 'Partial',  cls: 'bg-amber-100   text-amber-700',  icon: <Clock        className="size-3" /> },
     unpaid:   { label: 'Unpaid',   cls: 'bg-red-100     text-red-600',    icon: <AlertCircle  className="size-3" /> },
     void:     { label: 'Void',     cls: 'bg-gray-100    text-gray-500',   icon: <Ban          className="size-3" /> },
+    refunded: { label: 'Refunded', cls: 'bg-rose-100    text-rose-700',   icon: <Ban          className="size-3" /> },
   };
   const s = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-500', icon: null };
   return (
@@ -62,6 +63,7 @@ function InvoiceDetail({ invoiceId, currency, onClose, onVoided }: { invoiceId: 
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [voiding, setVoiding] = useState(false);
+  const [refunding, setRefunding] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -80,6 +82,22 @@ function InvoiceDetail({ invoiceId, currency, onClose, onVoided }: { invoiceId: 
     setVoiding(false);
     if (error) { toast.error(error); return; }
     toast.success('Invoice voided.');
+    onVoided();
+    onClose();
+  };
+
+  const handleRefund = async () => {
+    if (!invoice) return;
+    if (!confirm(`Refund invoice ${invoice.invoice_number}? This will return cash and restore product stocks.`)) return;
+    setRefunding(true);
+    const { error } = await paymentsApi.refund({
+      transaction_id: invoice.id,
+      amount: invoice.total,
+      reason: 'Refunded from invoices panel',
+    });
+    setRefunding(false);
+    if (error) { toast.error(error); return; }
+    toast.success('Invoice refunded successfully.');
     onVoided();
     onClose();
   };
@@ -198,15 +216,27 @@ function InvoiceDetail({ invoiceId, currency, onClose, onVoided }: { invoiceId: 
                 View as PDF
               </button>
 
-              {invoice.status !== 'void' && (
-                <button
-                  onClick={handleVoid}
-                  disabled={voiding}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 transition-colors"
-                >
-                  <Ban className="size-3.5" />
-                  {voiding ? 'Voiding…' : 'Void invoice'}
-                </button>
+              {invoice.status !== 'void' && invoice.status !== 'refunded' && (
+                <div className="flex gap-2">
+                  {(invoice.status === 'paid' || invoice.status === 'partial') && (
+                    <button
+                      onClick={handleRefund}
+                      disabled={refunding}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-600 border border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/20 disabled:opacity-50 transition-colors"
+                    >
+                      <Clock className="size-3.5" />
+                      {refunding ? 'Refunding…' : 'Refund invoice'}
+                    </button>
+                  )}
+                  <button
+                    onClick={handleVoid}
+                    disabled={voiding}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 transition-colors"
+                  >
+                    <Ban className="size-3.5" />
+                    {voiding ? 'Voiding…' : 'Void invoice'}
+                  </button>
+                </div>
               )}
             </div>
           </div>
