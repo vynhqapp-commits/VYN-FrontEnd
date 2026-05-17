@@ -17,7 +17,7 @@ const LOCALE_BCP47: Record<PublicLocale, string> = {
   fr: "fr-FR",
 };
 
-type BookingRow = Appointment;
+type BookingRow = Appointment & { is_invoice?: boolean; source?: string; };
 
 function fmt(iso: string, locale?: string) {
   const local = iso.replace(/Z$/, "");
@@ -894,13 +894,13 @@ function BookingCard({
         </div>
       )}
       {reviewOpen && (
-        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">{t("ratingLabel")}</label>
+            <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">{t("ratingLabel")}</label>
             <select
               value={reviewRating ?? 5}
               onChange={(e) => onReviewRatingChange?.(Number(e.target.value))}
-              className="w-full sm:w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full sm:w-40 px-3 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-salon-gold/50 focus:border-salon-gold"
             >
               {[5, 4, 3, 2, 1].map((r) => (
                 <option key={r} value={r}>
@@ -910,12 +910,12 @@ function BookingCard({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">{t("commentOptional")}</label>
+            <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">{t("commentOptional")}</label>
             <textarea
               value={reviewComment ?? ""}
               onChange={(e) => onReviewCommentChange?.(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-salon-gold/50 focus:border-salon-gold"
               placeholder={t("reviewCommentPlaceholder")}
             />
           </div>
@@ -924,14 +924,14 @@ function BookingCard({
               type="button"
               onClick={() => onSubmitReview?.(b.id)}
               disabled={!!submittingReview}
-              className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50"
+              className="px-3 py-2 text-xs font-medium bg-salon-gold text-white rounded-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
             >
               {submittingReview ? t("submittingReview") : t("submitReview")}
             </button>
             <button
               type="button"
               onClick={onDismissReview}
-              className="px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg"
+              className="px-3 py-2 text-xs font-medium border border-gray-200 dark:border-zinc-700 text-slate-900 dark:text-zinc-100 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 rounded-lg transition-colors"
             >
               {t("cancelAction")}
             </button>

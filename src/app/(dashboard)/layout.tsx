@@ -38,6 +38,7 @@ import {
   Receipt,
   RotateCcw,
   Settings2,
+  Star,
   TrendingUp,
   UserCog,
   Users,
@@ -49,6 +50,7 @@ function iconForHref(href: string): React.ReactNode {
   if (href === "/dashboard/appointments")
     return <CalendarDays className="size-5" />;
   if (href === "/dashboard/clients") return <Users className="size-5" />;
+  if (href === "/dashboard/reviews") return <Star className="size-5" />;
   if (href === "/dashboard/staff") return <UserCog className="size-5" />;
   if (href === "/dashboard/locations") return <MapPin className="size-5" />;
   if (href === "/dashboard/services") return <Settings2 className="size-5" />;

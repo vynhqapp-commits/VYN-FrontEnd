@@ -33,6 +33,11 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
         fallbackLabel: "Clients",
         anyPermission: ["clients.view"],
       },
+      {
+        href: "/dashboard/reviews",
+        fallbackLabel: "Reviews",
+        anyPermission: ["clients.view"],
+      },
     ],
   },
   {
@@ -279,6 +284,7 @@ const managerMenu: NavItem[] = ownerMenu.filter(
 const receptionistMenu: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/clients", label: "Clients" },
+  { href: "/dashboard/reviews", label: "Reviews" },
   { href: "/dashboard/appointments", label: "Calendar" },
   { href: "/dashboard/services", label: "Services" },
   { href: "/dashboard/products", label: "Products" },

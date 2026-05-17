@@ -3456,3 +3456,50 @@ export const purchaseOrderReturnsApi = {
     method: "POST"
   }),
 };
+
+export interface SalonReview {
+  id: number;
+  salon_id: number;
+  customer_id?: number | null;
+  appointment_id?: number | null;
+  invoice_id?: number | null;
+  rating: number;
+  comment?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_at?: string | null;
+  approved_by?: number | null;
+  created_at: string;
+  updated_at: string;
+  customer?: {
+    id: number;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  appointment?: {
+    id: number;
+    starts_at: string;
+    status: string;
+  } | null;
+  invoice?: {
+    id: number;
+    invoice_number: string;
+    created_at: string;
+  } | null;
+}
+
+export const reviewsApi = {
+  list: (params?: { status?: string; page?: number; per_page?: number }) =>
+    api<SalonReview[] | { data: SalonReview[], meta?: PaginationMeta }>("/api/reviews" + qs(params || {})).then((r) => {
+      const data = Array.isArray(r.data)
+        ? r.data
+        : (r.data as any)?.data ?? [];
+      const meta = (r.data as any)?.meta;
+      return r.error ? { error: r.error } : { data, meta };
+    }),
+  moderate: (id: number, action: 'approve' | 'reject') =>
+    api<{ review: SalonReview }>(`/api/reviews/${id}/moderate`, {
+      method: "PATCH",
+      body: JSON.stringify({ action }),
+    }).then((r) => (r.data ? { data: r.data } : { error: r.error })),
+};
