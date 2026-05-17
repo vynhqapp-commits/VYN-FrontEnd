@@ -20,6 +20,7 @@ import {
   type MembershipPlanTemplate,
   type Coupon,
   type GiftCard,
+  type StaffMember,
 } from "@/lib/api";
 import { Plus, Trash2, User, ShoppingBag, CreditCard, Tags, Info, Search, Package, Star, ChevronDown } from "lucide-react";
 import { toastError, toastSuccess } from "@/lib/toast";

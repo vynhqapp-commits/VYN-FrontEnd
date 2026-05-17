@@ -40,8 +40,9 @@ export default function AddPOPaymentPage() {
     try {
       const res = await purchaseOrdersApi.get(id);
       if ('error' in res) throw new Error(res.error);
-      const o = res.data;
+      const o = res.data || null;
       setOrder(o);
+      if (!o) return;
 
       const totalPaid = (o.payments || []).reduce((acc, p) => acc + parseFloat(p.amount.toString()), 0);
       const remaining = parseFloat(o.grand_total.toString()) - totalPaid;

@@ -56,6 +56,7 @@ const schema = z.object({
   timezone: z.string().optional(),
   currency: z.string().length(3, 'Must be a 3-letter currency code').optional().or(z.literal('')),
   vat_rate: z.coerce.number().min(0).max(100).optional(),
+  apply_vat: z.boolean().optional(),
   logo:     z.string().max(500).optional().or(z.literal('')),
   gender_preference: z.enum(['ladies', 'gents', 'unisex']).optional(),
   preferred_locale: z.string().max(10).optional().or(z.literal('')),
@@ -78,6 +79,7 @@ export default function SalonProfilePage() {
       timezone: 'UTC',
       currency: 'USD',
       vat_rate: 0,
+      apply_vat: false,
       logo: '',
       gender_preference: 'unisex' as const,
       preferred_locale: 'en',
@@ -100,6 +102,7 @@ export default function SalonProfilePage() {
         timezone: s.timezone ?? 'UTC',
         currency: s.currency ?? 'USD',
         vat_rate: s.vat_rate != null ? Number(s.vat_rate) : 0,
+        apply_vat: s.apply_vat ?? false,
         logo:     s.logo ?? '',
         gender_preference: (s.gender_preference ?? 'unisex') as 'ladies' | 'gents' | 'unisex',
         preferred_locale: s.preferred_locale ?? 'en',
@@ -119,6 +122,7 @@ export default function SalonProfilePage() {
       timezone: values.timezone || undefined,
       currency: values.currency || undefined,
       vat_rate: values.vat_rate,
+      apply_vat: values.apply_vat,
       logo:     values.logo || undefined,
       gender_preference: values.gender_preference,
       preferred_locale: values.preferred_locale || undefined,
@@ -219,7 +223,28 @@ export default function SalonProfilePage() {
                 disabled={saving}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end rounded-2xl border border-border bg-muted/20 p-4">
+                <div className="flex items-center justify-between h-full py-2">
+                  <div className="space-y-0.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Apply VAT
+                    </label>
+                    <p className="text-[11px] text-muted-foreground leading-normal">
+                      Enable tax calculations on services and products checkouts.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={!!form.watch('apply_vat')}
+                      onChange={(e) => form.setValue('apply_vat', e.target.checked, { shouldDirty: true })}
+                      disabled={saving}
+                    />
+                    <div className="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Default VAT rate (%)
@@ -230,13 +255,16 @@ export default function SalonProfilePage() {
                     max={100}
                     step={0.01}
                     {...form.register('vat_rate', { valueAsNumber: true })}
-                    disabled={saving}
+                    disabled={saving || !form.watch('apply_vat')}
                     className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
                   />
                   {form.formState.errors.vat_rate && (
                     <p className="text-xs text-red-500 mt-1">{form.formState.errors.vat_rate.message}</p>
                   )}
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Preferred locale

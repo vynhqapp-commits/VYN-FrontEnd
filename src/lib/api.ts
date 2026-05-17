@@ -321,6 +321,7 @@ export const settingsApi = {
     timezone?: string;
     currency?: string;
     vat_rate?: number;
+    apply_vat?: boolean;
     logo?: string;
     gender_preference?: "ladies" | "gents" | "unisex";
     preferred_locale?: string;
@@ -2395,6 +2396,16 @@ export type PurchaseOrderItem = {
   total: number;
 };
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export type PurchaseOrder = {
   id: number;
   vendor_id: number;
@@ -2415,7 +2426,7 @@ export type PurchaseOrder = {
   payment_status: 'unpaid' | 'partial' | 'paid';
   vendor_note?: string;
   vendor?: Vendor;
-  person_in_charge?: Staff;
+  person_in_charge?: StaffMember;
   items?: PurchaseOrderItem[];
   items_count?: number;
   payments?: any[];
@@ -2457,7 +2468,7 @@ export type Quotation = {
   tags?: string;
   converted_to_po_id?: number;
   vendor?: Vendor;
-  person_in_charge?: Staff;
+  person_in_charge?: StaffMember;
   items?: QuotationItem[];
   items_count?: number;
   purchase_order?: PurchaseOrder;
@@ -2511,6 +2522,7 @@ export interface Tenant {
   timezone?: string | null;
   currency?: string | null;
   vat_rate?: number | string | null;
+  apply_vat?: boolean;
   preferred_locale?: string | null;
   /** Aggregated from approved reviews; used for list filters and display */
   average_rating?: number | string | null;
@@ -2536,6 +2548,7 @@ function normalizeTenant(t: Tenant): Tenant {
   const status = (t as any).status ?? sub ?? null;
   const lat = t.latitude !== null && t.latitude !== undefined ? parseFloat(t.latitude as any) : null;
   const lng = t.longitude !== null && t.longitude !== undefined ? parseFloat(t.longitude as any) : null;
+  const applyVat = (t as any).apply_vat !== null && (t as any).apply_vat !== undefined ? !!(t as any).apply_vat : false;
   
   return {
     ...t,
@@ -2543,6 +2556,7 @@ function normalizeTenant(t: Tenant): Tenant {
     status: status ?? "active",
     latitude: isNaN(lat as any) ? null : lat,
     longitude: isNaN(lng as any) ? null : lng,
+    apply_vat: applyVat,
   };
 }
 

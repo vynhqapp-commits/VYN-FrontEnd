@@ -178,11 +178,11 @@ export default function VendorsPage() {
     if ('error' in res) {
       toastError(res.error || 'Failed to load vendors');
     } else {
-      const data = res.data || [];
+      const data = (res.data && 'data' in res.data ? (res.data as any).data : res.data) || [];
       setVendors(data);
       
       if (initialVendorId && !selectedVendor) {
-        const v = data.find(item => String(item.id) === String(initialVendorId));
+        const v = data.find((item: any) => String(item.id) === String(initialVendorId));
         if (v) setSelectedVendor(v);
       }
     }
@@ -259,6 +259,16 @@ export default function VendorsPage() {
       if (selectedVendor && editingVendor && selectedVendor.id === editingVendor.id) {
          setSelectedVendor({ ...selectedVendor, ...vendorForm } as any);
       }
+    }
+  };
+
+  const toggleStatus = async (v: Vendor) => {
+    const res = await vendorsApi.update(v.id, { is_active: !v.is_active } as any);
+    if ('error' in res) {
+      toastError(res.error || 'Failed to update status');
+    } else {
+      toastSuccess(`Vendor ${!v.is_active ? 'activated' : 'deactivated'}`);
+      loadVendors();
     }
   };
 
@@ -806,7 +816,7 @@ function VendorContactsTab({ vendorId }: { vendorId: number }) {
     const res = await vendorContactsApi.list(vendorId);
     setLoading(false);
     if (!('error' in res)) {
-      setContacts(res.data);
+      setContacts(res.data || []);
     }
   };
 
@@ -1025,7 +1035,7 @@ function VendorQuotationsTab({ vendorId, currency }: { vendorId: number; currenc
     quotationsApi.list({ vendor_id: vendorId }).then(res => {
       setLoading(false);
       if (!('error' in res)) {
-        setQuotations(res.data || []);
+        setQuotations((res.data && 'data' in res.data ? (res.data as any).data : res.data) || []);
       }
     });
   }, [vendorId]);
@@ -1094,7 +1104,7 @@ function VendorPurchaseOrdersTab({ vendorId, currency }: { vendorId: number; cur
     purchaseOrdersApi.list({ vendor_id: vendorId }).then(res => {
       setLoading(false);
       if (!('error' in res)) {
-        setOrders(res.data || []);
+        setOrders((res.data && 'data' in res.data ? (res.data as any).data : res.data) || []);
       }
     });
   }, [vendorId]);
@@ -1178,8 +1188,8 @@ function VendorPaymentsTab({ vendorId, currency }: { vendorId: number; currency:
       vendorPaymentsApi.listRefunds({ vendor_id: vendorId })
     ]).then(([payRes, refRes]) => {
       setLoading(false);
-      if (!('error' in payRes)) setPayments(payRes.data || []);
-      if (!('error' in refRes)) setRefunds(refRes.data || []);
+      if (!('error' in payRes) && payRes.data) setPayments((payRes.data as any).data || payRes.data || []);
+      if (!('error' in refRes) && refRes.data) setRefunds((refRes.data as any).data || refRes.data || []);
     });
   }, [vendorId]);
 
@@ -1285,7 +1295,7 @@ function VendorPaymentsTab({ vendorId, currency }: { vendorId: number; currency:
 }
 
 function VendorStatementTab({ vendorId, currency }: { vendorId: number; currency: string }) {
-  const [statement, setStatement] = useState<VendorStatementResponse | null>(null);
+  const [statement, setStatement] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState('month'); // month, quarter, year, custom
   const [dates, setDates] = useState({ 
@@ -1318,7 +1328,7 @@ function VendorStatementTab({ vendorId, currency }: { vendorId: number; currency
       setShowRefundModal(false);
       loadStatement();
     } else {
-      toastError(res.error);
+      toastError(res.error || 'Failed to record refund');
     }
   };
 
@@ -1546,7 +1556,7 @@ function VendorStatementTab({ vendorId, currency }: { vendorId: number; currency
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {statement.transactions.map((tx, idx) => (
+              {statement.transactions.map((tx: any, idx: number) => (
                 <tr key={idx} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</td>
                   <td className="px-6 py-4">

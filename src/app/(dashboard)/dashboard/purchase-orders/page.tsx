@@ -41,7 +41,7 @@ export default function PurchaseOrdersPage() {
     if ('error' in res) {
       toastError(res.error || 'Failed to load purchase orders');
     } else {
-      setOrders(res.data || []);
+      setOrders((res.data && 'data' in res.data ? (res.data as any).data : res.data) || []);
     }
   };
 

@@ -35,7 +35,7 @@ export default function POPaymentHistoryPage() {
     try {
       const res = await purchaseOrdersApi.get(id);
       if ('error' in res) throw new Error(res.error);
-      setOrder(res.data);
+      setOrder(res.data || null);
     } catch (err: any) {
       toastError(err.message || 'Failed to load order');
       router.back();

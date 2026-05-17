@@ -169,8 +169,9 @@ export default function NewPurchaseOrderReturnPage() {
     setLoading(false);
     
     if (!('error' in res)) {
-      const po = res.data;
+      const po = res.data || null;
       setSelectedPo(po);
+      if (!po) return;
       
       // For each item in PO, we need to know how many already returned
       // This is a bit expensive to do one by one, usually backend should provide remaining_quantity
@@ -179,15 +180,15 @@ export default function NewPurchaseOrderReturnPage() {
       const returns = !('error' in rtnRes) ? ((rtnRes.data as any).data || rtnRes.data || []) : [];
       
       const items = (po.items || []).map(poItem => {
-        const alreadyReturned = returns.reduce((sum, rtn) => {
-          const rtnItem = rtn.items?.find(ri => ri.purchase_order_item_id === poItem.id);
+        const alreadyReturned = returns.reduce((sum: number, rtn: any) => {
+          const rtnItem = (rtn.items || []).find((ri: any) => ri.purchase_order_item_id === poItem.id);
           return sum + (rtnItem ? Number(rtnItem.quantity) : 0);
         }, 0);
         
         return {
-          purchase_order_item_id: poItem.id,
+          purchase_order_item_id: poItem.id || 0,
           item_name: poItem.item_name,
-          product_id: poItem.product_id,
+          product_id: poItem.product_id || 0,
           bought_quantity: Number(poItem.quantity),
           remaining_quantity: Number(poItem.quantity) - alreadyReturned,
           quantity: 0,
@@ -244,7 +245,7 @@ export default function NewPurchaseOrderReturnPage() {
       toastSuccess('Return created successfully');
       router.push('/dashboard/purchase-orders/returns');
     } else {
-      toastError(res.error);
+      toastError(res.error || 'Failed to create return');
     }
   };
 

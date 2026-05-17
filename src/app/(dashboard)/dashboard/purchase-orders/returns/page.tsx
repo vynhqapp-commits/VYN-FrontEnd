@@ -48,7 +48,7 @@ export default function PurchaseOrderReturnsPage() {
     if (!('error' in retRes)) {
       setReturns((retRes.data as any).data || retRes.data || []);
     } else {
-      toastError(retRes.error);
+      toastError(retRes.error || 'Failed to load returns');
     }
     
     if (!('error' in setRes)) {
@@ -65,7 +65,7 @@ export default function PurchaseOrderReturnsPage() {
       toastSuccess('Return marked as collected');
       loadData();
     } else {
-      toastError(res.error);
+      toastError(res.error || 'Failed to collect return');
     }
   };
 

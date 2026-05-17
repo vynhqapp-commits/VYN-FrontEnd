@@ -362,6 +362,12 @@ export default function ServicesPage() {
     else { toastSuccess('Package deleted.'); loadPackages(); }
   };
 
+  const togglePkgStatus = async (p: PackageTemplate) => {
+    const res = await catalogApi.updatePackage(p.id, { is_active: !p.is_active });
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess(`Package ${!p.is_active ? 'activated' : 'deactivated'}.`); loadPackages(); }
+  };
+
   /* ── Membership CRUD helpers ── */
   const loadMemberships = async () => {
     setMemLoading(true);
@@ -449,6 +455,12 @@ export default function ServicesPage() {
     const res = await couponsApi.delete(c.id);
     if ('error' in res && res.error) toastError(res.error);
     else { toastSuccess('Coupon deleted.'); loadCoupons(); }
+  };
+
+  const toggleCouponStatus = async (c: Coupon) => {
+    const res = await couponsApi.update(c.id, { is_active: !c.is_active });
+    if ('error' in res && res.error) toastError(res.error);
+    else { toastSuccess(`Coupon ${!c.is_active ? 'activated' : 'deactivated'}.`); loadCoupons(); }
   };
 
   /* ── Add-ons helpers ── */
@@ -1602,9 +1614,9 @@ export default function ServicesPage() {
                         <div className="inline-flex items-center gap-2">
                           <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { 
                             setEditingMem(m); 
-                            setMemServiceIds(m.services?.map(s => String(s.id)) ?? []); 
+                            setMemServiceIds((m as any).services?.map((s: any) => String(s.id)) ?? []); 
                             const sessions: Record<string, number> = {};
-                            m.services?.forEach(s => {
+                            (m as any).services?.forEach((s: any) => {
                               sessions[String(s.id)] = s.pivot?.sessions_count ?? 1;
                             });
                             setMemServiceSessions(sessions);

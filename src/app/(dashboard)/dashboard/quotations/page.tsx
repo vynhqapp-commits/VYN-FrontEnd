@@ -39,7 +39,7 @@ export default function QuotationsPage() {
     if ('error' in res) {
       toastError(res.error || 'Failed to load quotations');
     } else {
-      setQuotations(res.data || []);
+      setQuotations((res.data && 'data' in res.data ? (res.data as any).data : res.data) || []);
     }
   };
 

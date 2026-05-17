@@ -203,7 +203,7 @@ export default function EditPurchaseOrderPage() {
       if (!('error' in lRes)) setLocations(lRes.data || []);
       if (!('error' in aRes)) setExistingAttachments(aRes.data || []);
       
-      if (!('error' in oRes)) {
+      if (!('error' in oRes) && oRes.data) {
         const o = oRes.data;
         setVendorId(o.vendor_id);
         setVendorPoNumber(o.vendor_po_number || '');
@@ -219,7 +219,7 @@ export default function EditPurchaseOrderPage() {
         setBranchId(o.branch_id || '');
         setItems(o.items || []);
       } else {
-        throw new Error(oRes.error);
+        throw new Error(('error' in oRes && oRes.error) ? String(oRes.error) : 'Failed to load order');
       }
     } catch (err: any) {
       toastError(err.message || 'Failed to load order data');
@@ -282,17 +282,17 @@ export default function EditPurchaseOrderPage() {
     setSubmitting(true);
     try {
       const payload = {
-        vendor_id: vendorId,
+        vendor_id: Number(vendorId),
         vendor_po_number: vendorPoNumber,
         description,
         order_date: orderDate,
-        person_in_charge_id: personInChargeId || null,
+        person_in_charge_id: personInChargeId ? Number(personInChargeId) : undefined,
         currency,
         shipping_fee: shippingFee,
         tags,
         vendor_note: vendorNote,
         status: newStatus || status,
-        branch_id: branchId || null,
+        branch_id: branchId ? Number(branchId) : undefined,
         subtotal: totals.subtotal,
         total_tax: totals.totalTax,
         total_discount: totals.totalDiscount,
@@ -301,7 +301,7 @@ export default function EditPurchaseOrderPage() {
           ...item,
           total: calculateItemTotal(item)
         }))
-      };
+      } as any;
 
       const res = await purchaseOrdersApi.update(id, payload);
       if ('error' in res) throw new Error(res.error);
@@ -598,7 +598,7 @@ export default function EditPurchaseOrderPage() {
                                               type="button"
                                               onClick={() => {
                                                 updateItem(idx, { 
-                                                  product_id: p.id, 
+                                                  product_id: Number(p.id), 
                                                   item_name: p.name, 
                                                   unit_price: Number(p.cost || p.price || 0)
                                                 });

@@ -265,12 +265,12 @@ export default function EditQuotationPage() {
     setSubmitting(true);
     try {
       const payload = {
-        vendor_id: vendorId,
+        vendor_id: Number(vendorId),
         description,
         date,
         expiry_date: expiryDate || null,
-        person_in_charge_id: personInChargeId || null,
-        branch_id: branchId || null,
+        person_in_charge_id: personInChargeId ? Number(personInChargeId) : null,
+        branch_id: branchId ? Number(branchId) : null,
         currency,
         tags,
         vendor_note: vendorNote,
@@ -283,7 +283,7 @@ export default function EditQuotationPage() {
           ...item,
           total: calculateItemTotal(item)
         }))
-      };
+      } as any;
 
       const res = await quotationsApi.update(id, payload);
       if ('error' in res) throw new Error(res.error);
@@ -529,7 +529,7 @@ export default function EditQuotationPage() {
                                                 type="button"
                                                 onClick={() => {
                                                   updateItem(idx, { 
-                                                    product_id: p.id, 
+                                                    product_id: Number(p.id), 
                                                     item_name: p.name, 
                                                     unit_price: Number(p.cost || p.price || 0)
                                                   });
@@ -539,7 +539,7 @@ export default function EditQuotationPage() {
                                               >
                                                  <div className="flex flex-col">
                                                    <span className="text-xs font-bold text-foreground group-hover/item:text-orange-600 transition-colors">{p.name}</span>
-                                                   <span className="text-[10px] text-muted-foreground">{p.sku || p.code}</span>
+                                                   <span className="text-[10px] text-muted-foreground">{p.sku || ''}</span>
                                                  </div>
                                                  <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded-md">{currency} {Number(p.cost || p.price || 0).toLocaleString()}</span>
                                               </button>

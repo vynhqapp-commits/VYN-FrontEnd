@@ -188,7 +188,10 @@ export default function NewPurchaseOrderPage() {
     ]);
     
     setLoading(false);
-    if (!('error' in vRes)) setVendors(vRes.data || []);
+    if (!('error' in vRes)) {
+      const vData = (vRes.data as any).data || vRes.data || [];
+      setVendors(vData);
+    }
     if (!('error' in bRes)) setBranches(bRes.data || []);
     if (!('error' in sRes)) {
       const staffList = sRes.data || [];
@@ -200,7 +203,10 @@ export default function NewPurchaseOrderPage() {
         if (currentStaff) setPersonInChargeId(currentStaff.id);
       }
     }
-    if (!('error' in pRes)) setProducts(pRes.data?.products || []);
+    if (!('error' in pRes)) {
+      const pData = (pRes.data as any).products || (pRes.data as any).data || pRes.data || [];
+      setProducts(pData);
+    }
     if (!('error' in setRes)) setCurrency(setRes.data?.salon?.currency || 'USD');
     if (!('error' in poRes)) setExistingPoCount(poRes.data?.meta?.total || 0);
   };
@@ -558,7 +564,7 @@ export default function NewPurchaseOrderPage() {
                                               type="button"
                                               onClick={() => {
                                                 updateItem(idx, { 
-                                                  product_id: p.id, 
+                                                  product_id: Number(p.id), 
                                                   item_name: p.name, 
                                                   unit_price: Number(p.cost || p.price || 0)
                                                 });

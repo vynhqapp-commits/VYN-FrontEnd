@@ -93,10 +93,10 @@ export default function PendingPaymentsPage() {
     setLoading(true);
     if (activeTab === 'pending') {
       const res = await api<{ data: VendorBalance[] }>('/api/vendor-balances');
-      if (!('error' in res)) setBalances(res.data || []);
+      if (!('error' in res) && res.data) setBalances(res.data.data || []);
     } else {
       const res = await api<{ data: RefundTransaction[] }>('/api/vendor-refunds');
-      if (!('error' in res)) setAllRefunds(res.data || []);
+      if (!('error' in res) && res.data) setAllRefunds(res.data.data || []);
     }
     setLoading(false);
   };
@@ -145,13 +145,13 @@ export default function PendingPaymentsPage() {
     
     setLoadingOrders(false);
     if (!('error' in res)) {
-      const orders = res.data || [];
+      const orders = (res.data && 'data' in res.data ? (res.data as any).data : res.data) || [];
       setPendingOrders(orders);
       if (orders.length > 0) {
         setPaymentForm({
           ...paymentForm,
           purchase_order_id: String(orders[0].id),
-          amount: (orders[0].grand_total || 0) - (orders[0].payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0)
+          amount: (orders[0].grand_total || 0) - (orders[0].payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0)
         });
       }
     }
@@ -173,7 +173,7 @@ export default function PendingPaymentsPage() {
       setShowRefundModal(false);
       loadData();
     } else {
-      toastError(res.error);
+      toastError(res.error || 'Failed to record refund');
     }
   };
 
@@ -193,7 +193,7 @@ export default function PendingPaymentsPage() {
       setShowPaymentModal(false);
       loadData();
     } else {
-      toastError(res.error);
+      toastError(res.error || 'Failed to record payment');
     }
   };
 
