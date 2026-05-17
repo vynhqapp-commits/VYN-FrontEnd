@@ -14,6 +14,9 @@ export default function ReceiptPage() {
     receipt?: {
       id: string;
       total: string | number;
+      subtotal?: string | number;
+      discount?: string | number;
+      tax?: string | number;
       Location?: { name: string };
       TransactionItems?: {
         quantity: string;
@@ -159,15 +162,42 @@ export default function ReceiptPage() {
             ))}
           </tbody>
         </table>
-        <div className="mt-2 text-sm text-muted-foreground">
-          {(r.Payments || []).map((p) => (
-            <div key={p.method} className="flex justify-between">
-              <span>{p.method}</span>
-              <span>{Number(p.amount).toFixed(2)}</span>
+        <div className="mt-4 space-y-1.5 border-t border-border pt-3 text-sm text-muted-foreground">
+          {r.subtotal !== undefined && Number(r.subtotal) > 0 && (
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span className="text-foreground">${Number(r.subtotal).toFixed(2)}</span>
             </div>
-          ))}
+          )}
+          {r.discount !== undefined && Number(r.discount) > 0 && (
+            <div className="flex justify-between text-red-500">
+              <span>Discount:</span>
+              <span>-${Number(r.discount).toFixed(2)}</span>
+            </div>
+          )}
+          {r.tax !== undefined && Number(r.tax) > 0 && (
+            <div className="flex justify-between">
+              <span>VAT:</span>
+              <span className="text-foreground">${Number(r.tax).toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-semibold text-foreground border-t border-border pt-2 text-base">
+            <span>Total:</span>
+            <span>${Number(r.total).toFixed(2)}</span>
+          </div>
         </div>
-        <p className="mt-2 font-semibold text-foreground border-t border-border pt-2">Total: {Number(r.total).toFixed(2)}</p>
+
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payments</p>
+          <div className="space-y-1 text-sm text-muted-foreground">
+            {(r.Payments || []).map((p) => (
+              <div key={p.method} className="flex justify-between">
+                <span className="capitalize">{p.method.replace('_', ' ')}</span>
+                <span className="text-foreground">${Number(p.amount).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
