@@ -10,6 +10,7 @@ import {
   servicesApi,
   transactionsApi,
   catalogApi,
+  settingsApi,
   couponsApi,
   giftCardsApi,
   type Appointment,
@@ -200,6 +201,9 @@ export default function SaleCheckoutForm({
     Array<{ id: string; staff_id: string; amount: number }>
   >([{ id: "tip-1", staff_id: "", amount: 0 }]);
 
+  const [applyVat, setApplyVat] = useState<boolean>(false);
+  const [vatRate, setVatRate] = useState<number>(0);
+
   useEffect(() => {
     let mounted = true;
     Promise.all([
@@ -208,7 +212,8 @@ export default function SaleCheckoutForm({
       productsApi.list(),
       catalogApi.listPackages(true),
       catalogApi.listMemberships(true),
-    ]).then(([clientRes, serviceRes, productRes, pkgRes, memRes]) => {
+      settingsApi.get(),
+    ]).then(([clientRes, serviceRes, productRes, pkgRes, memRes, settingsRes]) => {
       if (!mounted) return;
       if (clientRes.data?.clients) setClients(clientRes.data.clients);
       if (serviceRes.data?.services) setServices(serviceRes.data.services);
@@ -217,6 +222,12 @@ export default function SaleCheckoutForm({
         setPackageTemplates((pkgRes as any).data.packages);
       if (!("error" in memRes) && (memRes as any).data?.memberships)
         setMembershipPlans((memRes as any).data.memberships);
+
+      if (!("error" in settingsRes) && settingsRes.data?.salon) {
+        setApplyVat(!!settingsRes.data.salon.apply_vat);
+        setVatRate(Number(settingsRes.data.salon.vat_rate ?? 0));
+      }
+
       setLoading(false);
     });
     return () => {
@@ -369,9 +380,14 @@ export default function SaleCheckoutForm({
       return Math.min(subtotal, (subtotal * discountValue) / 100);
     return Math.min(subtotal, discountValue);
   }, [discountType, discountValue, subtotal]);
+  const vatAmount = useMemo(() => {
+    if (!applyVat || vatRate <= 0) return 0;
+    const taxable = Math.max(0, subtotal - discountAmount);
+    return (taxable * vatRate) / 100;
+  }, [applyVat, vatRate, subtotal, discountAmount]);
   const grandTotal = useMemo(
-    () => Math.max(0, subtotal - discountAmount + tipsAmount),
-    [subtotal, discountAmount, tipsAmount],
+    () => Math.max(0, subtotal - discountAmount + vatAmount + tipsAmount),
+    [subtotal, discountAmount, vatAmount, tipsAmount],
   );
   const paid = useMemo(
     () =>
@@ -1059,8 +1075,14 @@ export default function SaleCheckoutForm({
           </div>
 
           {/* Grand Total Area */}
-          <div className="p-5 bg-[var(--elite-surface)] border-t border-[var(--elite-border)] space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="p-5 bg-[var(--elite-surface)] border-t border-[var(--elite-border)] space-y-3">
+            {applyVat && (
+              <div className="flex items-center justify-between text-xs font-bold elite-subtle uppercase tracking-wider">
+                <span>VAT ({vatRate}%)</span>
+                <span className="elite-title">${vatAmount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1">
               <span className="text-xs font-bold elite-subtle uppercase tracking-widest">Grand Total</span>
               <span className="text-3xl font-black tracking-tighter text-[var(--elite-orange)]">${grandTotal.toFixed(2)}</span>
             </div>
