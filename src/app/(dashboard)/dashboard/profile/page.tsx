@@ -186,7 +186,7 @@ export default function SalonProfilePage() {
                   </label>
                   <Combobox
                     value={form.watch('currency')}
-                    onValueChange={(value) => form.setValue('currency', value)}
+                    onValueChange={(value) => form.setValue('currency', value, { shouldDirty: true })}
                     options={CURRENCIES.map((c) => ({
                       value: c.code,
                       label: c.label,
@@ -209,7 +209,7 @@ export default function SalonProfilePage() {
                   </label>
                   <Combobox
                     value={form.watch('timezone')}
-                    onValueChange={(value) => form.setValue('timezone', value)}
+                    onValueChange={(value) => form.setValue('timezone', value, { shouldDirty: true })}
                     options={TIMEZONES.map((tz) => ({
                       value: tz,
                       label: tz,
@@ -318,7 +318,7 @@ export default function SalonProfilePage() {
                   </label>
                   <Combobox
                     value={form.watch('preferred_locale')}
-                    onValueChange={(value) => form.setValue('preferred_locale', value)}
+                    onValueChange={(value) => form.setValue('preferred_locale', value, { shouldDirty: true })}
                     options={LOCALES.map((l) => ({
                       value: l.value,
                       label: l.label,
@@ -338,7 +338,7 @@ export default function SalonProfilePage() {
                 </label>
                 <Combobox
                   value={form.watch('gender_preference')}
-                  onValueChange={(value) => form.setValue('gender_preference', value as any)}
+                  onValueChange={(value) => form.setValue('gender_preference', value as any, { shouldDirty: true })}
                   options={GENDER_PREFS.map((g) => ({
                     value: g.value,
                     label: g.label,
@@ -383,7 +383,7 @@ export default function SalonProfilePage() {
                     </label>
                     <Combobox
                       value={form.watch('cancellation_policy_mode')}
-                      onValueChange={(value) => form.setValue('cancellation_policy_mode', value as any)}
+                      onValueChange={(value) => form.setValue('cancellation_policy_mode', value as any, { shouldDirty: true })}
                       options={POLICY_MODES.map((m) => ({
                         value: m.value,
                         label: m.label,
