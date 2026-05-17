@@ -2536,6 +2536,7 @@ export interface Tenant {
   gender_preference?: "ladies" | "gents" | "unisex" | null;
   cancellation_window_hours?: number;
   cancellation_policy_mode?: "soft" | "hard" | "none";
+  refund_window_hours?: number;
   branch_count?: number;
   service_count?: number;
   created_at?: string;

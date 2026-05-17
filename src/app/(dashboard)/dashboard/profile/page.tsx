@@ -64,6 +64,7 @@ const schema = z.object({
   preferred_locale: z.string().max(10).optional().or(z.literal('')),
   cancellation_window_hours: z.coerce.number().int().min(0).max(168).optional(),
   cancellation_policy_mode:  z.enum(['soft', 'hard', 'none']).optional(),
+  refund_window_hours: z.coerce.number().int().min(0).max(168).optional(),
 });
 type Values = z.infer<typeof schema>;
 
@@ -89,6 +90,7 @@ export default function SalonProfilePage() {
       preferred_locale: 'en',
       cancellation_window_hours: 24,
       cancellation_policy_mode: 'soft' as const,
+      refund_window_hours: 24,
     },
   });
 
@@ -114,6 +116,7 @@ export default function SalonProfilePage() {
         preferred_locale: s.preferred_locale ?? 'en',
         cancellation_window_hours: s.cancellation_window_hours ?? 24,
         cancellation_policy_mode:  (s.cancellation_policy_mode ?? 'soft') as 'soft' | 'hard' | 'none',
+        refund_window_hours: s.refund_window_hours ?? 24,
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,6 +139,7 @@ export default function SalonProfilePage() {
       preferred_locale: values.preferred_locale || undefined,
       cancellation_window_hours: values.cancellation_window_hours,
       cancellation_policy_mode:  values.cancellation_policy_mode,
+      refund_window_hours: values.refund_window_hours,
     });
     setSaving(false);
     if ('error' in res) { toastError(res.error ?? 'Failed to save'); return; }
@@ -355,7 +359,7 @@ export default function SalonProfilePage() {
               <div className="pt-4 mt-4 border-t border-border">
                 <h3 className="text-sm font-semibold text-foreground mb-1">Booking Policies</h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Configure how customers can cancel or reschedule their bookings.
+                  Configure how customers can cancel, reschedule, or receive refunds for their bookings.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -396,6 +400,33 @@ export default function SalonProfilePage() {
                     />
                     <p className="text-[11px] text-muted-foreground mt-1">
                       &quot;Allow with warning&quot; lets customers proceed with a notice. &quot;Block&quot; prevents changes inside the window.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/40">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Refund Policy Window (hours)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={168}
+                      {...form.register('refund_window_hours', { valueAsNumber: true })}
+                      disabled={saving}
+                      className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Disable customer refunds if they cancel within this number of hours before the appointment.
+                    </p>
+                    {form.formState.errors.refund_window_hours && (
+                      <p className="text-xs text-red-500 mt-1">{form.formState.errors.refund_window_hours.message}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center bg-muted/20 rounded-2xl border border-border p-4 h-full self-start">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      💡 <strong>Note:</strong> When a client cancels a pre-paid booking within this hourly window, any online payment refund is automatically disabled.
                     </p>
                   </div>
                 </div>
