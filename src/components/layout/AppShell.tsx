@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import { ThemeToggle } from "@/lib/auth-context";
-import { cn } from "@/lib/utils";
+import { cn, getMediaUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -152,6 +152,7 @@ function flattenNavGroups(nav: ShellNavGroup[]): ShellNavItem[] {
 export function AppShell({
   brand,
   userLabel,
+  logo,
   nav,
   onLogout,
   profileHref,
@@ -160,6 +161,7 @@ export function AppShell({
 }: {
   brand: string;
   userLabel?: string;
+  logo?: string;
   nav: ShellNavGroup[];
   onLogout?: () => void;
   profileHref?: string;
@@ -331,6 +333,30 @@ export function AppShell({
         )}
       >
         <div className="flex w-full flex-col px-3 py-4">
+          {/* Logo container above User Box */}
+          {logo && (
+            <div className={cn(
+              "mb-4 flex items-center shrink-0 animate-in fade-in zoom-in-95 duration-300",
+              collapsed ? "justify-center" : "px-3 justify-start"
+            )}>
+              {collapsed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={getMediaUrl(logo)}
+                  alt="Salon Logo"
+                  className="size-9 object-cover rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xs"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={getMediaUrl(logo)}
+                  alt="Salon Logo"
+                  className="h-10 max-w-[210px] object-contain rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xs"
+                />
+              )}
+            </div>
+          )}
+
           <div
             className={cn(
               "h-16 shrink-0 px-3 mb-4 flex items-center bg-zinc-50/50 dark:bg-zinc-900/30 rounded-2xl border border-zinc-100 dark:border-zinc-800/50",
@@ -370,24 +396,36 @@ export function AppShell({
         )}
         aria-hidden={!mobileOpen}
       >
-        <div className="h-14 shrink-0 border-b px-4 flex items-center justify-between">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{brand}</div>
-            {userLabel ? (
-              <div className="text-xs text-muted-foreground truncate">
-                {userLabel}
-              </div>
-            ) : null}
+        <div className="p-3 flex flex-col gap-3 border-b shrink-0">
+          {logo && (
+            <div className="px-1 py-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getMediaUrl(logo)}
+                alt="Salon Logo"
+                className="h-9 max-w-[180px] object-contain rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xs"
+              />
+            </div>
+          )}
+          <div className="px-1 flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate">{brand}</div>
+              {userLabel ? (
+                <div className="text-xs text-muted-foreground truncate">
+                  {userLabel}
+                </div>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="size-4" />
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-          >
-            <X className="size-4" />
-          </Button>
         </div>
         {renderNav("mobile")}
       </aside>

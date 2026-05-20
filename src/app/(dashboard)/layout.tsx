@@ -18,6 +18,7 @@ import {
 } from "@/components/layout/AppShell";
 import { CommandPalette } from "@/components/command/CommandPalette";
 import { LocaleProvider, useLocale } from "@/components/LocaleProvider";
+import { settingsApi } from "@/lib/api";
 import {
   dashboardGroupLabel,
   dashboardNavLabel,
@@ -86,6 +87,25 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const { locale } = useLocale();
   const td = getDashboardT(locale);
+  const [logo, setLogo] = useState<string | undefined>(undefined);
+
+  const fetchLogo = () => {
+    settingsApi.get().then((res) => {
+      if (!("error" in res) && res.data?.salon?.logo) {
+        setLogo(res.data.salon.logo);
+      } else {
+        setLogo(undefined);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchLogo();
+      window.addEventListener("logo-updated", fetchLogo);
+      return () => window.removeEventListener("logo-updated", fetchLogo);
+    }
+  }, [user]);
 
   const roleCandidate = (user?.role as AppRole | undefined) ?? undefined;
   const perms = user?.permissions;
@@ -163,6 +183,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     <AppShell
       brand={APP_NAME}
       userLabel={user.email}
+      logo={logo}
       nav={nav}
       profileHref="/dashboard/profile"
       onLogout={() => {

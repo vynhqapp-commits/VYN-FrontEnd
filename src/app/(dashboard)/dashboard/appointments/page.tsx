@@ -185,10 +185,10 @@ export default function AppointmentsPage() {
     });
   };
 
-  const loadAppointments = async () => {
+  const loadAppointments = async (silent = false) => {
     // Clear previous global errors so the UI doesn't get "stuck" in an error-only render.
     setError(null);
-    setLoading(true);
+    if (!silent) setLoading(true);
     const focus = parseDateKey(focusDate);
 
     const effectiveMode = viewMode === 'list' ? rangeMode : viewMode;
@@ -204,18 +204,38 @@ export default function AppointmentsPage() {
           : { from: focusDate, to: focusDate }; // day
     try {
       const res = await appointmentsApi.list(params);
-      if ('error' in res && res.error) setError(res.error);
-      else if (res.data?.appointments) setAppointments(filterAppointmentsForSelectedRange(res.data.appointments));
+      if ('error' in res && res.error) {
+        if (!silent) setError(res.error);
+      }
+      else if (res.data?.appointments) {
+        setAppointments(filterAppointmentsForSelectedRange(res.data.appointments));
+      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load appointments';
-      setError(msg);
+      if (!silent) {
+        const msg = e instanceof Error ? e.message : 'Failed to load appointments';
+        setError(msg);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadAppointments();
+  }, [focusDate, viewMode, rangeMode]);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (pollInFlightRef.current) return;
+      pollInFlightRef.current = true;
+      try {
+        await loadAppointments(true);
+      } finally {
+        pollInFlightRef.current = false;
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [focusDate, viewMode, rangeMode]);
 
   // Responsive default: on small screens show a single-column day agenda

@@ -15,6 +15,149 @@ import { RHFTextField } from '@/components/fields/RHFTextField';
 import { RHFTextareaField } from '@/components/fields/RHFTextareaField';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
+import { cn } from '@/lib/utils';
+
+type DaySchedule = {
+  day: string;
+  is_off: boolean;
+  start: string;
+  end: string;
+};
+
+const DAYS_OF_WEEK = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
+];
+
+const DEFAULT_SCHEDULE: DaySchedule[] = DAYS_OF_WEEK.map(day => ({
+  day,
+  is_off: day === 'Sunday', // Sunday off by default
+  start: '09:00',
+  end: '18:00'
+}));
+
+function WorkingHoursSelector({
+  value,
+  onChange
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const schedule: DaySchedule[] = useMemo(() => {
+    try {
+      if (value) {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed) && parsed.length === 7 && 'day' in parsed[0]) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Gracefully ignore parsing issues
+    }
+    return DEFAULT_SCHEDULE;
+  }, [value]);
+
+  const updateSchedule = (newSchedule: DaySchedule[]) => {
+    onChange(JSON.stringify(newSchedule));
+  };
+
+  const handleToggleOff = (index: number) => {
+    const updated = [...schedule];
+    updated[index] = { ...updated[index], is_off: !updated[index].is_off };
+    updateSchedule(updated);
+  };
+
+  const handleTimeChange = (index: number, field: 'start' | 'end', val: string) => {
+    const updated = [...schedule];
+    updated[index] = { ...updated[index], [field]: val };
+    updateSchedule(updated);
+  };
+
+  const applyMondayToAll = () => {
+    const monday = schedule[0];
+    const updated = schedule.map((item, idx) => {
+      if (idx === 0) return item;
+      return {
+        ...item,
+        is_off: monday.is_off,
+        start: monday.start,
+        end: monday.end
+      };
+    });
+    updateSchedule(updated);
+  };
+
+  return (
+    <div className="space-y-4 rounded-2xl border border-border bg-muted/10 p-5">
+      <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          Working Hours Setup
+        </span>
+        <button
+          type="button"
+          onClick={applyMondayToAll}
+          className="text-xs font-semibold text-[var(--elite-orange)] hover:underline flex items-center gap-1 animate-pulse"
+        >
+          Copy Monday's hours to all days
+        </button>
+      </div>
+
+      <div className="space-y-3 pt-2">
+        {schedule.map((item, idx) => (
+          <div
+            key={item.day}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-border bg-background shadow-2xs hover:border-border/80 transition-all"
+          >
+            {/* Day name & Off toggle */}
+            <div className="flex items-center justify-between sm:justify-start gap-4 min-w-[145px]">
+              <span className="text-sm font-semibold text-foreground w-20">{item.day}</span>
+              
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={item.is_off}
+                  onChange={() => handleToggleOff(idx)}
+                  className="rounded border-border text-[var(--elite-orange)] focus:ring-[var(--elite-orange)] size-4"
+                />
+                <span className="text-xs font-semibold text-muted-foreground">Off</span>
+              </label>
+            </div>
+
+            {/* Hours Selector */}
+            <div className="flex items-center gap-2.5">
+              {item.is_off ? (
+                <div className="h-9 flex items-center px-4 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-500 text-xs font-bold uppercase tracking-wider">
+                  Closed / Off
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={item.start}
+                    onChange={(e) => handleTimeChange(idx, 'start', e.target.value)}
+                    className="h-9 px-3 rounded-lg border border-border bg-background text-sm font-medium focus:ring-[var(--elite-orange)]/20 focus:border-[var(--elite-orange)]/40 outline-none"
+                  />
+                  <span className="text-muted-foreground text-xs font-medium">to</span>
+                  <input
+                    type="time"
+                    value={item.end}
+                    onChange={(e) => handleTimeChange(idx, 'end', e.target.value)}
+                    className="h-9 px-3 rounded-lg border border-border bg-background text-sm font-medium focus:ring-[var(--elite-orange)]/20 focus:border-[var(--elite-orange)]/40 outline-none"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -249,7 +392,7 @@ export default function LocationsPage() {
               </h2>
               <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg elite-subtle hover:bg-[var(--elite-card-2)] transition-colors"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-5">
+            <div className="p-5 max-h-[75vh] overflow-y-auto elite-scrollbar">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -259,22 +402,27 @@ export default function LocationsPage() {
                     <RHFTextField control={form.control} name="timezone" label="Timezone" placeholder="UTC" />
                   </div>
                   <RHFTextField control={form.control} name="address" label="Address" placeholder="Street, city, country" />
-                  <RHFTextareaField
-                    control={form.control}
-                    name="working_hours"
-                    label="Working hours"
-                    placeholder="Mon-Fri 09:00-18:00, Sat 10:00-16:00"
-                    rows={3}
-                  />
-                  <label className="flex items-center gap-2 text-sm">
+                  
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Working Hours
+                    </label>
+                    <WorkingHoursSelector
+                      value={form.watch('working_hours') ?? ''}
+                      onChange={(val) => form.setValue('working_hours', val, { shouldDirty: true })}
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={!!form.watch('is_active')}
                       onChange={(e) => form.setValue('is_active', e.target.checked)}
+                      className="rounded border-border text-[var(--elite-orange)] focus:ring-[var(--elite-orange)] size-4"
                     />
-                    <span>Active</span>
+                    <span className="font-semibold text-foreground">Active</span>
                   </label>
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
                     <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save' : 'Create'}</Button>
                   </div>

@@ -111,6 +111,11 @@ const SALON_DASHBOARD_GROUPS: SidebarGroupDef[] = [
         fallbackLabel: "Staff",
         anyPermission: ["staff.view"],
       },
+      {
+        href: "/dashboard/commission",
+        fallbackLabel: "Commission",
+        anyPermission: ["staff.view"],
+      },
     ],
   },
   {
@@ -295,6 +300,7 @@ const receptionistMenu: NavItem[] = [
 const staffMenu: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/appointments", label: "My Calendar" },
+  { href: "/dashboard/commission", label: "My Earnings" },
 ];
 
 export const menuByRole: Record<AppRole, NavItem[]> = {

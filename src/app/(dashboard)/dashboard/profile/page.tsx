@@ -12,6 +12,8 @@ import { RHFTextField } from '@/components/fields/RHFTextField';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Combobox } from '@/components/ui/combobox';
 import DashboardPageHeader from '@/components/layout/DashboardPageHeader';
+import { useLocale } from '@/components/LocaleProvider';
+import { getMediaUrl } from '@/lib/utils';
 
 const TIMEZONES = [
   'UTC', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait', 'Asia/Bahrain',
@@ -72,6 +74,7 @@ export default function SalonProfilePage() {
   const [salon, setSalon] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { setLocale } = useLocale();
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -143,8 +146,16 @@ export default function SalonProfilePage() {
     });
     setSaving(false);
     if ('error' in res) { toastError(res.error ?? 'Failed to save'); return; }
-    setSalon(res.data?.salon ?? salon);
+    
+    const updatedSalon = res.data?.salon;
+    if (updatedSalon) {
+      setSalon(updatedSalon);
+      if (updatedSalon.preferred_locale) {
+        setLocale(updatedSalon.preferred_locale as any);
+      }
+    }
     toastSuccess('Salon profile updated.');
+    window.dispatchEvent(new Event('logo-updated'));
   };
 
   if (loading) {
@@ -227,13 +238,92 @@ export default function SalonProfilePage() {
                 </div>
               </div>
 
-              <RHFTextField
-                control={form.control}
-                name="logo"
-                label="Logo URL"
-                placeholder="https://example.com/logo.png"
-                disabled={saving}
-              />
+              {/* Salon Logo Upload Section */}
+              <div className="rounded-2xl border border-border bg-muted/10 p-5 space-y-4">
+                <div className="flex items-center gap-4">
+                  {/* Preview avatar */}
+                  <div className="relative group size-20 rounded-2xl overflow-hidden border border-border bg-muted/40 flex items-center justify-center shadow-xs shrink-0">
+                    {form.watch('logo') ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={getMediaUrl(form.watch('logo'))}
+                        alt="Salon Logo"
+                        className="size-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <Building2 className="size-8 text-muted-foreground opacity-60" />
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-1.5 flex-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Salon Logo
+                    </label>
+                    <p className="text-[11px] text-muted-foreground leading-normal max-w-xs">
+                      Recommend square image, max size 5MB (JPEG, PNG, SVG).
+                    </p>
+
+                    <div className="flex items-center gap-2 pt-1.5">
+                      <label className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted/50 cursor-pointer transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            if (file.size > 5 * 1024 * 1024) {
+                              toastError("Logo file exceeds the 5MB size limit.");
+                              return;
+                            }
+
+                            setSaving(true);
+                            const res = await settingsApi.uploadLogo(file);
+                            setSaving(false);
+
+                            if ("error" in res) {
+                              toastError(res.error ?? "Failed to upload logo.");
+                            } else if (res.data?.logo) {
+                              form.setValue('logo', res.data.logo, { shouldDirty: true });
+                              toastSuccess("Salon logo uploaded successfully.");
+                              window.dispatchEvent(new Event('logo-updated'));
+                            }
+                          }}
+                          disabled={saving}
+                        />
+                        Upload logo
+                      </label>
+
+                      {form.watch('logo') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            form.setValue('logo', '', { shouldDirty: true });
+                            window.dispatchEvent(new Event('logo-updated'));
+                          }}
+                          disabled={saving}
+                          className="inline-flex items-center justify-center rounded-xl border border-transparent px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Legacy text input just in case they want to paste a URL */}
+                <div className="pt-2 border-t border-border/40">
+                  <RHFTextField
+                    control={form.control}
+                    name="logo"
+                    label="Or paste logo URL"
+                    placeholder="https://example.com/logo.png"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end rounded-2xl border border-border bg-muted/20 p-4">
                 <div className="flex items-center justify-between h-full py-2">

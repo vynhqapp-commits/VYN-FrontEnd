@@ -178,6 +178,7 @@ export default function SaleCheckoutForm({
   const [appointmentId, setAppointmentId] = useState(
     initialAppointmentId ?? "",
   );
+  const [staffId, setStaffId] = useState("");
 
   const [lines, setLines] = useState<PosLine[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([
@@ -663,6 +664,7 @@ export default function SaleCheckoutForm({
       customer_id: clientId,
       location_id: locationId,
       appointment_id: appointmentId || undefined,
+      staff_id: !appointmentId && staffId ? Number(staffId) : undefined,
       discount_code: discountCode.trim() || undefined,
       discount_type: discountValue > 0 ? discountType : undefined,
       discount_value: discountValue > 0 ? discountValue : undefined,
@@ -771,6 +773,29 @@ export default function SaleCheckoutForm({
                 searchPlaceholder="Name, phone, or email..."
               />
             </div>
+            {!appointmentId && (
+              <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <label className="text-[10px] font-bold uppercase tracking-wide elite-subtle">Stylist / Therapist</label>
+                <select
+                  value={staffId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setStaffId(val);
+                    if (val) {
+                      setTipRows([{ id: "tip-1", staff_id: val, amount: 0 }]);
+                    }
+                  }}
+                  className="w-full elite-input rounded-xl px-3 h-10 text-xs font-semibold bg-[var(--elite-surface)]/30 border border-[var(--elite-border)] focus:outline-none focus:ring-2 focus:ring-ring/30"
+                >
+                  <option value="">Select stylist...</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1049,6 +1074,15 @@ export default function SaleCheckoutForm({
                     </button>
                   </div>
                 ))}
+                {tipMode !== "single" && (
+                  <button
+                    type="button"
+                    onClick={() => setTipRows((prev) => [...prev, { id: `tip-${Date.now()}-${prev.length}`, staff_id: "", amount: 0 }])}
+                    className="text-[10px] font-bold text-[var(--elite-orange)] hover:underline flex items-center gap-1 mt-1.5"
+                  >
+                    <Plus className="size-3" /> Add staff allocation
+                  </button>
+                )}
               </div>
             </div>
 

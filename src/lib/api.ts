@@ -329,6 +329,7 @@ export const settingsApi = {
     preferred_locale?: string;
     cancellation_window_hours?: number;
     cancellation_policy_mode?: "soft" | "hard" | "none";
+    refund_window_hours?: number;
     annual_leave_limit?: number;
     sick_leave_limit?: number;
   }) =>
@@ -336,6 +337,14 @@ export const settingsApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }).then((r) => (r.data ? { data: { salon: r.data } } : { error: r.error })),
+  uploadLogo: (file: File) => {
+    const formData = new FormData();
+    formData.append("logo", file);
+    return api<{ logo: string }>("/api/settings/logo", {
+      method: "POST",
+      body: formData,
+    });
+  },
 };
 
 export const tenantsApi = {
@@ -2938,6 +2947,10 @@ export interface StaffMember {
   schedules?: StaffScheduleRow[];
   services?: { id: string; name: string }[];
   user?: { id: string; name?: string; email?: string } | null;
+  salary_value?: string | number | null;
+  compensation_model?: string | null;
+  commission_type?: string | null;
+  commission_value?: string | number | null;
 }
 
 export interface StaffScheduleRow {
@@ -3486,6 +3499,10 @@ export interface SalonReview {
     id: number;
     invoice_number: string;
     created_at: string;
+  } | null;
+  approver?: {
+    id: number;
+    name: string;
   } | null;
 }
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Check, Clock, MapPin, ChevronRight, CalendarCheck, UserCircle, Search, ChevronLeft, Heart, Sparkles, ShieldCheck, Zap, X, Star, Tag, Package, CreditCard, BadgePercent, Loader2 } from "lucide-react";
@@ -16,6 +16,7 @@ import {
   type PaginationMeta,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { getMediaUrl } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { formatPublicCurrency, getPublicT, type PublicLocale } from "@/lib/i18n-public";
 import { useLocale } from "@/components/LocaleProvider";
@@ -103,6 +104,98 @@ function StepBar({ step, labels }: { step: number; labels: string[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+type DaySchedule = {
+  day: string;
+  is_off: boolean;
+  start: string;
+  end: string;
+};
+
+function BranchHoursCollapse({ workingHours }: { workingHours?: string | null }) {
+  const [open, setOpen] = useState(false);
+
+  const schedule: DaySchedule[] | null = useMemo(() => {
+    if (!workingHours) return null;
+    try {
+      const parsed = JSON.parse(workingHours);
+      if (Array.isArray(parsed) && parsed.length === 7 && 'day' in parsed[0]) {
+        return parsed;
+      }
+    } catch (e) {
+      // Legacy text formats
+    }
+    return null;
+  }, [workingHours]);
+
+  if (!workingHours) return null;
+
+  if (!schedule) {
+    return (
+      <div className="mt-2 pt-2 border-t border-gray-100">
+        <p className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
+          <Clock className="w-3 h-3 shrink-0 text-salon-gold" />
+          {workingHours}
+        </p>
+      </div>
+    );
+  }
+
+  const formatTimeStr = (timeStr: string) => {
+    try {
+      const [hStr, mStr] = timeStr.split(":");
+      let hour = parseInt(hStr, 10);
+      const minutes = mStr || "00";
+      const ampm = hour >= 12 ? "PM" : "AM";
+      hour = hour % 12;
+      hour = hour ? hour : 12;
+      return `${hour}:${minutes} ${ampm}`;
+    } catch (e) {
+      return timeStr;
+    }
+  };
+
+  return (
+    <div className="mt-2.5 pt-2 border-t border-gray-100/70">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+        className="flex items-center gap-1 text-[11px] font-semibold text-salon-gold hover:text-salon-gold/80 transition-colors"
+      >
+        <Clock className="w-3.5 h-3.5 shrink-0" />
+        <span>{open ? "Hide working hours" : "View working hours"}</span>
+        <ChevronRight className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
+      </button>
+
+      {open && (
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 space-y-1 bg-gray-50/60 dark:bg-zinc-900/40 p-2.5 rounded-lg border border-gray-100/50 animate-in fade-in slide-in-from-top-1 duration-200"
+        >
+          {schedule.map((day) => (
+            <div key={day.day} className="flex justify-between items-center text-[11px] text-gray-500 font-medium">
+              <span className="text-gray-600 dark:text-gray-400 font-semibold">{day.day}</span>
+              <span>
+                {day.is_off ? (
+                  <span className="text-red-500/80 font-bold uppercase tracking-wider text-[9px] bg-red-50 dark:bg-red-950/20 px-1.5 py-0.5 rounded-sm">
+                    Off / Closed
+                  </span>
+                ) : (
+                  <span className="text-gray-700 dark:text-zinc-300">
+                    {formatTimeStr(day.start)} - {formatTimeStr(day.end)}
+                  </span>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -476,6 +569,23 @@ export default function BookPage() {
   };
 
   const selectedBranch = detail?.branches.find((b) => String(b.id) === String(branchId));
+
+  const isBranchClosedOnSelectedDate = useMemo(() => {
+    if (!date || !selectedBranch?.working_hours) return false;
+    try {
+      const [year, month, day] = date.split("-").map(Number);
+      const localDate = new Date(year, month - 1, day);
+      const dayName = localDate.toLocaleDateString("en-US", { weekday: "long" });
+      const parsedSchedule = JSON.parse(selectedBranch.working_hours);
+      if (Array.isArray(parsedSchedule) && parsedSchedule.length === 7) {
+        const dayInfo = parsedSchedule.find((item: any) => item.day === dayName);
+        return dayInfo ? dayInfo.is_off === true : false;
+      }
+    } catch (e) {
+      // Gracefully ignore legacy text schedules
+    }
+    return false;
+  }, [date, selectedBranch]);
   const selectedServices = detail?.services.filter((s) => selectedServiceIds.includes(String(s.id))) ?? [];
   const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price ?? 0), 0);
@@ -885,51 +995,67 @@ export default function BookPage() {
                         className="w-full cursor-pointer text-start p-5 bg-card rounded-2xl border border-gray-100 shadow-sm hover:border-salon-gold/50 hover:shadow-md transition-all group hover:-translate-y-0.5"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-salon-espresso group-hover:text-salon-gold transition-colors">
-                              {s.name}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                              {i < 2 && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-salon-gold/10 text-salon-gold">
-                                  {t("popular")}
-                                </span>
-                              )}
-                              {ratingText && (
-                                <span className="inline-flex items-center gap-1 text-xs text-salon-espresso/90">
-                                  <Star className="w-3.5 h-3.5 text-salon-gold shrink-0" aria-hidden />
-                                  {t("listSalonRating").replace("{rating}", ratingText)}
-                                </span>
-                              )}
-                              {genderLabel && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">
-                                  {genderLabel}
-                                </span>
-                              )}
-                              {dist != null && Number.isFinite(dist) && (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                          <div className="min-w-0 flex-1 flex items-start gap-4">
+                            {s.logo ? (
+                              <img
+                                src={getMediaUrl(s.logo)}
+                                alt={`${s.name} logo`}
+                                className="w-12 h-12 rounded-full object-cover border border-salon-gold/20 shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-salon-gold/10 flex items-center justify-center shrink-0 border border-salon-gold/15 text-salon-gold font-bold text-base transition-colors duration-300 group-hover:bg-salon-gold/20">
+                                {s.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-salon-espresso group-hover:text-salon-gold transition-colors text-base">
+                                {s.name}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                {i < 2 && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-salon-gold/10 text-salon-gold">
+                                    {t("popular")}
+                                  </span>
+                                )}
+                                {ratingText && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-salon-espresso/90">
+                                    <Star className="w-3.5 h-3.5 text-salon-gold shrink-0" aria-hidden />
+                                    {t("listSalonRating").replace("{rating}", ratingText)}
+                                  </span>
+                                )}
+                                {genderLabel && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">
+                                    {genderLabel}
+                                  </span>
+                                )}
+                                {dist != null && Number.isFinite(dist) && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+                                    <MapPin className="w-3 h-3 shrink-0" />
+                                    {t("listSalonDistance").replace("{n}", dist < 10 ? dist.toFixed(1) : String(Math.round(dist)))}
+                                  </span>
+                                )}
+                                {row.latitude != null && row.longitude != null && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${row.latitude},${row.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-500 hover:text-blue-700 underline underline-offset-2"
+                                  >
+                                    View on map
+                                  </a>
+                                )}
+                              </div>
+                              {s.address && (
+                                <p className="flex items-center gap-1 text-gray-400 text-xs mt-1.5">
                                   <MapPin className="w-3 h-3 shrink-0" />
-                                  {t("listSalonDistance").replace("{n}", dist < 10 ? dist.toFixed(1) : String(Math.round(dist)))}
-                                </span>
-                              )}
-                              {row.latitude != null && row.longitude != null && (
-                                <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${row.latitude},${row.longitude}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-500 hover:text-blue-700 underline underline-offset-2"
-                                >
-                                  View on map
-                                </a>
+                                  {s.address}
+                                </p>
                               )}
                             </div>
-                            {s.address && (
-                              <p className="flex items-center gap-1 text-gray-400 text-xs mt-1.5">
-                                <MapPin className="w-3 h-3 shrink-0" />
-                                {s.address}
-                              </p>
-                            )}
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
                             <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-salon-gold transition-colors" />
@@ -1054,6 +1180,7 @@ export default function BookPage() {
                                 {b.address}
                               </p>
                             )}
+                            <BranchHoursCollapse workingHours={b.working_hours} />
                           </div>
                         </SelectCard>
                       ))}
@@ -1297,6 +1424,18 @@ export default function BookPage() {
                 <SectionLabel>{t("availableTimes")}</SectionLabel>
                 {loadingSlots ? (
                   <div className="flex justify-center py-8"><Spinner /></div>
+                ) : isBranchClosedOnSelectedDate ? (
+                  <div className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-2xl border border-red-100 bg-red-50/30 dark:border-red-950/20 dark:bg-red-950/5 animate-fade-in-up">
+                    <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/30 flex items-center justify-center text-red-500 mb-3.5">
+                      <Clock className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <h3 className="text-sm font-bold text-red-900 dark:text-red-400 uppercase tracking-wider">
+                      Salon Closed
+                    </h3>
+                    <p className="text-xs text-red-700/80 dark:text-red-500/80 mt-1 max-w-[320px]">
+                      The salon is closed on this day. Please select another date to view available time slots.
+                    </p>
+                  </div>
                 ) : slots.length === 0 ? (
                   <p className="text-gray-400 text-sm py-4">
                     {t("noSlotsAvailableTryAnotherDay")}
